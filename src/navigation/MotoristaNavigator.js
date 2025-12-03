@@ -1,0 +1,100 @@
+import React from 'react';
+import {Platform} from 'react-native';
+import DashboardMotorista from '../screens/Motorista/DashboardMotorista';
+import RotaMotorista from '../screens/Motorista/RotaMotorista';
+import DetalheViagemMotorista from '../screens/Motorista/DetalheViagemMotorista';
+import ListaAlunosConfirmados from '../screens/Motorista/ListaAlunosConfirmados';
+import DefinirPontosRota from '../screens/Motorista/DefinirPontosRota';
+import RotaOtimizada from '../screens/Motorista/RotaOtimizada';
+import InicioFimViagem from '../screens/Motorista/InicioFimViagem';
+import ChatGestor from '../screens/Motorista/ChatGestor';
+import ConfigNotificacoesMotorista from '../screens/Motorista/ConfigNotificacoesMotorista';
+import {
+  NavigationProvider,
+  Navigator,
+  Screen,
+} from './SimpleNavigator';
+
+// Detecta se está na web
+const isWeb = Platform.OS === 'web' || typeof window !== 'undefined';
+
+// Para mobile, tenta usar React Navigation
+let NativeStackNavigator = null;
+let createNativeStackNavigator = null;
+
+if (!isWeb) {
+  try {
+    const ReactNavigation = require('@react-navigation/native-stack');
+    createNativeStackNavigator = ReactNavigation.createNativeStackNavigator;
+  } catch (e) {
+    console.log('React Navigation não disponível, usando navegação simples');
+  }
+}
+
+const MotoristaNavigator = () => {
+  // Se estiver na web ou React Navigation não estiver disponível, usa navegação simples
+  if (isWeb || !createNativeStackNavigator) {
+    return (
+      <NavigationProvider initialRoute="DashboardMotorista">
+        <Navigator>
+          <Screen name="DashboardMotorista" component={DashboardMotorista} />
+          <Screen name="RotaMotorista" component={RotaMotorista} />
+          <Screen
+            name="DetalheViagemMotorista"
+            component={DetalheViagemMotorista}
+          />
+          <Screen
+            name="ListaAlunosConfirmados"
+            component={ListaAlunosConfirmados}
+          />
+          <Screen name="DefinirPontosRota" component={DefinirPontosRota} />
+          <Screen name="RotaOtimizada" component={RotaOtimizada} />
+          <Screen name="InicioFimViagem" component={InicioFimViagem} />
+          <Screen name="ChatGestor" component={ChatGestor} />
+          <Screen
+            name="ConfigNotificacoesMotorista"
+            component={ConfigNotificacoesMotorista}
+          />
+        </Navigator>
+      </NavigationProvider>
+    );
+  }
+
+  // Para mobile, usa React Navigation
+  if (!NativeStackNavigator && createNativeStackNavigator) {
+    NativeStackNavigator = createNativeStackNavigator();
+  }
+
+  const Stack = NativeStackNavigator;
+
+  return (
+    <Stack.Navigator
+      initialRouteName="DashboardMotorista"
+      screenOptions={{
+        headerShown: false,
+        animation: 'slide_from_right',
+      }}>
+      <Stack.Screen name="DashboardMotorista" component={DashboardMotorista} />
+      <Stack.Screen name="RotaMotorista" component={RotaMotorista} />
+      <Stack.Screen
+        name="DetalheViagemMotorista"
+        component={DetalheViagemMotorista}
+      />
+      <Stack.Screen
+        name="ListaAlunosConfirmados"
+        component={ListaAlunosConfirmados}
+      />
+      <Stack.Screen name="DefinirPontosRota" component={DefinirPontosRota} />
+      <Stack.Screen name="RotaOtimizada" component={RotaOtimizada} />
+      <Stack.Screen name="InicioFimViagem" component={InicioFimViagem} />
+      <Stack.Screen name="ChatGestor" component={ChatGestor} />
+      <Stack.Screen
+        name="ConfigNotificacoesMotorista"
+        component={ConfigNotificacoesMotorista}
+      />
+    </Stack.Navigator>
+  );
+};
+
+export default MotoristaNavigator;
+
