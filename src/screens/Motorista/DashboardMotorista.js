@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -6,19 +6,244 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
+import { useAuth } from '../../contexts/AuthContext';
+import {motoristaService} from '../../services/motoristaService';
 
 const DashboardMotorista = ({navigation}) => {
-  // Dados mockados
-  const proximaViagem = {
-    id: 1,
-    tipo: 'Manhã',
-    horario: '07:30',
-    origem: 'Centro',
-    destino: 'Escola Municipal',
-    alunosConfirmados: 18,
-    totalAlunos: 25,
-    status: 'A iniciar',
+  const { user } = useAuth();
+
+  const getRoleLabel = (role) => {
+    const roleMap = {
+      'aluno': 'Aluno',
+      'motorista': 'Motorista',
+      'gestor': 'Gestor'
+    };
+    return roleMap[role] || role;
+  };
+
+  const getUserInfo = () => {
+    const roleLabel = getRoleLabel(user?.role);
+    const municipioInfo = user?.municipio 
+      ? `${user.municipio.nome}${user.municipio.uf ? ` - ${user.municipio.uf}` : ''}`
+      : '';
+    return municipioInfo ? `${roleLabel} • ${municipioInfo}` : roleLabel;
+  };
+
+  const [proximaViagem, setProximaViagem] = useState(null);
+  const [loadingViagem, setLoadingViagem] = useState(true);
+  const [alunosInfo, setAlunosInfo] = useState({
+    totalAlunos: 0,
+    alunosConfirmados: 0,
+  });
+  const [loadingAlunos, setLoadingAlunos] = useState(false);
+
+  useEffect(() => {
+    const loadProximaViagem = async () => {
+      try {
+        console.log('Loading proxima viagem...');
+        const viagens = await motoristaService.listarViagens();
+        console.log('Viagens recebidas:', viagens);
+        
+        if (viagens && viagens.length > 0) {
+          // Ordenar por data e horário, encontrar a próxima viagem
+          const now = new Date();
+          const todayStr = now.toISOString().split('T')[0]; // "2025-12-10"
+          now.setHours(0, 0, 0, 0); // Resetar para início do dia para comparação
+          
+          console.log('Now date:', now);
+          console.log('Today string:', todayStr);
+          
+          const viagensFuturas = viagens
+            .filter((v) => {
+              // Extrair apenas a parte da data (YYYY-MM-DD)
+              const viagemDateStr = v.data.split('T')[0];
+              
+              // Criar data da viagem às 00:00:00 no timezone local
+              const [year, month, day] = viagemDateStr.split('-').map(Number);
+              const viagemDate = new Date(year, month - 1, day);
+              
+              console.log(`Viagem ${v.id}: data=${v.data}, viagemDateStr=${viagemDateStr}, viagemDate=${viagemDate}`);
+              
+              // Se a viagem tem horario_fim, considerar apenas se ainda não passou
+              if (v.horario_fim) {
+                const horarioFimStr = v.horario_fim.includes('T') 
+                  ? v.horario_fim.substring(11, 16) 
+                  : v.horario_fim.substring(0, 5);
+                const [horasFim, minutosFim] = horarioFimStr.split(':').map(Number);
+                const fimViagem = new Date(year, month - 1, day, horasFim, minutosFim);
+                
+                if (fimViagem < new Date()) {
+                  console.log('Viagem já finalizada:', v.id, fimViagem);
+                  return false; // Viagem já finalizada
+                }
+              }
+              
+              // Comparar datas: viagemDate >= now (inclui hoje e futuras)
+              const isTodayOrFuture = viagemDate >= now;
+              
+              console.log(`Viagem ${v.id}: viagemDate=${viagemDate}, now=${now}, isTodayOrFuture=${isTodayOrFuture}`);
+              
+              return isTodayOrFuture;
+            })
+            .sort((a, b) => {
+              // Parse completo com data e horário
+              const horarioA = a.horario_inicio || '00:00';
+              const horarioB = b.horario_inicio || '00:00';
+              
+              const dateA = new Date(`${a.data}T${horarioA}`);
+              const dateB = new Date(`${b.data}T${horarioB}`);
+              
+              return dateA - dateB;
+            });
+
+          console.log('Viagens futuras encontradas:', viagensFuturas.length);
+          console.log('Viagens futuras:', viagensFuturas);
+
+          if (viagensFuturas.length > 0) {
+            const proxima = viagensFuturas[0];
+            
+            // Buscar pontos da rota para obter origem e destino
+            let origem = 'N/A';
+            let destino = 'N/A';
+            
+            try {
+              const pontos = await motoristaService.listarPontosRota(proxima.rota_id);
+              if (pontos && pontos.length > 0) {
+                origem = pontos[0].nome || 'N/A';
+                if (pontos.length > 1) {
+                  destino = pontos[pontos.length - 1].nome || 'N/A';
+                } else {
+                  destino = origem;
+                }
+              }
+            } catch (error) {
+              console.error('Error loading route points:', error);
+            }
+            
+            console.log('Proxima viagem selecionada:', proxima);
+            
+            // Normalizar formato do horário
+            let horarioFormatado = '--:--';
+            if (proxima.horario_inicio) {
+              if (proxima.horario_inicio.includes('T')) {
+                // Formato ISO: "2024-12-10T08:37:00" -> "08:37"
+                horarioFormatado = proxima.horario_inicio.substring(11, 16);
+              } else if (proxima.horario_inicio.includes(':')) {
+                // Formato HH:MM ou HH:MM:SS -> pegar apenas HH:MM
+                horarioFormatado = proxima.horario_inicio.substring(0, 5);
+              }
+            }
+            
+            console.log('Horario formatado:', horarioFormatado);
+            
+            setProximaViagem({
+              id: proxima.id,
+              tipo: proxima.tipo,
+              data: proxima.data,
+              horario: horarioFormatado,
+              rota_id: proxima.rota_id,
+              status: proxima.horario_fim ? 'Finalizada' : 'A iniciar',
+              origem: origem,
+              destino: destino,
+            });
+          } else {
+            console.log('Nenhuma viagem futura encontrada');
+            setProximaViagem(null);
+          }
+        } else {
+          console.log('Nenhuma viagem retornada da API');
+          setProximaViagem(null);
+        }
+      } catch (error) {
+        console.error('Error loading next trip:', error);
+        console.error('Error details:', error.message, error.response?.data);
+        setProximaViagem(null);
+      } finally {
+        setLoadingViagem(false);
+      }
+    };
+
+    loadProximaViagem();
+  }, []);
+
+  // Buscar informações de alunos quando a próxima viagem for definida
+  useEffect(() => {
+    const loadAlunosInfo = async () => {
+      if (!proximaViagem?.id) {
+        setAlunosInfo({
+          totalAlunos: 0,
+          alunosConfirmados: 0,
+        });
+        return;
+      }
+      
+      try {
+        setLoadingAlunos(true);
+        console.log('Loading alunos info for viagem:', proximaViagem.id);
+        const alunosData = await motoristaService.listarAlunosViagem(proximaViagem.id);
+        console.log('Alunos data received:', alunosData);
+        
+        // Verificar se a resposta tem a estrutura esperada
+        if (alunosData && typeof alunosData === 'object') {
+          const totalAlunos = alunosData.total_alunos !== undefined ? alunosData.total_alunos : 0;
+          const alunosConfirmados = alunosData.alunos_confirmados !== undefined ? alunosData.alunos_confirmados : 0;
+          
+          console.log(`Setting alunos info: ${alunosConfirmados} de ${totalAlunos}`);
+          
+          setAlunosInfo({
+            totalAlunos: totalAlunos,
+            alunosConfirmados: alunosConfirmados,
+          });
+        } else {
+          console.warn('Unexpected alunos data format:', alunosData);
+          setAlunosInfo({
+            totalAlunos: 0,
+            alunosConfirmados: 0,
+          });
+        }
+      } catch (error) {
+        console.error('Error loading alunos info:', error);
+        console.error('Error details:', error.message);
+        if (error.response) {
+          console.error('Response status:', error.response.status);
+          console.error('Response data:', error.response.data);
+        }
+        // Em caso de erro, manter valores anteriores ou definir como 0
+        setAlunosInfo({
+          totalAlunos: 0,
+          alunosConfirmados: 0,
+        });
+      } finally {
+        setLoadingAlunos(false);
+      }
+    };
+
+    loadAlunosInfo();
+  }, [proximaViagem?.id]);
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString + 'T00:00:00'); // Adiciona hora para evitar problemas de timezone
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    date.setHours(0, 0, 0, 0);
+    
+    if (date.getTime() === today.getTime()) {
+      return 'Hoje';
+    } else if (date.getTime() === tomorrow.getTime()) {
+      return 'Amanhã';
+    } else {
+      const weekdays = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+      const months = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+      const weekday = weekdays[date.getDay()];
+      const day = date.getDate();
+      const month = months[date.getMonth()];
+      return `${weekday}, ${day} de ${month}`;
+    }
   };
 
   return (
@@ -26,102 +251,157 @@ const DashboardMotorista = ({navigation}) => {
       <ScrollView style={styles.scrollView}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.greeting}>Olá, Carlos Silva! 👋</Text>
-          <Text style={styles.subtitle}>Motorista - Rota Centro - Zona Norte</Text>
+          <Text style={styles.greeting}>
+            Olá, {user?.nome || 'Motorista'}! 👋
+          </Text>
+          <Text style={styles.subtitle}>
+            {getUserInfo()}
+          </Text>
         </View>
 
         {/* Próxima Viagem */}
         <View style={styles.proximaViagemCard}>
-          <Text style={styles.cardTitle}>Próxima Viagem do Dia</Text>
-          <View style={styles.viagemInfo}>
-            <View style={styles.viagemHeader}>
-              <View>
-                <Text style={styles.viagemTipo}>{proximaViagem.tipo}</Text>
-                <Text style={styles.viagemHorario}>{proximaViagem.horario}</Text>
-              </View>
-              <View style={styles.statusBadge}>
-                <Text style={styles.statusText}>{proximaViagem.status}</Text>
-              </View>
+          <Text style={styles.cardTitle}>Próxima Viagem</Text>
+          {loadingViagem ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#1a73e8" />
             </View>
+          ) : proximaViagem ? (
+            <>
+              {proximaViagem.data && (
+                <Text style={styles.viagemData}>
+                  {formatDate(proximaViagem.data)}
+                </Text>
+              )}
+              <View style={styles.viagemInfo}>
+                <View style={styles.viagemHeader}>
+                  <View>
+                    <Text style={styles.viagemTipo}>{proximaViagem.tipo}</Text>
+                    <Text style={styles.viagemHorario}>{proximaViagem.horario}</Text>
+                  </View>
+                  <View style={styles.statusBadge}>
+                    <Text style={styles.statusText}>{proximaViagem.status}</Text>
+                  </View>
+                </View>
 
-            <View style={styles.rotaInfo}>
-              <View style={styles.pontoRota}>
-                <Text style={styles.pontoIcon}>📍</Text>
-                <Text style={styles.pontoNome}>{proximaViagem.origem}</Text>
+                <View style={styles.rotaInfo}>
+                  <View style={styles.pontoRota}>
+                    <Text style={styles.pontoIcon}>📍</Text>
+                    <Text style={styles.pontoNome}>{proximaViagem.origem || 'N/A'}</Text>
+                  </View>
+                  <View style={styles.linhaRota} />
+                  <View style={styles.pontoRota}>
+                    <Text style={styles.pontoIcon}>🎯</Text>
+                    <Text style={styles.pontoNome}>{proximaViagem.destino || 'N/A'}</Text>
+                  </View>
+                </View>
               </View>
-              <View style={styles.linhaRota} />
-              <View style={styles.pontoRota}>
-                <Text style={styles.pontoIcon}>🎯</Text>
-                <Text style={styles.pontoNome}>{proximaViagem.destino}</Text>
+
+              {/* Informações de Alunos */}
+              <View style={styles.alunosInfo}>
+                {loadingAlunos ? (
+                  <View style={styles.loadingAlunosContainer}>
+                    <ActivityIndicator size="small" color="#1a73e8" />
+                  </View>
+                ) : (
+                  <>
+                    <Text style={styles.alunosText}>
+                      {alunosInfo.alunosConfirmados} de {alunosInfo.totalAlunos} alunos confirmados
+                    </Text>
+                    {alunosInfo.totalAlunos > 0 ? (
+                      <View style={styles.alunosBar}>
+                        <View
+                          style={[
+                            styles.alunosBarFill,
+                            {
+                              width: `${
+                                alunosInfo.totalAlunos > 0
+                                  ? (alunosInfo.alunosConfirmados / alunosInfo.totalAlunos) * 100
+                                  : 0
+                              }%`,
+                            },
+                          ]}
+                        />
+                      </View>
+                    ) : alunosInfo.totalAlunos === 0 && alunosInfo.alunosConfirmados === 0 ? (
+                      <Text style={styles.emptyAlunosText}>
+                        Nenhum aluno inscrito nesta rota
+                      </Text>
+                    ) : null}
+                  </>
+                )}
               </View>
+
+              {/* Botões de Ação */}
+              <View style={styles.acoesContainer}>
+                <TouchableOpacity
+                  style={styles.verDetalhesButton}
+                  onPress={() =>
+                    navigation.navigate('DetalheViagemMotorista', {
+                      viagem: proximaViagem,
+                    })
+                  }>
+                  <Text style={styles.verDetalhesButtonText}>Ver Detalhes</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.iniciarButton}
+                  onPress={() =>
+                    navigation.navigate('InicioFimViagem', {viagem: proximaViagem})
+                  }>
+                  <Text style={styles.iniciarButtonText}>Iniciar Viagem</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>Nenhuma viagem agendada</Text>
             </View>
-
-            <View style={styles.alunosInfo}>
-              <Text style={styles.alunosText}>
-                {proximaViagem.alunosConfirmados} de {proximaViagem.totalAlunos}{' '}
-                alunos confirmados
-              </Text>
-              <View style={styles.alunosBar}>
-                <View
-                  style={[
-                    styles.alunosBarFill,
-                    {
-                      width: `${
-                        (proximaViagem.alunosConfirmados /
-                          proximaViagem.totalAlunos) *
-                        100
-                      }%`,
-                    },
-                  ]}
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* Botões de Ação */}
-          <View style={styles.acoesContainer}>
-            <TouchableOpacity
-              style={styles.verDetalhesButton}
-              onPress={() =>
-                navigation.navigate('DetalheViagemMotorista', {
-                  viagem: proximaViagem,
-                })
-              }>
-              <Text style={styles.verDetalhesButtonText}>Ver Detalhes</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.iniciarButton}
-              onPress={() =>
-                navigation.navigate('InicioFimViagem', {viagem: proximaViagem})
-              }>
-              <Text style={styles.iniciarButtonText}>Iniciar Viagem</Text>
-            </TouchableOpacity>
-          </View>
+          )}
         </View>
 
         {/* Botões Rápidos */}
         <View style={styles.botoesRapidos}>
-          <TouchableOpacity
-            style={styles.botaoRapido}
-            onPress={() => navigation.navigate('RotaMotorista')}>
-            <Text style={styles.botaoRapidoIcon}>🚌</Text>
-            <Text style={styles.botaoRapidoText}>Minhas Rotas</Text>
-          </TouchableOpacity>
+          <View style={styles.botoesRow}>
+            <TouchableOpacity
+              style={styles.botaoRapido}
+              onPress={() => navigation.navigate('RotaMotorista')}>
+              <Text style={styles.botaoRapidoIcon}>🚌</Text>
+              <Text style={styles.botaoRapidoText}>Minhas Rotas</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.botaoRapido}
-            onPress={() => navigation.navigate('ChatGestor')}>
-            <Text style={styles.botaoRapidoIcon}>💬</Text>
-            <Text style={styles.botaoRapidoText}>Chat Gestor</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.botaoRapido}
+              onPress={() => navigation.navigate('CriarRota')}>
+              <Text style={styles.botaoRapidoIcon}>➕</Text>
+              <Text style={styles.botaoRapidoText}>Criar Rota</Text>
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity
-            style={styles.botaoRapido}
-            onPress={() => navigation.navigate('ConfigNotificacoesMotorista')}>
-            <Text style={styles.botaoRapidoIcon}>⚙️</Text>
-            <Text style={styles.botaoRapidoText}>Configurações</Text>
-          </TouchableOpacity>
+          <View style={styles.botoesRow}>
+            <TouchableOpacity
+              style={styles.botaoRapido}
+              onPress={() => navigation.navigate('CriarViagem')}>
+              <Text style={styles.botaoRapidoIcon}>🚗</Text>
+              <Text style={styles.botaoRapidoText}>Criar Viagem</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.botaoRapido}
+              onPress={() => navigation.navigate('ChatGestor')}>
+              <Text style={styles.botaoRapidoIcon}>💬</Text>
+              <Text style={styles.botaoRapidoText}>Chat Gestor</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.botoesRow}>
+            <TouchableOpacity
+              style={styles.botaoRapido}
+              onPress={() => navigation.navigate('ConfigNotificacoesMotorista')}>
+              <Text style={styles.botaoRapidoIcon}>⚙️</Text>
+              <Text style={styles.botaoRapidoText}>Configurações</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -164,7 +444,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 16,
+    marginBottom: 8,
+  },
+  viagemData: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 12,
+    fontWeight: '500',
+    textTransform: 'capitalize',
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
   },
   viagemInfo: {
     marginBottom: 20,
@@ -200,6 +491,10 @@ const styles = StyleSheet.create({
   rotaInfo: {
     marginBottom: 16,
   },
+  rotaIdText: {
+    fontSize: 14,
+    color: '#666',
+  },
   pontoRota: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -220,9 +515,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#e0e0e0',
     marginLeft: 14,
     marginBottom: 8,
+    marginTop: 4,
   },
   alunosInfo: {
     marginTop: 12,
+    marginBottom: 20,
   },
   alunosText: {
     fontSize: 14,
@@ -234,11 +531,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#e0e0e0',
     borderRadius: 4,
     overflow: 'hidden',
+    marginBottom: 8,
   },
   alunosBarFill: {
     height: '100%',
     backgroundColor: '#34a853',
     borderRadius: 4,
+  },
+  loadingAlunosContainer: {
+    padding: 12,
+    alignItems: 'center',
+  },
+  emptyAlunosText: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
+    marginTop: 8,
   },
   acoesContainer: {
     gap: 12,
@@ -267,19 +575,24 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   botoesRapidos: {
-    flexDirection: 'row',
     paddingHorizontal: 16,
     marginBottom: 24,
+  },
+  botoesRow: {
+    flexDirection: 'row',
+    marginBottom: 12,
     gap: 12,
   },
   botaoRapido: {
     flex: 1,
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 16,
+    padding: 20,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#e0e0e0',
+    minHeight: 100,
+    justifyContent: 'center',
   },
   botaoRapidoIcon: {
     fontSize: 32,
@@ -318,6 +631,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     fontWeight: '500',
+  },
+  emptyState: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
   },
 });
 

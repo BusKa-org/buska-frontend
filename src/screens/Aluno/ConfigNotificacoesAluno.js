@@ -7,9 +7,13 @@ import {
   SafeAreaView,
   ScrollView,
   Switch,
+  Alert,
+  Platform,
 } from 'react-native';
+import { useAuth } from '../../contexts/AuthContext';
 
 const ConfigNotificacoesAluno = ({navigation}) => {
+  const { logout } = useAuth();
   const [lembretePresenca, setLembretePresenca] = useState(true);
   const [antecedenciaLembrete, setAntecedenciaLembrete] = useState(30); // minutos
   const [notificacaoAproximacao, setNotificacaoAproximacao] = useState(true);
@@ -17,6 +21,78 @@ const ConfigNotificacoesAluno = ({navigation}) => {
 
   const opcoesAntecedencia = [15, 30, 45, 60];
   const opcoesDistancia = [200, 500, 1000, 1500];
+
+  const handleLogout = async () => {
+    console.log('handleLogout chamado');
+    
+    // Usar window.confirm na web, Alert.alert no mobile
+    const isWeb = Platform.OS === 'web';
+    
+    let shouldLogout = false;
+    
+    if (isWeb) {
+      // Na web, usar window.confirm que funciona melhor
+      shouldLogout = window.confirm('Tem certeza que deseja sair?');
+      console.log('Confirmação web:', shouldLogout);
+    } else {
+      // No mobile, usar Alert
+      return new Promise((resolve) => {
+        Alert.alert(
+          'Sair',
+          'Tem certeza que deseja sair?',
+          [
+            {
+              text: 'Cancelar',
+              style: 'cancel',
+              onPress: () => {
+                console.log('Logout cancelado');
+                resolve(false);
+              },
+            },
+            {
+              text: 'Sair',
+              style: 'destructive',
+              onPress: async () => {
+                shouldLogout = true;
+                resolve(true);
+              },
+            },
+          ],
+          { 
+            cancelable: true,
+            onDismiss: () => {
+              console.log('Alert fechado sem ação');
+              resolve(false);
+            }
+          }
+        );
+      }).then(async (confirmed) => {
+        if (confirmed) {
+          await performLogout();
+        }
+      });
+    }
+    
+    if (shouldLogout) {
+      await performLogout();
+    }
+  };
+
+  const performLogout = async () => {
+    console.log('Iniciando logout...');
+    try {
+      await logout();
+      console.log('Logout concluído');
+    } catch (error) {
+      console.error('Erro no logout:', error);
+      // Mesmo em caso de erro, tentar limpar o estado novamente
+      try {
+        await logout();
+      } catch (e) {
+        console.error('Erro ao tentar logout novamente:', e);
+      }
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -132,6 +208,21 @@ const ConfigNotificacoesAluno = ({navigation}) => {
           <TouchableOpacity style={styles.saveButton}>
             <Text style={styles.saveButtonText}>Salvar Configurações</Text>
           </TouchableOpacity>
+
+          {/* Seção de Conta */}
+          <View style={styles.accountSection}>
+            <Text style={styles.accountSectionTitle}>Conta</Text>
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={() => {
+                console.log('Botão Sair pressionado!');
+                handleLogout();
+              }}
+              activeOpacity={0.7}
+              testID="logout-button">
+              <Text style={styles.logoutButtonText}>🚪 Sair</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -243,6 +334,31 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  accountSection: {
+    marginTop: 24,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  accountSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+  },
+  logoutButton: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ffebee',
+  },
+  logoutButtonText: {
+    fontSize: 16,
+    color: '#d32f2f',
+    fontWeight: '600',
   },
 });
 

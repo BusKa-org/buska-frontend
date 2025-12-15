@@ -9,16 +9,47 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Login = ({navigation}) => {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const { login } = useAuth();
 
-  const handleLogin = () => {
-    // Simulação de login - apenas navegação
-    console.log('Login:', {email, senha});
-    // Aqui você navegaria para a tela principal após autenticação
+  const handleLogin = async () => {
+    // Clear previous errors
+    setError('');
+
+    if (!email.trim() || !senha.trim()) {
+      setError('Por favor, preencha todos os campos');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await login(email, senha);
+      
+      if (result.success) {
+        // Navigation will be handled automatically by MainNavigator
+        // based on authentication state and user role
+        // The AuthContext update will trigger a re-render
+      } else {
+        // Display error message from API
+        const errorMessage = result.error || 'Credenciais inválidas. Verifique seu e-mail e senha.';
+        setError(errorMessage);
+      }
+    } catch (error) {
+      // Handle unexpected errors
+      const errorMessage = error.message || 'Ocorreu um erro ao fazer login. Verifique sua conexão e tente novamente.';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -40,11 +71,15 @@ const Login = ({navigation}) => {
             <View style={styles.form}>
               <Text style={styles.label}>E-mail</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, error && styles.inputError]}
                 placeholder="seu@email.com"
                 placeholderTextColor="#999"
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  // Clear error when user starts typing
+                  if (error) setError('');
+                }}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -52,14 +87,25 @@ const Login = ({navigation}) => {
 
               <Text style={styles.label}>Senha</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, error && styles.inputError]}
                 placeholder="Digite sua senha"
                 placeholderTextColor="#999"
                 value={senha}
-                onChangeText={setSenha}
+                onChangeText={(text) => {
+                  setSenha(text);
+                  // Clear error when user starts typing
+                  if (error) setError('');
+                }}
                 secureTextEntry
                 autoCapitalize="none"
               />
+
+              {/* Error message display */}
+              {error ? (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              ) : null}
 
               <TouchableOpacity
                 style={styles.forgotPassword}
@@ -69,8 +115,15 @@ const Login = ({navigation}) => {
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-                <Text style={styles.loginButtonText}>Entrar</Text>
+              <TouchableOpacity 
+                style={[styles.loginButton, loading && styles.loginButtonDisabled]} 
+                onPress={handleLogin}
+                disabled={loading}>
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.loginButtonText}>Entrar</Text>
+                )}
               </TouchableOpacity>
 
               <View style={styles.signupContainer}>
@@ -158,6 +211,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  loginButtonDisabled: {
+    opacity: 0.6,
+  },
   signupContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -171,6 +227,24 @@ const styles = StyleSheet.create({
     color: '#1a73e8',
     fontSize: 14,
     fontWeight: '600',
+  },
+  errorContainer: {
+    backgroundColor: '#ffebee',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    marginBottom: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#d32f2f',
+  },
+  errorText: {
+    color: '#d32f2f',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  inputError: {
+    borderColor: '#d32f2f',
+    borderWidth: 1,
   },
 });
 

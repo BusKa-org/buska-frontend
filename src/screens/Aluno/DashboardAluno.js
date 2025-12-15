@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -6,42 +6,145 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
+import { alunoService } from '../../services';
+import { useAuth } from '../../contexts/AuthContext';
 
 const DashboardAluno = ({navigation}) => {
-  // Dados mockados
-  const rotasCadastradas = [
-    {
-      id: 1,
-      nome: 'Rota Centro - Zona Norte',
-      bairro: 'Centro',
-      proximaViagem: {
-        horario: '07:30',
-        tipo: 'Manhã',
-        status: 'Confirmado',
-      },
-    },
-    {
-      id: 2,
-      nome: 'Rota Centro - Zona Sul',
-      bairro: 'Centro',
-      proximaViagem: {
-        horario: '13:00',
-        tipo: 'Tarde',
-        status: 'Não confirmado',
-      },
-    },
-  ];
+  const [rotasCadastradas, setRotasCadastradas] = useState([]);
+  const [proximaViagem, setProximaViagem] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const { user } = useAuth();
 
-  const proximaViagem = rotasCadastradas[0]?.proximaViagem;
+  const getRoleLabel = (role) => {
+    const roleMap = {
+      'aluno': 'Aluno',
+      'motorista': 'Motorista',
+      'gestor': 'Gestor'
+    };
+    return roleMap[role] || role;
+  };
+
+  const getUserInfo = () => {
+    const roleLabel = getRoleLabel(user?.role);
+    const municipioInfo = user?.municipio 
+      ? `${user.municipio.nome}${user.municipio.uf ? ` - ${user.municipio.uf}` : ''}`
+      : '';
+    return municipioInfo ? `${roleLabel} • ${municipioInfo}` : roleLabel;
+  };
+
+  const loadData = async () => {
+    try {
+      // Load enrolled routes
+      const rotas = await alunoService.listarMinhasRotas();
+      setRotasCadastradas(rotas || []);
+
+      // Load all available trips (not just confirmed ones) to find the next one
+      const todasViagens = await alunoService.listarViagens();
+      
+      if (todasViagens && todasViagens.length > 0 && rotas.length > 0) {
+        // Filter trips for enrolled routes only
+        const rotasIds = rotas.map(r => r.id);
+        const viagensRotas = todasViagens.filter(v => rotasIds.includes(v.rota_id));
+        
+        // Sort by date and time, find the next upcoming trip
+        const now = new Date();
+        const upcomingTrips = viagensRotas
+          .filter((v) => {
+            try {
+              const tripDate = new Date(v.data);
+              const tripDateTime = v.horario_inicio 
+                ? new Date(`${v.data}T${v.horario_inicio}`)
+                : tripDate;
+              return tripDateTime >= now;
+            } catch (e) {
+              return false;
+            }
+          })
+          .sort((a, b) => {
+            try {
+              const dateA = new Date(`${a.data}T${a.horario_inicio || '00:00'}`);
+              const dateB = new Date(`${b.data}T${b.horario_inicio || '00:00'}`);
+              return dateA - dateB;
+            } catch (e) {
+              return 0;
+            }
+          });
+
+        if (upcomingTrips.length > 0) {
+          const nextTrip = upcomingTrips[0];
+          
+          // Check presenca status for this trip
+          let presencaStatus = 'Não confirmado';
+          try {
+            const presencaData = await alunoService.obterPresencaViagem(nextTrip.id);
+            presencaStatus = presencaData.presente ? 'Confirmado' : 'Não confirmado';
+          } catch (error) {
+            console.error('Error loading presenca status:', error);
+          }
+          
+          setProximaViagem({
+            id: nextTrip.id,
+            horario: nextTrip.horario_inicio
+              ? nextTrip.horario_inicio.substring(0, 5)
+              : '--:--',
+            tipo: nextTrip.tipo,
+            status: presencaStatus,
+            rota_id: nextTrip.rota_id,
+            data: nextTrip.data,
+          });
+        } else {
+          setProximaViagem(null);
+        }
+      } else {
+        setProximaViagem(null);
+      }
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      setProximaViagem(null);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadData();
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#1a73e8" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.greeting}>Olá, João Silva! 👋</Text>
-          <Text style={styles.subtitle}>Bem-vindo ao transporte escolar</Text>
+          <Text style={styles.greeting}>
+            Olá, {user?.nome || 'Aluno'}! 👋
+          </Text>
+          <Text style={styles.subtitle}>
+            {getUserInfo()}
+          </Text>
         </View>
 
         {/* Próxima Viagem Destacada */}
@@ -62,18 +165,24 @@ const DashboardAluno = ({navigation}) => {
                 </View>
               </View>
               <Text style={styles.viagemRota}>
-                {rotasCadastradas[0].nome}
+                {rotasCadastradas.find((r) => r.id === proximaViagem.rota_id)
+                  ?.nome || 'Rota'}
               </Text>
               <Text style={styles.viagemTipo}>{proximaViagem.tipo}</Text>
             </View>
             <TouchableOpacity
               style={styles.verDetalhesButton}
-              onPress={() =>
-                navigation.navigate('DetalheViagem', {
-                  rota: rotasCadastradas[0],
-                  viagem: proximaViagem,
-                })
-              }>
+              onPress={() => {
+                const rotaViagem = rotasCadastradas.find(
+                  (r) => r.id === proximaViagem.rota_id
+                );
+                if (rotaViagem) {
+                  navigation.navigate('DetalheViagem', {
+                    rota: rotaViagem,
+                    viagem: proximaViagem,
+                  });
+                }
+              }}>
               <Text style={styles.verDetalhesText}>Ver Detalhes</Text>
             </TouchableOpacity>
           </View>
@@ -113,25 +222,37 @@ const DashboardAluno = ({navigation}) => {
             </TouchableOpacity>
           </View>
 
-          {rotasCadastradas.map((rota) => (
-            <TouchableOpacity
-              key={rota.id}
-              style={styles.rotaCard}
-              onPress={() => navigation.navigate('RotaAluno', {rota})}>
-              <View style={styles.rotaInfo}>
-                <Text style={styles.rotaNome}>{rota.nome}</Text>
-                <Text style={styles.rotaBairro}>{rota.bairro}</Text>
-              </View>
-              <View style={styles.rotaStatus}>
-                <Text style={styles.rotaStatusText}>
-                  {rota.proximaViagem.status}
+          {rotasCadastradas.length > 0 ? (
+            rotasCadastradas.map((rota) => (
+              <TouchableOpacity
+                key={rota.id}
+                style={styles.rotaCard}
+                onPress={() => navigation.navigate('RotaAluno', {rota})}>
+                <View style={styles.rotaInfo}>
+                  <Text style={styles.rotaNome}>{rota.nome}</Text>
+                  <Text style={styles.rotaBairro}>
+                    {rota.municipio_nome || `Município ID: ${rota.municipio_id}`}
+                  </Text>
+                </View>
+                <View style={styles.rotaStatus}>
+                  <Text style={styles.rotaStatusText}>Cadastrado</Text>
+                </View>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>
+                Você ainda não está cadastrado em nenhuma rota
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyStateButton}
+                onPress={() => navigation.navigate('SelecaoRotas')}>
+                <Text style={styles.emptyStateButtonText}>
+                  Ver rotas disponíveis
                 </Text>
-                <Text style={styles.rotaHorario}>
-                  {rota.proximaViagem.horario}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Configurações */}
@@ -328,6 +449,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     fontWeight: '500',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  emptyStateButton: {
+    backgroundColor: '#1a73e8',
+    borderRadius: 8,
+    padding: 12,
+    paddingHorizontal: 24,
+  },
+  emptyStateButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

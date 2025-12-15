@@ -8,48 +8,10 @@ import {
   ScrollView,
 } from 'react-native';
 
-const RotaOtimizada = ({navigation}) => {
+const RotaOtimizada = ({navigation, route}) => {
+  const {viagem} = route?.params || {};
   const [totalmenteOtimizada, setTotalmenteOtimizada] = useState(false);
-
-  // Pontos ordenados após otimização
-  const pontosOtimizados = [
-    {
-      id: 1,
-      nome: 'Centro - Rua Principal',
-      ordem: 1,
-      alunosConfirmados: 5,
-      confirmadoAposInicio: false,
-    },
-    {
-      id: 2,
-      nome: 'Praça da República',
-      ordem: 2,
-      alunosConfirmados: 3,
-      confirmadoAposInicio: false,
-    },
-    {
-      id: 3,
-      nome: 'Avenida Principal',
-      ordem: 3,
-      alunosConfirmados: 4,
-      confirmadoAposInicio: false,
-    },
-    {
-      id: 4,
-      nome: 'Rua das Flores',
-      ordem: 4,
-      alunosConfirmados: 2,
-      confirmadoAposInicio: true, // Confirmado após início
-    },
-    {
-      id: 5,
-      nome: 'Escola Municipal',
-      ordem: 5,
-      alunosConfirmados: 0,
-      confirmadoAposInicio: false,
-      tipo: 'destino',
-    },
-  ];
+  const [pontosOtimizados, setPontosOtimizados] = useState([]);
 
   const pontosForaDeOrdem = pontosOtimizados.filter(
     (p) => p.confirmadoAposInicio,
@@ -96,7 +58,10 @@ const RotaOtimizada = ({navigation}) => {
           {/* Lista de Pontos Ordenados */}
           <View style={styles.pontosContainer}>
             <Text style={styles.sectionTitle}>Ordem dos Pontos</Text>
-            {pontosOtimizados.map((ponto, index) => (
+            {pontosOtimizados.length === 0 ? (
+              <Text style={styles.emptyText}>Nenhum ponto disponível</Text>
+            ) : (
+              pontosOtimizados.map((ponto, index) => (
               <View
                 key={ponto.id}
                 style={[
@@ -133,7 +98,8 @@ const RotaOtimizada = ({navigation}) => {
                   </View>
                 )}
               </View>
-            ))}
+              ))
+            )}
           </View>
 
           {/* Informações Adicionais */}
@@ -370,6 +336,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 24,
   },
 });
 

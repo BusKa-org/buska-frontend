@@ -9,50 +9,8 @@ import {
 } from 'react-native';
 
 const ListaAlunosConfirmados = ({navigation, route}) => {
-  const viagem = route?.params?.viagem || {
-    id: 1,
-    tipo: 'Manhã',
-    horario: '07:30',
-  };
-
-  // Dados mockados - alunos confirmados
-  const [alunos, setAlunos] = useState([
-    {
-      id: 1,
-      nome: 'João Silva',
-      pontoEmbarque: 'Centro - Rua Principal',
-      confirmadoAntes: true,
-      foto: null,
-    },
-    {
-      id: 2,
-      nome: 'Maria Santos',
-      pontoEmbarque: 'Centro - Praça da República',
-      confirmadoAntes: true,
-      foto: null,
-    },
-    {
-      id: 3,
-      nome: 'Pedro Oliveira',
-      pontoEmbarque: 'Avenida Principal',
-      confirmadoAntes: false, // Confirmado após início da viagem
-      foto: null,
-    },
-    {
-      id: 4,
-      nome: 'Ana Costa',
-      pontoEmbarque: 'Centro - Rua Principal',
-      confirmadoAntes: true,
-      foto: null,
-    },
-    {
-      id: 5,
-      nome: 'Lucas Ferreira',
-      pontoEmbarque: 'Praça da República',
-      confirmadoAntes: false, // Confirmado após início da viagem
-      foto: null,
-    },
-  ]);
+  const viagem = route?.params?.viagem || {};
+  const [alunos, setAlunos] = useState([]);
 
   return (
     <SafeAreaView style={styles.container}>

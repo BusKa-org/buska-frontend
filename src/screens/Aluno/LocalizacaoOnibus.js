@@ -11,21 +11,40 @@ import {
 const {width, height} = Dimensions.get('window');
 
 const LocalizacaoOnibus = ({navigation, route}) => {
-  const {rota, viagem} = route?.params || {
-    rota: {
-      id: 1,
-      nome: 'Rota Centro - Zona Norte',
-    },
-    viagem: {
-      horario: '07:30',
-    },
-  };
+  const {rota, viagem} = route?.params || {};
 
-  const [distanciaAluno, setDistanciaAluno] = useState(850); // metros
-  const [posicaoOnibus, setPosicaoOnibus] = useState({x: 100, y: 200});
+  if (!rota || !viagem) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
+            <Text style={styles.backButtonText}>← Voltar</Text>
+          </TouchableOpacity>
+          <View style={styles.headerInfo}>
+            <Text style={styles.headerTitle}>Localização do Ônibus</Text>
+          </View>
+        </View>
+        <View style={styles.content}>
+          <Text style={styles.emptyText}>Dados da rota não disponíveis</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
-  // Simula movimento do ônibus
+  const [distanciaAluno, setDistanciaAluno] = useState(0);
+  const [posicaoOnibus, setPosicaoOnibus] = useState({x: 0, y: 0});
+  const [pontosRota, setPontosRota] = useState([]);
+  const [posicaoAluno, setPosicaoAluno] = useState({x: 0, y: 0});
+
+  // Simula movimento do ônibus (quando dados reais estiverem disponíveis)
   useEffect(() => {
+    if (pontosRota.length > 0 && posicaoOnibus.x === 0 && posicaoOnibus.y === 0) {
+      // Inicializar posição quando dados estiverem disponíveis
+      return;
+    }
+    
     const interval = setInterval(() => {
       setPosicaoOnibus((prev) => ({
         x: prev.x + (Math.random() - 0.5) * 10,
@@ -35,24 +54,7 @@ const LocalizacaoOnibus = ({navigation, route}) => {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, []);
-
-  // Pontos da rota (coordenadas simuladas)
-  const pontosRota = [
-    {id: 1, nome: 'Centro', x: 50, y: 100, tipo: 'origem'},
-    {id: 2, nome: 'Praça da República', x: width / 2, y: 150, tipo: 'parada'},
-    {id: 3, nome: 'Avenida Principal', x: width - 100, y: 250, tipo: 'parada'},
-    {
-      id: 4,
-      nome: 'Escola Municipal',
-      x: width - 80,
-      y: height - 200,
-      tipo: 'destino',
-    },
-  ];
-
-  // Posição do aluno (simulada)
-  const posicaoAluno = {x: width - 100, y: height - 150};
+  }, [pontosRota]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -72,7 +74,13 @@ const LocalizacaoOnibus = ({navigation, route}) => {
       {/* Mapa em Tela Cheia */}
       <View style={styles.mapaContainer}>
         {/* Pontos da Rota */}
-        {pontosRota.map((ponto) => (
+        {pontosRota.length === 0 ? (
+          <View style={styles.emptyMapState}>
+            <Text style={styles.emptyMapText}>Carregando mapa...</Text>
+          </View>
+        ) : (
+          <>
+            {pontosRota.map((ponto) => (
           <View
             key={ponto.id}
             style={[
@@ -95,7 +103,7 @@ const LocalizacaoOnibus = ({navigation, route}) => {
           </View>
         ))}
 
-        {/* Linha da Rota */}
+            {/* Linha da Rota */}
         <View style={styles.rotaLine} />
 
         {/* Marcador do Ônibus */}
@@ -123,8 +131,10 @@ const LocalizacaoOnibus = ({navigation, route}) => {
           <Text style={styles.alunoIcon}>👤</Text>
         </View>
 
-        {/* Linha entre ônibus e aluno */}
-        <View style={styles.distanciaLine} />
+            {/* Linha entre ônibus e aluno */}
+            <View style={styles.distanciaLine} />
+          </>
+        )}
       </View>
 
       {/* Painel de Informações */}
@@ -313,6 +323,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#34a853',
     fontWeight: '600',
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
+  emptyMapState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyMapText: {
+    fontSize: 16,
+    color: '#666',
   },
 });
 

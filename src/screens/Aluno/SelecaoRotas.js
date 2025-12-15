@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -7,66 +7,91 @@ import {
   SafeAreaView,
   ScrollView,
   TextInput,
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
 } from 'react-native';
+import { alunoService } from '../../services';
 
 const SelecaoRotas = ({navigation}) => {
   const [busca, setBusca] = useState('');
+  const [rotasDisponiveis, setRotasDisponiveis] = useState([]);
+  const [rotasInscritas, setRotasInscritas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [subscribing, setSubscribing] = useState(null);
 
-  // Dados mockados - todas as rotas disponíveis no município
-  const rotasDisponiveis = [
-    {
-      id: 1,
-      nome: 'Rota Centro - Zona Norte',
-      bairroOrigem: 'Centro',
-      distancia: '2.5 km',
-      alunosCadastrados: 25,
-      capacidade: 40,
-    },
-    {
-      id: 2,
-      nome: 'Rota Centro - Zona Sul',
-      bairroOrigem: 'Centro',
-      distancia: '3.2 km',
-      alunosCadastrados: 18,
-      capacidade: 40,
-    },
-    {
-      id: 3,
-      nome: 'Rota Jardim América - Centro',
-      bairroOrigem: 'Jardim América',
-      distancia: '1.8 km',
-      alunosCadastrados: 32,
-      capacidade: 40,
-    },
-    {
-      id: 4,
-      nome: 'Rota Vila Nova - Escola Municipal',
-      bairroOrigem: 'Vila Nova',
-      distancia: '4.1 km',
-      alunosCadastrados: 15,
-      capacidade: 40,
-    },
-    {
-      id: 5,
-      nome: 'Rota Bela Vista - Zona Leste',
-      bairroOrigem: 'Bela Vista',
-      distancia: '2.9 km',
-      alunosCadastrados: 28,
-      capacidade: 40,
-    },
-  ];
+  const loadRotas = async () => {
+    try {
+      // Carregar todas as rotas disponíveis
+      const rotas = await alunoService.listarRotas();
+      
+      // Carregar rotas em que o aluno já está inscrito
+      const rotasInscritasData = await alunoService.listarMinhasRotas();
+      
+      setRotasDisponiveis(rotas || []);
+      setRotasInscritas(rotasInscritasData || []);
+    } catch (error) {
+      console.error('Error loading routes:', error);
+      Alert.alert(
+        'Erro',
+        'Não foi possível carregar as rotas. Tente novamente.',
+      );
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
-  const rotasFiltradas = rotasDisponiveis.filter(
-    (rota) =>
-      rota.nome.toLowerCase().includes(busca.toLowerCase()) ||
-      rota.bairroOrigem.toLowerCase().includes(busca.toLowerCase()),
+  useEffect(() => {
+    loadRotas();
+  }, []);
+
+  // Filtrar rotas: excluir as que o aluno já está inscrito
+  const rotasIdsInscritas = rotasInscritas.map((r) => r.id);
+  const rotasDisponiveisFiltradas = rotasDisponiveis.filter(
+    (rota) => !rotasIdsInscritas.includes(rota.id),
   );
 
-  const handleCadastrar = (rota) => {
-    // Simulação de cadastro
-    console.log('Cadastrar na rota:', rota);
-    // Aqui você mostraria uma confirmação e depois voltaria para o dashboard
-    navigation.goBack();
+  const rotasFiltradas = rotasDisponiveisFiltradas.filter(
+    (rota) =>
+      rota.nome.toLowerCase().includes(busca.toLowerCase()),
+  );
+
+  const handleCadastrar = async (rota) => {
+    try {
+      setSubscribing(rota.id);
+      await alunoService.gerenciarInscricaoRota(rota.id, 'inscrever');
+      
+      // Atualizar a lista de rotas inscritas e remover da lista de disponíveis
+      const rotasInscritasAtualizadas = await alunoService.listarMinhasRotas();
+      setRotasInscritas(rotasInscritasAtualizadas || []);
+      
+      // Remover a rota da lista de disponíveis
+      setRotasDisponiveis(rotasDisponiveis.filter((r) => r.id !== rota.id));
+      
+      Alert.alert('Sucesso', 'Você foi cadastrado nesta rota!', [
+        {
+          text: 'OK',
+          onPress: () => {
+            navigation.goBack();
+          },
+        },
+      ]);
+    } catch (error) {
+      console.error('Error subscribing to route:', error);
+      Alert.alert(
+        'Erro',
+        error?.message || 'Não foi possível cadastrar na rota. Tente novamente.',
+      );
+    } finally {
+      setSubscribing(null);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadRotas();
   };
 
   return (
@@ -91,15 +116,23 @@ const SelecaoRotas = ({navigation}) => {
         />
       </View>
 
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.content}>
-          <Text style={styles.sectionTitle}>
-            Rotas Disponíveis ({rotasFiltradas.length})
-          </Text>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#1a73e8" />
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.scrollView}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }>
+          <View style={styles.content}>
+            <Text style={styles.sectionTitle}>
+              Rotas Disponíveis ({rotasFiltradas.length})
+            </Text>
 
-          {rotasFiltradas.map((rota) => {
-            const vagasDisponiveis = rota.capacidade - rota.alunosCadastrados;
-            const temVagas = vagasDisponiveis > 0;
+            {rotasFiltradas.map((rota) => {
+              const isSubscribing = subscribing === rota.id;
 
             return (
               <View key={rota.id} style={styles.rotaCard}>
@@ -108,51 +141,27 @@ const SelecaoRotas = ({navigation}) => {
                     <Text style={styles.rotaNome}>{rota.nome}</Text>
                     <View style={styles.rotaMeta}>
                       <Text style={styles.rotaBairro}>
-                        📍 {rota.bairroOrigem}
-                      </Text>
-                      <Text style={styles.rotaDistancia}>
-                        📏 {rota.distancia} da sua casa
+                        📍 {rota.municipio_nome || `Município ID: ${rota.municipio_id}`}
                       </Text>
                     </View>
                   </View>
                 </View>
 
                 <View style={styles.rotaFooter}>
-                  <View style={styles.vagasInfo}>
-                    <Text style={styles.vagasText}>
-                      {vagasDisponiveis} vagas disponíveis
-                    </Text>
-                    <View
-                      style={[
-                        styles.vagasBar,
-                        temVagas ? styles.vagasBarOk : styles.vagasBarFull,
-                      ]}>
-                      <View
-                        style={[
-                          styles.vagasBarFill,
-                          {
-                            width: `${(rota.alunosCadastrados / rota.capacidade) * 100}%`,
-                          },
-                          temVagas ? styles.vagasBarFillOk : styles.vagasBarFillFull,
-                        ]}
-                      />
-                    </View>
-                  </View>
-
                   <TouchableOpacity
                     style={[
                       styles.cadastrarButton,
-                      !temVagas && styles.cadastrarButtonDisabled,
+                      isSubscribing && styles.cadastrarButtonDisabled,
                     ]}
                     onPress={() => handleCadastrar(rota)}
-                    disabled={!temVagas}>
-                    <Text
-                      style={[
-                        styles.cadastrarButtonText,
-                        !temVagas && styles.cadastrarButtonTextDisabled,
-                      ]}>
-                      {temVagas ? 'Cadastrar nesta rota' : 'Sem vagas'}
-                    </Text>
+                    disabled={isSubscribing}>
+                    {isSubscribing ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={styles.cadastrarButtonText}>
+                        Cadastrar nesta rota
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -169,8 +178,9 @@ const SelecaoRotas = ({navigation}) => {
               </Text>
             </View>
           )}
-        </View>
-      </ScrollView>
+          </View>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 };
@@ -320,6 +330,12 @@ const styles = StyleSheet.create({
   emptyStateSubtext: {
     fontSize: 14,
     color: '#999',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 48,
   },
 });
 

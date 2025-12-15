@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect, useMemo} from 'react';
 import {
   View,
   Text,
@@ -6,45 +6,112 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  Alert,
 } from 'react-native';
+import { alunoService } from '../../services';
 
 const DetalheViagem = ({navigation, route}) => {
-  const {rota, viagem} = route?.params || {
-    rota: {
-      id: 1,
-      nome: 'Rota Centro - Zona Norte',
-      bairro: 'Centro',
-    },
-    viagem: {
-      id: 1,
-      tipo: 'Manhã',
-      horario: '07:30',
-      status: 'Confirmado',
-      origem: 'Centro',
-      destino: 'Escola Municipal',
-    },
-  };
+  const {rota, viagem} = route?.params || {};
+
+  if (!rota || !viagem) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
+            <Text style={styles.backButtonText}>← Voltar</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>Detalhes da Viagem</Text>
+        </View>
+        <View style={styles.content}>
+          <Text style={styles.emptyText}>Dados da viagem não disponíveis</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const [situacaoViagem, setSituacaoViagem] = useState('não iniciada');
-  const [presencaConfirmada, setPresencaConfirmada] = useState(
-    viagem.status === 'Confirmado',
-  );
+  const [presencaConfirmada, setPresencaConfirmada] = useState(false);
+  const [carregandoPresenca, setCarregandoPresenca] = useState(true);
+  const [pontosRota, setPontosRota] = useState([]);
+  const [carregandoPontos, setCarregandoPontos] = useState(true);
 
-  // Simula pontos da rota
-  const pontosRota = [
-    {id: 1, nome: 'Centro', tipo: 'origem'},
-    {id: 2, nome: 'Praça da República', tipo: 'parada'},
-    {id: 3, nome: 'Avenida Principal', tipo: 'parada'},
-    {id: 4, nome: 'Escola Municipal', tipo: 'destino'},
-  ];
+  useEffect(() => {
+    const carregarPresenca = async () => {
+      if (viagem?.id) {
+        try {
+          const presencaData = await alunoService.obterPresencaViagem(viagem.id);
+          setPresencaConfirmada(presencaData.presente || false);
+        } catch (error) {
+          console.error('Erro ao carregar presença:', error);
+          setPresencaConfirmada(false);
+        } finally {
+          setCarregandoPresenca(false);
+        }
+      } else {
+        setCarregandoPresenca(false);
+      }
+    };
+
+    carregarPresenca();
+  }, [viagem?.id]);
+
+  useEffect(() => {
+    const carregarPontos = async () => {
+      if (rota?.id) {
+        try {
+          setCarregandoPontos(true);
+          const pontos = await alunoService.listarPontosRota(rota.id);
+          setPontosRota(pontos || []);
+        } catch (error) {
+          console.error('Erro ao carregar pontos da rota:', error);
+          setPontosRota([]);
+        } finally {
+          setCarregandoPontos(false);
+        }
+      } else {
+        setCarregandoPontos(false);
+      }
+    };
+
+    carregarPontos();
+  }, [rota?.id]);
 
   const podeConfirmarPresenca = () => {
     // Pode confirmar se estiver dentro da janela de 10 minutos após início
     return situacaoViagem === 'em andamento';
   };
 
-  const handleConfirmarPresenca = () => {
-    setPresencaConfirmada(true);
+  const handleConfirmarPresenca = async () => {
+    try {
+      // Atualizar o estado imediatamente para feedback visual
+      console.log('Confirmando presença, estado atual:', presencaConfirmada);
+      setPresencaConfirmada(true);
+      console.log('Estado atualizado para: true');
+      
+      await alunoService.alterarPresencaViagem(viagem.id, true);
+      
+      // Buscar o status atualizado da API para garantir consistência
+      const presencaData = await alunoService.obterPresencaViagem(viagem.id);
+      console.log('Dados da API:', presencaData);
+      setPresencaConfirmada(presencaData.presente || false);
+      console.log('Estado final:', presencaData.presente || false);
+      
+      Alert.alert('Sucesso', 'Presença confirmada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao confirmar presença:', error);
+      // Reverter o estado em caso de erro
+      setPresencaConfirmada(false);
+      Alert.alert('Erro', error.message || 'Não foi possível confirmar a presença.');
+      // Em caso de erro, tentar recarregar o status atual
+      try {
+        const presencaData = await alunoService.obterPresencaViagem(viagem.id);
+        setPresencaConfirmada(presencaData.presente || false);
+      } catch (e) {
+        // Ignorar erro ao recarregar
+      }
+    }
   };
 
   const getSituacaoColor = (situacao) => {
@@ -59,6 +126,20 @@ const DetalheViagem = ({navigation, route}) => {
         return '#999';
     }
   };
+
+  // Memoizar os estilos de presença para garantir que sejam recalculados quando o estado mudar
+  const presencaContainerStyle = useMemo(() => [
+    styles.presencaStatus,
+    presencaConfirmada
+      ? styles.presencaConfirmada
+      : styles.presencaNaoConfirmada,
+  ], [presencaConfirmada]);
+
+  const presencaTextStyle = useMemo(() => 
+    presencaConfirmada
+      ? [styles.presencaText, styles.presencaTextConfirmada]
+      : styles.presencaText,
+  [presencaConfirmada]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -124,17 +205,9 @@ const DetalheViagem = ({navigation, route}) => {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Status de Presença</Text>
             <View
-              style={[
-                styles.presencaStatus,
-                presencaConfirmada
-                  ? styles.presencaConfirmada
-                  : styles.presencaNaoConfirmada,
-              ]}>
+              style={presencaContainerStyle}>
               <Text
-                style={[
-                  styles.presencaText,
-                  presencaConfirmada && styles.presencaTextConfirmada,
-                ]}>
+                style={presencaTextStyle}>
                 {presencaConfirmada
                   ? '✓ Presença Confirmada'
                   : '✗ Presença Não Confirmada'}
@@ -158,7 +231,10 @@ const DetalheViagem = ({navigation, route}) => {
           {/* Pontos da Rota */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Pontos da Rota</Text>
-            {pontosRota.map((ponto, index) => (
+            {carregandoPontos ? (
+              <Text style={styles.loadingText}>Carregando pontos...</Text>
+            ) : pontosRota.length > 0 ? (
+              pontosRota.map((ponto, index) => (
               <View key={ponto.id} style={styles.pontoItem}>
                 <View style={styles.pontoItemLeft}>
                   <View
@@ -190,7 +266,10 @@ const DetalheViagem = ({navigation, route}) => {
                   </Text>
                 </View>
               </View>
-            ))}
+            ))
+            ) : (
+              <Text style={styles.emptyText}>Nenhum ponto cadastrado para esta rota</Text>
+            )}
           </View>
 
           {/* Mapa Simplificado */}
@@ -346,10 +425,10 @@ const styles = StyleSheet.create({
   presencaText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fbbc04',
+    color: '#fbbc04', // Cor padrão (amarelo) quando não confirmado
   },
   presencaTextConfirmada: {
-    color: '#34a853',
+    color: '#34a853', // Cor verde quando confirmado (sobrescreve a cor padrão)
   },
   confirmarButton: {
     backgroundColor: '#1a73e8',
@@ -447,6 +526,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 24,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    padding: 16,
   },
 });
 

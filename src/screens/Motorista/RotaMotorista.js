@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -6,42 +6,16 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
 } from 'react-native';
+import {motoristaService} from '../../services/motoristaService';
 
 const RotaMotorista = ({navigation, route}) => {
-  // Dados mockados - viagens do dia
-  const viagens = [
-    {
-      id: 1,
-      tipo: 'Manhã',
-      horario: '07:30',
-      origem: 'Centro',
-      destino: 'Escola Municipal',
-      status: 'A iniciar',
-      alunosConfirmados: 18,
-      totalAlunos: 25,
-    },
-    {
-      id: 2,
-      tipo: 'Tarde',
-      horario: '13:00',
-      origem: 'Centro',
-      destino: 'Escola Municipal',
-      status: 'A iniciar',
-      alunosConfirmados: 15,
-      totalAlunos: 25,
-    },
-    {
-      id: 3,
-      tipo: 'Noite',
-      horario: '17:30',
-      origem: 'Escola Municipal',
-      destino: 'Centro',
-      status: 'Finalizada',
-      alunosConfirmados: 22,
-      totalAlunos: 25,
-    },
-  ];
+  const [rotas, setRotas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -56,17 +30,29 @@ const RotaMotorista = ({navigation, route}) => {
     }
   };
 
-  const getStatusBgColor = (status) => {
-    switch (status) {
-      case 'A iniciar':
-        return '#fff3cd';
-      case 'Em andamento':
-        return '#e3f2fd';
-      case 'Finalizada':
-        return '#e8f5e9';
-      default:
-        return '#f5f5f5';
+  const loadRotas = async () => {
+    try {
+      const rotasData = await motoristaService.listarRotas();
+      setRotas(rotasData || []);
+    } catch (error) {
+      console.error('Error loading routes:', error);
+      Alert.alert(
+        'Erro',
+        'Não foi possível carregar as rotas. Tente novamente.',
+      );
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  useEffect(() => {
+    loadRotas();
+  }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadRotas();
   };
 
   return (
@@ -77,104 +63,84 @@ const RotaMotorista = ({navigation, route}) => {
           onPress={() => navigation.goBack()}>
           <Text style={styles.backButtonText}>← Voltar</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Rotas do Dia</Text>
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>Minhas Rotas</Text>
+          <TouchableOpacity
+            style={styles.criarRotaButton}
+            onPress={() => navigation.navigate('CriarRota')}>
+            <Text style={styles.criarRotaButtonText}>+ Nova Rota</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.content}>
-          {viagens.map((viagem) => (
-            <View key={viagem.id} style={styles.viagemCard}>
-              <View style={styles.viagemHeader}>
-                <View style={styles.viagemInfo}>
-                  <View style={styles.viagemTipoContainer}>
-                    <Text style={styles.viagemTipo}>{viagem.tipo}</Text>
-                    <Text style={styles.viagemHorario}>{viagem.horario}</Text>
-                  </View>
-                  <View style={styles.rotaInfo}>
-                    <View style={styles.pontoRota}>
-                      <Text style={styles.pontoIcon}>📍</Text>
-                      <Text style={styles.pontoNome}>{viagem.origem}</Text>
-                    </View>
-                    <View style={styles.linhaRota} />
-                    <View style={styles.pontoRota}>
-                      <Text style={styles.pontoIcon}>🎯</Text>
-                      <Text style={styles.pontoNome}>{viagem.destino}</Text>
-                    </View>
-                  </View>
-                </View>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    {backgroundColor: getStatusBgColor(viagem.status)},
-                  ]}>
-                  <Text
-                    style={[
-                      styles.statusText,
-                      {color: getStatusColor(viagem.status)},
-                    ]}>
-                    {viagem.status}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.alunosInfo}>
-                <Text style={styles.alunosText}>
-                  {viagem.alunosConfirmados} de {viagem.totalAlunos} alunos
-                  confirmados
-                </Text>
-                <View style={styles.alunosBar}>
-                  <View
-                    style={[
-                      styles.alunosBarFill,
-                      {
-                        width: `${
-                          (viagem.alunosConfirmados / viagem.totalAlunos) * 100
-                        }%`,
-                      },
-                    ]}
-                  />
-                </View>
-              </View>
-
-              <TouchableOpacity
-                style={styles.detalhesButton}
-                onPress={() =>
-                  navigation.navigate('DetalheViagemMotorista', {viagem})
-                }>
-                <Text style={styles.detalhesButtonText}>Ver Detalhes →</Text>
-              </TouchableOpacity>
-
-              {viagem.status === 'A iniciar' && (
-                <TouchableOpacity
-                  style={styles.acaoButton}
-                  onPress={() =>
-                    navigation.navigate('InicioFimViagem', {viagem})
-                  }>
-                  <Text style={styles.acaoButtonText}>Iniciar Viagem</Text>
-                </TouchableOpacity>
-              )}
-
-              {viagem.status === 'Em andamento' && (
-                <TouchableOpacity
-                  style={styles.acaoButton}
-                  onPress={() =>
-                    navigation.navigate('ListaAlunosConfirmados', {viagem})
-                  }>
-                  <Text style={styles.acaoButtonText}>
-                    Ver Alunos Confirmados
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              {viagem.status === 'Finalizada' && (
-                <View style={styles.finalizadaInfo}>
-                  <Text style={styles.finalizadaText}>✓ Viagem finalizada</Text>
-                </View>
-              )}
-            </View>
-          ))}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#1a73e8" />
         </View>
-      </ScrollView>
+      ) : (
+        <ScrollView
+          style={styles.scrollView}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }>
+          <View style={styles.content}>
+            {rotas.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>
+                  Nenhuma rota cadastrada ainda
+                </Text>
+                <Text style={styles.emptySubtext}>
+                  Crie sua primeira rota para começar
+                </Text>
+                <TouchableOpacity
+                  style={styles.emptyButton}
+                  onPress={() => navigation.navigate('CriarRota')}>
+                  <Text style={styles.emptyButtonText}>Criar Primeira Rota</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                {rotas.map((rota) => (
+                  <View key={rota.id} style={styles.rotaCard}>
+                    <View style={styles.rotaHeader}>
+                      <View style={styles.rotaInfo}>
+                        <Text style={styles.rotaNome}>{rota.nome}</Text>
+                        <Text style={styles.rotaId}>ID: {rota.id}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.rotaActions}>
+                      <TouchableOpacity
+                        style={styles.acaoButton}
+                        onPress={() =>
+                          navigation.navigate('DefinirPontosRota', {
+                            rota: rota,
+                            isNovaRota: false,
+                          })
+                        }>
+                        <Text style={styles.acaoButtonText}>
+                          📍 Gerenciar Pontos
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.acaoButton, styles.acaoButtonSecondary]}
+                        onPress={() =>
+                          navigation.navigate('CriarViagem', {
+                            rota: rota,
+                          })
+                        }>
+                        <Text style={styles.acaoButtonText}>
+                          🚗 Criar Viagem
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </>
+            )}
+          </View>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 };
@@ -197,10 +163,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1a73e8',
   },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
+    flex: 1,
+  },
+  criarRotaButton: {
+    backgroundColor: '#34a853',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  criarRotaButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 48,
   },
   scrollView: {
     flex: 1,
@@ -208,7 +197,7 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
   },
-  viagemCard: {
+  rotaCard: {
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
@@ -216,117 +205,67 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
-  viagemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  rotaHeader: {
     marginBottom: 16,
   },
-  viagemInfo: {
-    flex: 1,
-  },
-  viagemTipoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 12,
-  },
-  viagemTipo: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a73e8',
-  },
-  viagemHorario: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
   rotaInfo: {
-    marginTop: 8,
-  },
-  pontoRota: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginBottom: 8,
   },
-  pontoIcon: {
-    fontSize: 16,
-    marginRight: 8,
-  },
-  pontoNome: {
-    fontSize: 14,
-    color: '#666',
-  },
-  linhaRota: {
-    width: 2,
-    height: 16,
-    backgroundColor: '#e0e0e0',
-    marginLeft: 12,
-    marginBottom: 8,
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    alignSelf: 'flex-start',
-  },
-  statusText: {
-    fontSize: 12,
+  rotaNome: {
+    fontSize: 18,
     fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
   },
-  alunosInfo: {
+  rotaId: {
+    fontSize: 12,
+    color: '#999',
+  },
+  rotaActions: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
-  },
-  alunosText: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  alunosBar: {
-    height: 8,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  alunosBarFill: {
-    height: '100%',
-    backgroundColor: '#34a853',
-    borderRadius: 4,
-  },
-  detalhesButton: {
-    padding: 8,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  detalhesButtonText: {
-    color: '#1a73e8',
-    fontSize: 14,
-    fontWeight: '500',
   },
   acaoButton: {
     backgroundColor: '#1a73e8',
     borderRadius: 8,
     padding: 12,
     alignItems: 'center',
-    marginTop: 8,
+    marginBottom: 8,
+  },
+  acaoButtonSecondary: {
+    backgroundColor: '#34a853',
   },
   acaoButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
-  finalizadaInfo: {
-    marginTop: 12,
-    padding: 12,
-    backgroundColor: '#e8f5e9',
-    borderRadius: 8,
+  emptyState: {
+    padding: 48,
     alignItems: 'center',
   },
-  finalizadaText: {
-    color: '#34a853',
+  emptyText: {
+    fontSize: 18,
+    color: '#666',
+    marginBottom: 8,
+    fontWeight: '600',
+  },
+  emptySubtext: {
     fontSize: 14,
+    color: '#999',
+    marginBottom: 24,
+  },
+  emptyButton: {
+    backgroundColor: '#1a73e8',
+    borderRadius: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  emptyButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

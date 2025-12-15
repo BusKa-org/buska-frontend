@@ -1,8 +1,10 @@
-import React from 'react';
-import {Platform} from 'react-native';
+import React, { useEffect } from 'react';
+import {Platform, View, ActivityIndicator, StyleSheet} from 'react-native';
 import SelecaoFluxo from '../screens/SelecaoFluxo';
 import AlunoNavigator from './AlunoNavigator';
 import MotoristaNavigator from './MotoristaNavigator';
+import AuthNavigator from './AuthNavigator';
+import { useAuth } from '../contexts/AuthContext';
 import {
   NavigationProvider,
   Navigator,
@@ -26,10 +28,32 @@ if (!isWeb) {
 }
 
 const MainNavigator = () => {
+  const { isAuthenticated, user, loading } = useAuth();
+
+  // Log para debug
+  console.log('MainNavigator render:', { isAuthenticated, loading, userId: user?.id });
+
+  // Show loading screen while checking auth status
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#1a73e8" />
+      </View>
+    );
+  }
+
+  // If not authenticated, show auth screens
+  // AuthNavigator already has its own NavigationProvider, so return it directly
+  if (!isAuthenticated) {
+    console.log('MainNavigator: Redirecionando para AuthNavigator');
+    return <AuthNavigator />;
+  }
+
+  // If authenticated, show role-based navigator
   // Se estiver na web ou React Navigation não estiver disponível, usa navegação simples
   if (isWeb || !createNativeStackNavigator) {
     return (
-      <NavigationProvider initialRoute="SelecaoFluxo">
+      <NavigationProvider initialRoute={user?.role === 'aluno' ? 'AlunoNavigator' : 'MotoristaNavigator'}>
         <Navigator>
           <Screen name="SelecaoFluxo" component={SelecaoFluxo} />
           <Screen name="AlunoNavigator" component={AlunoNavigator} />
@@ -48,7 +72,7 @@ const MainNavigator = () => {
 
   return (
     <Stack.Navigator
-      initialRouteName="SelecaoFluxo"
+      initialRouteName={user?.role === 'aluno' ? 'AlunoNavigator' : 'MotoristaNavigator'}
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
@@ -59,6 +83,15 @@ const MainNavigator = () => {
     </Stack.Navigator>
   );
 };
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+});
 
 export default MainNavigator;
 

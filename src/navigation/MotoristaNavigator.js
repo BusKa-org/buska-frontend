@@ -2,6 +2,9 @@ import React from 'react';
 import {Platform} from 'react-native';
 import DashboardMotorista from '../screens/Motorista/DashboardMotorista';
 import RotaMotorista from '../screens/Motorista/RotaMotorista';
+import CriarRota from '../screens/Motorista/CriarRota';
+import CriarViagem from '../screens/Motorista/CriarViagem';
+import ListaViagens from '../screens/Motorista/ListaViagens';
 import DetalheViagemMotorista from '../screens/Motorista/DetalheViagemMotorista';
 import ListaAlunosConfirmados from '../screens/Motorista/ListaAlunosConfirmados';
 import DefinirPontosRota from '../screens/Motorista/DefinirPontosRota';
@@ -39,6 +42,9 @@ const MotoristaNavigator = () => {
         <Navigator>
           <Screen name="DashboardMotorista" component={DashboardMotorista} />
           <Screen name="RotaMotorista" component={RotaMotorista} />
+          <Screen name="CriarRota" component={CriarRota} />
+          <Screen name="CriarViagem" component={CriarViagem} />
+          <Screen name="ListaViagens" component={ListaViagens} />
           <Screen
             name="DetalheViagemMotorista"
             component={DetalheViagemMotorista}
@@ -76,6 +82,9 @@ const MotoristaNavigator = () => {
       }}>
       <Stack.Screen name="DashboardMotorista" component={DashboardMotorista} />
       <Stack.Screen name="RotaMotorista" component={RotaMotorista} />
+      <Stack.Screen name="CriarRota" component={CriarRota} />
+      <Stack.Screen name="CriarViagem" component={CriarViagem} />
+      <Stack.Screen name="ListaViagens" component={ListaViagens} />
       <Stack.Screen
         name="DetalheViagemMotorista"
         component={DetalheViagemMotorista}

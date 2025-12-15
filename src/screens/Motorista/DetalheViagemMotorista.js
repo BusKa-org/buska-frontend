@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -6,32 +6,64 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
+import {motoristaService} from '../../services/motoristaService';
 
 const DetalheViagemMotorista = ({navigation, route}) => {
-  const {viagem} = route?.params || {
-    viagem: {
-      id: 1,
-      tipo: 'Manhã',
-      horario: '07:30',
-      origem: 'Centro',
-      destino: 'Escola Municipal',
-      alunosConfirmados: 18,
-      totalAlunos: 25,
-      status: 'A iniciar',
-    },
-  };
+  const {viagem} = route?.params || {};
+
+  if (!viagem) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
+            <Text style={styles.backButtonText}>← Voltar</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>Detalhes da Viagem</Text>
+        </View>
+        <View style={styles.content}>
+          <Text style={styles.emptyText}>Dados da viagem não disponíveis</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const [situacaoViagem, setSituacaoViagem] = useState(viagem.status);
+  const [pontosRota, setPontosRota] = useState([]);
+  const [alunosInfo, setAlunosInfo] = useState({
+    totalAlunos: 0,
+    alunosConfirmados: 0,
+  });
+  const [loadingAlunos, setLoadingAlunos] = useState(true);
 
-  // Simula pontos da rota
-  const pontosRota = [
-    {id: 1, nome: 'Centro - Rua Principal', tipo: 'origem', alunos: 5},
-    {id: 2, nome: 'Praça da República', tipo: 'parada', alunos: 3},
-    {id: 3, nome: 'Avenida Principal', tipo: 'parada', alunos: 4},
-    {id: 4, nome: 'Rua das Flores', tipo: 'parada', alunos: 2},
-    {id: 5, nome: 'Escola Municipal', tipo: 'destino', alunos: 0},
-  ];
+  useEffect(() => {
+    const loadAlunosInfo = async () => {
+      if (!viagem?.id) return;
+      
+      try {
+        setLoadingAlunos(true);
+        const data = await motoristaService.listarAlunosViagem(viagem.id);
+        setAlunosInfo({
+          totalAlunos: data.total_alunos || 0,
+          alunosConfirmados: data.alunos_confirmados || 0,
+        });
+      } catch (error) {
+        console.error('Error loading alunos info:', error);
+        // Não mostrar erro, apenas deixar como 0
+        setAlunosInfo({
+          totalAlunos: 0,
+          alunosConfirmados: 0,
+        });
+      } finally {
+        setLoadingAlunos(false);
+      }
+    };
+
+    loadAlunosInfo();
+  }, [viagem?.id]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -122,24 +154,36 @@ const DetalheViagemMotorista = ({navigation, route}) => {
           {/* Informações de Alunos */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Alunos Confirmados</Text>
-            <View style={styles.alunosInfo}>
-              <Text style={styles.alunosText}>
-                {viagem.alunosConfirmados} de {viagem.totalAlunos} alunos
-                confirmados
-              </Text>
-              <View style={styles.alunosBar}>
-                <View
-                  style={[
-                    styles.alunosBarFill,
-                    {
-                      width: `${
-                        (viagem.alunosConfirmados / viagem.totalAlunos) * 100
-                      }%`,
-                    },
-                  ]}
-                />
+            {loadingAlunos ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="#1a73e8" />
               </View>
-            </View>
+            ) : (
+              <View style={styles.alunosInfo}>
+                <Text style={styles.alunosText}>
+                  {alunosInfo.alunosConfirmados} de {alunosInfo.totalAlunos} alunos
+                  confirmados
+                </Text>
+                {alunosInfo.totalAlunos > 0 ? (
+                  <View style={styles.alunosBar}>
+                    <View
+                      style={[
+                        styles.alunosBarFill,
+                        {
+                          width: `${
+                            (alunosInfo.alunosConfirmados / alunosInfo.totalAlunos) * 100
+                          }%`,
+                        },
+                      ]}
+                    />
+                  </View>
+                ) : (
+                  <Text style={styles.emptyAlunosText}>
+                    Nenhum aluno inscrito nesta rota
+                  </Text>
+                )}
+              </View>
+            )}
 
             <TouchableOpacity
               style={styles.verAlunosButton}
@@ -155,7 +199,10 @@ const DetalheViagemMotorista = ({navigation, route}) => {
           {/* Pontos da Rota */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Pontos da Rota</Text>
-            {pontosRota.map((ponto, index) => (
+            {pontosRota.length === 0 ? (
+              <Text style={styles.emptyText}>Nenhum ponto cadastrado</Text>
+            ) : (
+              pontosRota.map((ponto, index) => (
               <View key={ponto.id} style={styles.pontoItem}>
                 <View style={styles.pontoItemLeft}>
                   <View
@@ -188,7 +235,8 @@ const DetalheViagemMotorista = ({navigation, route}) => {
                   </Text>
                 </View>
               </View>
-            ))}
+              ))
+            )}
           </View>
 
           {/* Mapa Simplificado */}
@@ -212,7 +260,11 @@ const DetalheViagemMotorista = ({navigation, route}) => {
               <TouchableOpacity
                 style={styles.definirPontosButton}
                 onPress={() =>
-                  navigation.navigate('DefinirPontosRota', {viagem})
+                  navigation.navigate('DefinirPontosRota', {
+                    viagem,
+                    rota: viagem?.rota_id ? {id: viagem.rota_id} : null,
+                    isNovaRota: false,
+                  })
                 }>
                 <Text style={styles.definirPontosButtonText}>
                   📍 Definir Pontos da Rota
@@ -491,6 +543,22 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 24,
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  emptyAlunosText: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
+    marginTop: 8,
   },
 });
 

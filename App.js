@@ -1,6 +1,7 @@
 import React from 'react';
 import {Platform} from 'react-native';
 import MainNavigator from './src/navigation/MainNavigator';
+import { AuthProvider } from './src/contexts/AuthContext';
 
 // Detecta se está na web
 const isWeb = Platform.OS === 'web' || typeof window !== 'undefined';
@@ -20,14 +21,20 @@ if (!isWeb) {
 function App() {
   // Se estiver na web ou NavigationContainer não estiver disponível, renderiza diretamente
   if (isWeb || !NavigationContainer) {
-    return <MainNavigator />;
+    return (
+      <AuthProvider>
+        <MainNavigator />
+      </AuthProvider>
+    );
   }
 
   // Para mobile, usa NavigationContainer
   return (
-    <NavigationContainer>
-      <MainNavigator />
-    </NavigationContainer>
+    <AuthProvider>
+      <NavigationContainer>
+        <MainNavigator />
+      </NavigationContainer>
+    </AuthProvider>
   );
 }
 

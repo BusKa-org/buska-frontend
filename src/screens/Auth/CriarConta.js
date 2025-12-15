@@ -9,25 +9,71 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { useAuth } from '../../contexts/AuthContext';
 
 const CriarConta = ({navigation}) => {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
+  const [municipio, setMunicipio] = useState('');
   const [tipoUsuario, setTipoUsuario] = useState('aluno'); // aluno, motorista, gestor
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const { register } = useAuth();
 
-  const handleCriarConta = () => {
-    // Simulação de criação de conta
-    console.log('Criar conta:', {
-      nome,
-      email,
-      senha,
-      confirmarSenha,
-      tipoUsuario,
-    });
-    // Aqui você navegaria para a tela principal após criação
+  const handleCriarConta = async () => {
+    // Clear previous errors
+    setError('');
+
+    // Validation
+    if (!nome.trim() || !email.trim() || !senha.trim() || !municipio.trim()) {
+      setError('Por favor, preencha todos os campos');
+      return;
+    }
+
+    if (senha.length < 6) {
+      setError('A senha deve ter no mínimo 6 caracteres');
+      return;
+    }
+
+    if (senha !== confirmarSenha) {
+      setError('As senhas não coincidem');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await register({
+        nome,
+        email,
+        password: senha,
+        role: tipoUsuario,
+        municipio,
+      });
+
+      if (result.success) {
+        // Navigate immediately to login screen
+        navigation.navigate('Login');
+        // Show success message after navigation
+        setTimeout(() => {
+          Alert.alert('Sucesso', 'Conta criada com sucesso! Faça login para continuar.');
+        }, 300);
+      } else {
+        // Display error message from backend
+        const errorMessage = result.error || 'Não foi possível criar a conta';
+        setError(errorMessage);
+      }
+    } catch (error) {
+      // Handle unexpected errors
+      const errorMessage = error?.message || 'Ocorreu um erro ao criar a conta. Verifique sua conexão e tente novamente.';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -49,21 +95,27 @@ const CriarConta = ({navigation}) => {
             <View style={styles.form}>
               <Text style={styles.label}>Nome Completo</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, error && styles.inputError]}
                 placeholder="Seu nome completo"
                 placeholderTextColor="#999"
                 value={nome}
-                onChangeText={setNome}
+                onChangeText={(text) => {
+                  setNome(text);
+                  if (error) setError('');
+                }}
                 autoCapitalize="words"
               />
 
               <Text style={styles.label}>E-mail</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, error && styles.inputError]}
                 placeholder="seu@email.com"
                 placeholderTextColor="#999"
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (error) setError('');
+                }}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -141,10 +193,35 @@ const CriarConta = ({navigation}) => {
                 autoCapitalize="none"
               />
 
+              <Text style={styles.label}>Município</Text>
+              <TextInput
+                style={[styles.input, error && styles.inputError]}
+                placeholder="Ex: CAMPINA GRANDE"
+                placeholderTextColor="#999"
+                value={municipio}
+                onChangeText={(text) => {
+                  setMunicipio(text);
+                  if (error) setError('');
+                }}
+                autoCapitalize="characters"
+              />
+
+              {/* Error message display */}
+              {error ? (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              ) : null}
+
               <TouchableOpacity
-                style={styles.criarContaButton}
-                onPress={handleCriarConta}>
-                <Text style={styles.criarContaButtonText}>Criar Conta</Text>
+                style={[styles.criarContaButton, loading && styles.criarContaButtonDisabled]}
+                onPress={handleCriarConta}
+                disabled={loading}>
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.criarContaButtonText}>Criar Conta</Text>
+                )}
               </TouchableOpacity>
 
               <View style={styles.loginContainer}>
@@ -249,6 +326,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  criarContaButtonDisabled: {
+    opacity: 0.6,
+  },
   loginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -262,6 +342,24 @@ const styles = StyleSheet.create({
     color: '#1a73e8',
     fontSize: 14,
     fontWeight: '600',
+  },
+  errorContainer: {
+    backgroundColor: '#ffebee',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    marginBottom: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#d32f2f',
+  },
+  errorText: {
+    color: '#d32f2f',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  inputError: {
+    borderColor: '#d32f2f',
+    borderWidth: 1,
   },
 });
 

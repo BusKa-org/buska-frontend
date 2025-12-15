@@ -8,13 +8,25 @@ import {
 } from 'react-native';
 
 const InicioFimViagem = ({navigation, route}) => {
-  const viagem = route?.params?.viagem || {
-    id: 1,
-    tipo: 'Manhã',
-    horario: '07:30',
-    origem: 'Centro',
-    destino: 'Escola Municipal',
-  };
+  const viagem = route?.params?.viagem;
+
+  if (!viagem) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
+            <Text style={styles.backButtonText}>← Voltar</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>Iniciar Viagem</Text>
+        </View>
+        <View style={styles.content}>
+          <Text style={styles.emptyText}>Dados da viagem não disponíveis</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const [viagemIniciada, setViagemIniciada] = useState(false);
   const [tempoDecorrido, setTempoDecorrido] = useState(0); // em segundos
@@ -299,6 +311,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 });
 
