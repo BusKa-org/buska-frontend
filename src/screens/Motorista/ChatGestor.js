@@ -56,15 +56,19 @@ const ChatGestor = ({navigation}) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
-          <Text style={styles.backButtonText}>Voltar</Text>
-        </TouchableOpacity>
-        <View style={styles.headerInfo}>
-          <Text style={styles.title}>Chat com Gestor</Text>
-          <Text style={styles.subtitle}>Gestor Municipal</Text>
+        <View style={styles.headerTop}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
+            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.title}>Chat</Text>
+            <Text style={styles.headerSubtitle}>Gestor Municipal</Text>
+          </View>
+          <View style={styles.headerIcon}>
+            <Icon name={IconNames.chat} size="lg" color={colors.secondary.contrast} />
+          </View>
         </View>
       </View>
 
@@ -131,33 +135,45 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: colors.background.paper,
-    padding: spacing.base,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
-    ...shadows.sm,
+    backgroundColor: colors.secondary.main,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.lg,
+    borderBottomLeftRadius: borderRadius.xxl,
+    borderBottomRightRadius: borderRadius.xxl,
   },
-  backButton: {
-    marginBottom: spacing.sm,
+  headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
   },
-  backButtonText: {
-    ...textStyles.body,
-    color: colors.secondary.main,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  headerInfo: {
-    marginTop: spacing.xs,
+  headerTitleContainer: {
+    flex: 1,
+    marginLeft: spacing.md,
   },
   title: {
-    ...textStyles.h2,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
+    ...textStyles.h3,
+    color: colors.secondary.contrast,
   },
-  subtitle: {
+  headerSubtitle: {
     ...textStyles.bodySmall,
-    color: colors.text.secondary,
+    color: colors.secondary.light,
+    marginTop: spacing.xs,
+  },
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   keyboardView: {
     flex: 1,

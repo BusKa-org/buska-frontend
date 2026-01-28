@@ -141,14 +141,18 @@ const DefinirHorariosRota = ({ navigation, route }) => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
-            <Text style={styles.backButtonText}>Voltar</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Definir Horários</Text>
+          <View style={styles.headerTop}>
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+              <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+            </TouchableOpacity>
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.title}>Definir Horários</Text>
+            </View>
+          </View>
         </View>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Rota não encontrada</Text>
+          <Icon name={IconNames.warning} size="xxl" color={colors.warning.main} />
+          <Text style={styles.emptyContainerText}>Rota não encontrada</Text>
         </View>
       </SafeAreaView>
     );
@@ -158,12 +162,18 @@ const DefinirHorariosRota = ({ navigation, route }) => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
-          <Text style={styles.backButtonText}>Voltar</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Horários da Rota</Text>
-        <Text style={styles.subtitle}>{rotaNome}</Text>
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.title}>Horários</Text>
+            <Text style={styles.headerSubtitle}>{rotaNome}</Text>
+          </View>
+          <View style={styles.headerIcon}>
+            <Icon name={IconNames.schedule} size="lg" color={colors.secondary.contrast} />
+          </View>
+        </View>
       </View>
 
       <ScrollView style={styles.scrollView}>
@@ -308,30 +318,45 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: colors.background.paper,
-    padding: spacing.base,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
-    ...shadows.sm,
+    backgroundColor: colors.secondary.main,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.xl,
+    borderBottomLeftRadius: borderRadius.xxl,
+    borderBottomRightRadius: borderRadius.xxl,
   },
-  backButton: {
+  headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.sm,
   },
-  backButtonText: {
-    ...textStyles.body,
-    color: colors.secondary.main,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitleContainer: {
+    flex: 1,
+    marginLeft: spacing.md,
   },
   title: {
-    ...textStyles.h2,
-    color: colors.text.primary,
+    ...textStyles.h3,
+    color: colors.secondary.contrast,
   },
-  subtitle: {
+  headerSubtitle: {
     ...textStyles.bodySmall,
-    color: colors.text.secondary,
+    color: colors.secondary.light,
     marginTop: spacing.xs,
+  },
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollView: {
     flex: 1,
@@ -355,10 +380,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: spacing.xl,
   },
-  emptyText: {
-    ...textStyles.body,
+  emptyContainerText: {
+    ...textStyles.h4,
     color: colors.text.secondary,
+    marginTop: spacing.md,
   },
   emptyState: {
     alignItems: 'center',

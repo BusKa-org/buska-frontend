@@ -158,11 +158,18 @@ const RotaAluno = ({navigation, route}) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Icon name={IconNames.back} size="base" color={colors.secondary.main} />
-          <Text style={styles.backButtonText}>Voltar</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>{screenTitle}</Text>
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.title}>{screenTitle}</Text>
+            <Text style={styles.headerSubtitle}>{viagens.length} viagem{viagens.length !== 1 ? 'ns' : ''}</Text>
+          </View>
+          <View style={styles.headerIcon}>
+            <Icon name={IconNames.route} size="lg" color={colors.secondary.contrast} />
+          </View>
+        </View>
       </View>
 
       <ScrollView
@@ -262,14 +269,43 @@ const RotaAluno = ({navigation, route}) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background.default },
   header: {
-    backgroundColor: colors.background.paper,
-    padding: spacing.base,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
+    backgroundColor: colors.secondary.main,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.xl,
+    borderBottomLeftRadius: borderRadius.xxl,
+    borderBottomRightRadius: borderRadius.xxl,
   },
-  backButton: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
-  backButtonText: { ...textStyles.body, color: colors.secondary.main },
-  title: { ...textStyles.h2, color: colors.text.primary },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitleContainer: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  title: { ...textStyles.h3, color: colors.secondary.contrast },
+  headerSubtitle: {
+    ...textStyles.bodySmall,
+    color: colors.secondary.light,
+    marginTop: spacing.xs,
+  },
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   scrollView: { flex: 1 },
   content: { padding: spacing.base },
   sectionTitle: { ...textStyles.h4, color: colors.text.primary, marginBottom: spacing.base },

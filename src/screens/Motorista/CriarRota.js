@@ -67,13 +67,20 @@ const CriarRota = ({navigation}) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
-          <Text style={styles.backButtonText}>Voltar</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Criar Nova Rota</Text>
+        <View style={styles.headerTop}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
+            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.title}>Nova Rota</Text>
+            <Text style={styles.headerSubtitle}>Configure sua nova rota</Text>
+          </View>
+          <View style={styles.headerIcon}>
+            <Icon name={IconNames.bus} size="lg" color={colors.secondary.contrast} />
+          </View>
+        </View>
       </View>
 
       <ScrollView style={styles.scrollView}>
@@ -135,25 +142,45 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: colors.background.paper,
-    padding: spacing.base,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
-    ...shadows.sm,
+    backgroundColor: colors.secondary.main,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.xl,
+    borderBottomLeftRadius: borderRadius.xxl,
+    borderBottomRightRadius: borderRadius.xxl,
   },
-  backButton: {
-    marginBottom: spacing.sm,
+  headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
   },
-  backButtonText: {
-    ...textStyles.body,
-    color: colors.secondary.main,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitleContainer: {
+    flex: 1,
+    marginLeft: spacing.md,
   },
   title: {
-    ...textStyles.h2,
-    color: colors.text.primary,
+    ...textStyles.h3,
+    color: colors.secondary.contrast,
+  },
+  headerSubtitle: {
+    ...textStyles.bodySmall,
+    color: colors.secondary.light,
+    marginTop: spacing.xs,
+  },
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollView: {
     flex: 1,

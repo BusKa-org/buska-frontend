@@ -64,20 +64,28 @@ const RotaMotorista = ({navigation, route}) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
-          <Text style={styles.backButtonText}>Voltar</Text>
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={styles.title}>Minhas Rotas</Text>
+        <View style={styles.headerTop}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
+            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.title}>Minhas Rotas</Text>
+            <Text style={styles.subtitle}>{rotas.length} rota{rotas.length !== 1 ? 's' : ''} cadastrada{rotas.length !== 1 ? 's' : ''}</Text>
+          </View>
+          <View style={styles.headerIcon}>
+            <Icon name={IconNames.bus} size="lg" color={colors.secondary.contrast} />
+          </View>
+        </View>
+        {isGestor && (
           <TouchableOpacity
             style={styles.criarRotaButton}
             onPress={() => navigation.navigate('CriarRota')}>
-            <Text style={styles.criarRotaButtonText}>+ Nova Rota</Text>
+            <Icon name={IconNames.add} size="sm" color={colors.text.inverse} />
+            <Text style={styles.criarRotaButtonText}>Nova Rota</Text>
           </TouchableOpacity>
-        </View>
+        )}
       </View>
 
       {loading ? (
@@ -177,41 +185,60 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: colors.background.paper,
-    padding: spacing.base,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
-    ...shadows.sm,
+    backgroundColor: colors.secondary.main,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.lg,
+    borderBottomLeftRadius: borderRadius.xxl,
+    borderBottomRightRadius: borderRadius.xxl,
   },
-  backButton: {
-    marginBottom: spacing.sm,
+  headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
   },
-  backButtonText: {
-    ...textStyles.body,
-    color: colors.secondary.main,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  headerTitleContainer: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  subtitle: {
+    ...textStyles.bodySmall,
+    color: colors.secondary.light,
+    marginTop: spacing.xs,
+  },
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   title: {
-    ...textStyles.h2,
-    color: colors.text.primary,
-    flex: 1,
+    ...textStyles.h3,
+    color: colors.secondary.contrast,
   },
   criarRotaButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
     backgroundColor: colors.success.main,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
-    ...shadows.xs,
+    marginTop: spacing.md,
+    ...shadows.sm,
   },
   criarRotaButtonText: {
-    ...textStyles.buttonSmall,
+    ...textStyles.button,
     color: colors.text.inverse,
   },
   loadingContainer: {

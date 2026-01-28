@@ -19,16 +19,20 @@ const DetalheViagemMotorista = ({navigation, route}) => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}>
-            <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
-            <Text style={styles.backButtonText}>Voltar</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Detalhes da Viagem</Text>
+          <View style={styles.headerTop}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}>
+              <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+            </TouchableOpacity>
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.title}>Detalhes da Viagem</Text>
+            </View>
+          </View>
         </View>
-        <View style={styles.content}>
-          <Text style={styles.emptyText}>Dados da viagem não disponíveis</Text>
+        <View style={styles.emptyContainer}>
+          <Icon name={IconNames.warning} size="xxl" color={colors.warning.main} />
+          <Text style={styles.emptyContainerText}>Dados da viagem não disponíveis</Text>
         </View>
       </SafeAreaView>
     );
@@ -71,12 +75,20 @@ const DetalheViagemMotorista = ({navigation, route}) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← Voltar</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Detalhes da Viagem</Text>
+        <View style={styles.headerTop}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
+            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.title}>Detalhes da Viagem</Text>
+            <Text style={styles.headerSubtitle}>{viagem.tipo} • {viagem.horario}</Text>
+          </View>
+          <View style={styles.headerIcon}>
+            <Icon name={IconNames.route} size="lg" color={colors.secondary.contrast} />
+          </View>
+        </View>
       </View>
 
       <ScrollView style={styles.scrollView}>
@@ -285,25 +297,56 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: colors.background.paper,
-    padding: spacing.base,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
-    ...shadows.sm,
+    backgroundColor: colors.secondary.main,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.xl,
+    borderBottomLeftRadius: borderRadius.xxl,
+    borderBottomRightRadius: borderRadius.xxl,
   },
-  backButton: {
-    marginBottom: spacing.sm,
+  headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
   },
-  backButtonText: {
-    ...textStyles.body,
-    color: colors.secondary.main,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitleContainer: {
+    flex: 1,
+    marginLeft: spacing.md,
   },
   title: {
-    ...textStyles.h2,
-    color: colors.text.primary,
+    ...textStyles.h3,
+    color: colors.secondary.contrast,
+  },
+  headerSubtitle: {
+    ...textStyles.bodySmall,
+    color: colors.secondary.light,
+    marginTop: spacing.xs,
+  },
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  emptyContainerText: {
+    ...textStyles.h4,
+    color: colors.text.secondary,
+    marginTop: spacing.md,
   },
   scrollView: {
     flex: 1,

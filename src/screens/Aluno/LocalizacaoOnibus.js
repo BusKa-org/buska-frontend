@@ -19,15 +19,17 @@ const LocalizacaoOnibus = ({navigation, route}) => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Icon name={IconNames.back} size="base" color={colors.primary.contrast} />
-          </TouchableOpacity>
-          <View style={styles.headerInfo}>
-            <Text style={styles.headerTitle}>Localização do Ônibus</Text>
+          <View style={styles.headerTop}>
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+              <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+            </TouchableOpacity>
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>Localização do Ônibus</Text>
+            </View>
           </View>
         </View>
         <View style={styles.emptyContent}>
-          <Icon name={IconNames.warning} size="huge" color={colors.neutral[300]} />
+          <Icon name={IconNames.warning} size="xxl" color={colors.warning.main} />
           <Text style={styles.emptyText}>Dados da rota não disponíveis</Text>
         </View>
       </SafeAreaView>
@@ -52,12 +54,17 @@ const LocalizacaoOnibus = ({navigation, route}) => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Icon name={IconNames.back} size="base" color={colors.primary.contrast} />
-        </TouchableOpacity>
-        <View style={styles.headerInfo}>
-          <Text style={styles.headerTitle}>Localização do Ônibus</Text>
-          <Text style={styles.headerSubtitle}>{rota.nome}</Text>
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>Localização</Text>
+            <Text style={styles.headerSubtitle}>{rota.nome}</Text>
+          </View>
+          <View style={styles.headerIcon}>
+            <Icon name={IconNames.bus} size="lg" color={colors.secondary.contrast} />
+          </View>
         </View>
       </View>
 
@@ -122,25 +129,41 @@ const LocalizacaoOnibus = ({navigation, route}) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background.default },
   header: {
-    backgroundColor: colors.primary.main,
-    padding: spacing.base,
-    flexDirection: 'row',
-    alignItems: 'center',
+    backgroundColor: colors.secondary.main,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.xl,
+    borderBottomLeftRadius: borderRadius.xxl,
+    borderBottomRightRadius: borderRadius.xxl,
     zIndex: 100,
     elevation: 10,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.primary.light,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.md,
   },
-  headerInfo: { flex: 1 },
-  headerTitle: { ...textStyles.h4, color: colors.primary.contrast },
-  headerSubtitle: { ...textStyles.bodySmall, color: colors.secondary.light, marginTop: spacing.xxs },
+  headerTitleContainer: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  headerTitle: { ...textStyles.h3, color: colors.secondary.contrast },
+  headerSubtitle: { ...textStyles.bodySmall, color: colors.secondary.light, marginTop: spacing.xs },
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   mapaContainer: {
     flex: 1,
     backgroundColor: colors.neutral[100],

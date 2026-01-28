@@ -132,16 +132,20 @@ const InicioFimViagem = ({navigation, route}) => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}>
-            <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
-            <Text style={styles.backButtonText}>Voltar</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Iniciar Viagem</Text>
+          <View style={styles.headerTop}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}>
+              <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+            </TouchableOpacity>
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.title}>Iniciar Viagem</Text>
+            </View>
+          </View>
         </View>
-        <View style={styles.content}>
-          <Text style={styles.emptyText}>Dados da viagem não disponíveis</Text>
+        <View style={styles.emptyContainer}>
+          <Icon name={IconNames.warning} size="xxl" color={colors.warning.main} />
+          <Text style={styles.emptyContainerText}>Dados da viagem não disponíveis</Text>
         </View>
       </SafeAreaView>
     );
@@ -151,15 +155,18 @@ const InicioFimViagem = ({navigation, route}) => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}>
-            <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
-            <Text style={styles.backButtonText}>Voltar</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Carregando...</Text>
+          <View style={styles.headerTop}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}>
+              <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+            </TouchableOpacity>
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.title}>Carregando...</Text>
+            </View>
+          </View>
         </View>
-        <View style={[styles.content, { justifyContent: 'center', alignItems: 'center' }]}>
+        <View style={styles.emptyContainer}>
           <ActivityIndicator size="large" color={colors.secondary.main} />
         </View>
       </SafeAreaView>
@@ -168,22 +175,26 @@ const InicioFimViagem = ({navigation, route}) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          disabled={viagemIniciada}>
-          <Text
-            style={[
-              styles.backButtonText,
-              viagemIniciada && styles.backButtonDisabled,
-            ]}>
-            ← Voltar
-          </Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>
-          {viagemIniciada ? 'Viagem em Andamento' : 'Iniciar Viagem'}
-        </Text>
+      <View style={[styles.header, viagemIniciada && styles.headerEmAndamento]}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity
+            style={[styles.backButton, viagemIniciada && styles.backButtonDisabledStyle]}
+            onPress={() => navigation.goBack()}
+            disabled={viagemIniciada}>
+            <Icon name={IconNames.back} size="md" color={viagemIniciada ? colors.success.light : colors.secondary.contrast} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.title}>
+              {viagemIniciada ? 'Em Andamento' : 'Iniciar Viagem'}
+            </Text>
+            <Text style={styles.headerSubtitle}>
+              {viagem.tipo} • {viagem.horario}
+            </Text>
+          </View>
+          <View style={[styles.headerIcon, viagemIniciada && styles.headerIconEmAndamento]}>
+            <Icon name={viagemIniciada ? IconNames.route : IconNames.schedule} size="lg" color={viagemIniciada ? colors.success.contrast : colors.secondary.contrast} />
+          </View>
+        </View>
       </View>
 
       <View style={styles.content}>
@@ -276,28 +287,66 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: colors.background.paper,
-    padding: spacing.base,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
-    ...shadows.sm,
+    backgroundColor: colors.secondary.main,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.xl,
+    borderBottomLeftRadius: borderRadius.xxl,
+    borderBottomRightRadius: borderRadius.xxl,
   },
-  backButton: {
-    marginBottom: spacing.sm,
+  headerEmAndamento: {
+    backgroundColor: colors.success.main,
+  },
+  headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
   },
-  backButtonText: {
-    ...textStyles.body,
-    color: colors.secondary.main,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  backButtonDisabled: {
-    color: colors.text.hint,
+  backButtonDisabledStyle: {
+    backgroundColor: colors.success.dark,
+    opacity: 0.5,
+  },
+  headerTitleContainer: {
+    flex: 1,
+    marginLeft: spacing.md,
   },
   title: {
-    ...textStyles.h2,
-    color: colors.text.primary,
+    ...textStyles.h3,
+    color: colors.secondary.contrast,
+  },
+  headerSubtitle: {
+    ...textStyles.bodySmall,
+    color: colors.secondary.light,
+    marginTop: spacing.xs,
+  },
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerIconEmAndamento: {
+    backgroundColor: colors.success.dark,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  emptyContainerText: {
+    ...textStyles.h4,
+    color: colors.text.secondary,
+    marginTop: spacing.md,
   },
   content: {
     flex: 1,
