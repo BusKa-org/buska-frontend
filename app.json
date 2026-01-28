@@ -1,4 +1,6 @@
 {
-  "name": "projeto1",
-  "displayName": "projeto1"
+  "name": "buska",
+  "displayName": "BusKá",
+  "description": "Gestão Municipal de Transporte Escolar",
+  "version": "1.0.0"
 }
