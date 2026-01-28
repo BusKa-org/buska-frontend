@@ -469,6 +469,7 @@ const DefinirPontosRota = ({navigation, route}) => {
   const [mostrarFormNovoPonto, setMostrarFormNovoPonto] = useState(false);
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [adicionando, setAdicionando] = useState(null); // Track which point is being added
 
   // Load existing points
   useEffect(() => {
@@ -496,19 +497,44 @@ const DefinirPontosRota = ({navigation, route}) => {
     carregarDados();
   }, [rotaId, isNovaRota]);
 
+  // Track added point IDs to prevent duplicates
+  const pontosRotaIds = useMemo(() => 
+    new Set(pontosRota.map(p => String(p.id))), 
+    [pontosRota]
+  );
+
   const handleAdicionarPontoExistente = (ponto) => {
-    // Check if already added (compare as strings to handle UUID inconsistencies)
     const pontoIdStr = String(ponto.id);
-    if (pontosRota.some(p => String(p.id) === pontoIdStr)) {
+    
+    // Prevent double-clicks
+    if (adicionando === pontoIdStr) {
+      return;
+    }
+    
+    // Check using memoized Set for instant lookup
+    if (pontosRotaIds.has(pontoIdStr)) {
       toast.warning('Este ponto já está na rota.');
       return;
     }
     
-    setPontosRota(prev => [...prev, {
-      ...ponto,
-      ordem: prev.length + 1,
-    }]);
+    // Lock this point while adding
+    setAdicionando(pontoIdStr);
+    
+    setPontosRota(prev => {
+      // Double-check inside updater to handle race conditions
+      if (prev.some(p => String(p.id) === pontoIdStr)) {
+        return prev;
+      }
+      return [...prev, {
+        ...ponto,
+        ordem: prev.length + 1,
+      }];
+    });
+    
     toast.success(`${ponto.nome || ponto.apelido} adicionado!`);
+    
+    // Unlock after a short delay
+    setTimeout(() => setAdicionando(null), 300);
   };
 
   const handleCriarNovoPonto = async () => {
@@ -752,13 +778,20 @@ const DefinirPontosRota = ({navigation, route}) => {
               <View style={styles.pontosGrid}>
                 {pontosDisponiveis.slice(0, 15).map(ponto => {
                   const pontoIdStr = String(ponto.id);
-                  const isAdded = pontosRota.some(pr => String(pr.id) === pontoIdStr);
+                  const isAdded = pontosRotaIds.has(pontoIdStr);
+                  const isAdding = adicionando === pontoIdStr;
+                  const isDisabled = isAdded || isAdding;
+                  
                   return (
                     <TouchableOpacity
                       key={ponto.id}
-                      style={[styles.pontoChip, isAdded && styles.pontoChipAdded]}
+                      style={[
+                        styles.pontoChip, 
+                        isAdded && styles.pontoChipAdded,
+                        isAdding && styles.pontoChipAdding,
+                      ]}
                       onPress={() => handleAdicionarPontoExistente(ponto)}
-                      disabled={isAdded}>
+                      disabled={isDisabled}>
                       <Icon 
                         name={isAdded ? IconNames.checkCircle : IconNames.add} 
                         size="xs" 
@@ -1039,6 +1072,9 @@ const styles = StyleSheet.create({
   pontoChipAdded: {
     backgroundColor: colors.success.light,
     opacity: 0.7,
+  },
+  pontoChipAdding: {
+    opacity: 0.5,
   },
   pontoChipText: {
     ...textStyles.caption,
