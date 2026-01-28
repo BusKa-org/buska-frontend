@@ -108,16 +108,11 @@ const DashboardMotorista = ({navigation}) => {
             }
             
             setProximaViagem({
-              id: proxima.id,
-              tipo: proxima.tipo,
-              data: proxima.data,
+              ...proxima, // Keep all original data including 'alunos' array
               horario: horarioFormatado,
-              rota_id: proxima.rota_id,
               status: proxima.horario_fim ? 'Finalizada' : 'A iniciar',
               origem: proxima.origem || origem,
               destino: proxima.destino || destino,
-              total_alunos: proxima.total_alunos || 0,
-              alunos_confirmados_count: proxima.alunos_confirmados_count || 0,
             });
           } else {
             setProximaViagem(null);

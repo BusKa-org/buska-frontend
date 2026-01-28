@@ -13,6 +13,9 @@ import Icon, { IconNames } from '../../components/Icon';
 const ListaAlunosConfirmados = ({navigation, route}) => {
   const viagem = route?.params?.viagem || {};
   
+  console.log('[ListaAlunosConfirmados] viagem:', viagem);
+  console.log('[ListaAlunosConfirmados] viagem.alunos:', viagem.alunos);
+  
   // Use alunos data from viagem object (from /viagens/minhas response)
   // Filter to show only confirmed students
   const alunos = (viagem.alunos || [])
