@@ -8,14 +8,15 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { alunoService } from '../../services';
 import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
+import { useToast } from '../../components/Toast';
 
 const RotaAluno = ({navigation, route}) => {
   const rota = route?.params?.rota || { id: 1, nome: 'Rota' };
+  const toast = useToast();
   const [viagens, setViagens] = useState([]);
   const [presencasStatus, setPresencasStatus] = useState({});
   const [loading, setLoading] = useState(true);
@@ -36,7 +37,7 @@ const RotaAluno = ({navigation, route}) => {
       });
       setPresencasStatus(statusMap);
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível carregar as viagens.');
+      toast.error('Não foi possível carregar as viagens.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -78,16 +79,28 @@ const RotaAluno = ({navigation, route}) => {
       // Get boarding point ID
       let pontoEmbarqueId = viagem.ponto_embarque_id;
       if (novoStatus && !pontoEmbarqueId) {
-        const pontos = await alunoService.listarPontosRota(viagem.rota_id);
-        if (pontos && pontos.length > 0) {
-          pontoEmbarqueId = pontos[0].id;
+        try {
+          const pontos = await alunoService.listarPontosRota(viagem.rota_id);
+          if (pontos && pontos.length > 0) {
+            pontoEmbarqueId = pontos[0].id;
+          }
+        } catch (e) {
+          // Silently fail, will show error from backend if no point
         }
+      }
+      
+      if (novoStatus && !pontoEmbarqueId) {
+        toast.error('Não foi possível encontrar um ponto de embarque para esta rota.');
+        return;
       }
       
       await alunoService.alterarPresencaViagem(viagem.id, novoStatus, pontoEmbarqueId);
       setPresencasStatus({ ...presencasStatus, [viagem.id]: novoStatus });
+      
+      toast.success(novoStatus ? 'Presença confirmada!' : 'Presença cancelada.');
     } catch (error) {
-      Alert.alert('Erro', error?.message || 'Não foi possível atualizar a presença.');
+      const errorMessage = error?.message || error?.error || 'Não foi possível atualizar a presença.';
+      toast.error(errorMessage);
     } finally {
       setUpdatingPresenca(null);
     }
