@@ -32,6 +32,13 @@ const systemFonts = Platform.select({
     semiBold: 'Roboto-Medium',
     bold: 'Roboto-Bold',
   },
+  web: {
+    // Web uses CSS font-family stack
+    regular: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    medium: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    semiBold: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    bold: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  },
   default: {
     regular: 'System',
     medium: 'System',
@@ -40,13 +47,22 @@ const systemFonts = Platform.select({
   },
 });
 
-// Custom fonts (when installed)
-const customFonts = {
-  regular: 'Inter-Regular',
-  medium: 'Inter-Medium',
-  semiBold: 'Inter-SemiBold',
-  bold: 'Inter-Bold',
-};
+// Custom fonts (when installed and loaded)
+const customFonts = Platform.select({
+  web: {
+    // On web, use Inter with fallback stack (requires Inter to be loaded via CSS)
+    regular: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    medium: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    semiBold: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    bold: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  },
+  default: {
+    regular: 'Inter-Regular',
+    medium: 'Inter-Medium',
+    semiBold: 'Inter-SemiBold',
+    bold: 'Inter-Bold',
+  },
+});
 
 // Toggle this when you install custom fonts
 // Set to true since Inter fonts are now installed in assets/fonts/

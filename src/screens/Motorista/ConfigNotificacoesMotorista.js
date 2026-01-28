@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   settingDescription: {
     ...textStyles.bodySmall,
     color: colors.text.secondary,
-    lineHeight: lineHeight.relaxed,
+    lineHeight: fontSize.bodySmall * lineHeight.relaxed,
   },
   saveButton: {
     backgroundColor: colors.secondary.main,

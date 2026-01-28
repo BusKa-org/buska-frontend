@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   infoText: {
     ...textStyles.bodySmall,
     color: colors.info.dark,
-    lineHeight: lineHeight.relaxed,
+    lineHeight: fontSize.bodySmall * lineHeight.relaxed,
     flex: 1,
   },
   form: {

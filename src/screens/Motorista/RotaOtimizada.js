@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   avisoText: {
     ...textStyles.bodySmall,
     color: colors.warning.dark,
-    lineHeight: lineHeight.relaxed,
+    lineHeight: fontSize.bodySmall * lineHeight.relaxed,
   },
   sucessoBox: {
     backgroundColor: colors.success.light,
