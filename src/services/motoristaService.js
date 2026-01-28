@@ -166,6 +166,29 @@ export const motoristaService = {
   },
 
   /**
+   * List all trips in the prefeitura (for gestores)
+   * Backend: GET /v1/viagens/
+   * @param {object} filters - Optional filters { data_inicio, data_fim, status, motorista_id, rota_id }
+   */
+  async listarTodasViagens(filters = {}) {
+    try {
+      const params = new URLSearchParams();
+      if (filters.data_inicio) params.append('data_inicio', filters.data_inicio);
+      if (filters.data_fim) params.append('data_fim', filters.data_fim);
+      if (filters.status) params.append('status', filters.status);
+      if (filters.motorista_id) params.append('motorista_id', filters.motorista_id);
+      if (filters.rota_id) params.append('rota_id', filters.rota_id);
+      
+      const queryString = params.toString();
+      const url = queryString ? `/viagens/?${queryString}` : '/viagens/';
+      const response = await api.get(url);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
    * Create a new trip (requires GESTOR role in backend)
    * Backend: POST /v1/viagens/
    * @param {object} viagemData - { rota_id, horario_id, data, motorista_id?, veiculo_id? }

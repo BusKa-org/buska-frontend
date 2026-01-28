@@ -10,14 +10,17 @@ import {
   RefreshControl,
 } from 'react-native';
 import {motoristaService} from '../../services/motoristaService';
+import {useAuth} from '../../contexts/AuthContext';
 import {useToast} from '../../components/Toast';
 import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
 
 const ListaViagens = ({navigation, route}) => {
+  const { user } = useAuth();
   const toast = useToast();
   const params = route?.params || {};
   const rotaFiltro = params.rota; // Optional: filter by specific route
+  const isGestor = user?.role?.toLowerCase() === 'gestor';
   
   const [viagens, setViagens] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,16 +29,23 @@ const ListaViagens = ({navigation, route}) => {
   const loadViagens = async () => {
     try {
       setLoading(true);
-      const viagensData = await motoristaService.listarViagens();
       
-      // Filter by route if specified
-      let viagensFiltradas = viagensData || [];
-      if (rotaFiltro?.id) {
-        viagensFiltradas = viagensFiltradas.filter(v => v.rota_id === rotaFiltro.id);
+      let viagensData;
+      if (isGestor) {
+        // Gestor uses the full trips endpoint with optional filters
+        const filters = rotaFiltro?.id ? { rota_id: rotaFiltro.id } : {};
+        viagensData = await motoristaService.listarTodasViagens(filters);
+      } else {
+        // Motorista uses /viagens/minhas
+        viagensData = await motoristaService.listarViagens();
+        // Filter by route if specified (client-side for motorista)
+        if (rotaFiltro?.id) {
+          viagensData = (viagensData || []).filter(v => v.rota_id === rotaFiltro.id);
+        }
       }
       
       // Ordenar por data (mais recentes primeiro)
-      const viagensOrdenadas = viagensFiltradas.sort((a, b) => {
+      const viagensOrdenadas = (viagensData || []).sort((a, b) => {
         const dataA = new Date(a.data);
         const dataB = new Date(b.data);
         return dataB - dataA;
@@ -53,7 +63,7 @@ const ListaViagens = ({navigation, route}) => {
 
   useEffect(() => {
     loadViagens();
-  }, [rotaFiltro?.id]);
+  }, [rotaFiltro?.id, isGestor]);
 
   const onRefresh = () => {
     setRefreshing(true);
