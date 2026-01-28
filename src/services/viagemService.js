@@ -1,47 +1,38 @@
-import {apiGet, apiPost, apiPut, apiPatch} from '../utils/api';
-
 /**
  * Trips Service
- * Handles trip-related operations
+ * Handles trip-related operations using Axios API
  */
+
+import api from './api';
 
 /**
  * Get all trips
  * @param {Object} [filters] - Optional filters
- * @param {number} [filters.rota_id] - Filter by route
- * @param {number} [filters.motorista_id] - Filter by driver
+ * @param {string} [filters.rota_id] - Filter by route
+ * @param {string} [filters.motorista_id] - Filter by driver
  * @param {string} [filters.data] - Filter by date (YYYY-MM-DD)
  * @param {string} [filters.tipo] - Filter by type (IDA, VOLTA)
  * @returns {Promise<Array>} List of trips
  */
 export const getViagens = async (filters = {}) => {
-  const queryParams = new URLSearchParams();
-  if (filters.rota_id) {
-    queryParams.append('rota_id', filters.rota_id);
-  }
-  if (filters.motorista_id) {
-    queryParams.append('motorista_id', filters.motorista_id);
-  }
-  if (filters.data) {
-    queryParams.append('data', filters.data);
-  }
-  if (filters.tipo) {
-    queryParams.append('tipo', filters.tipo);
-  }
+  const params = {};
+  if (filters.rota_id) params.rota_id = filters.rota_id;
+  if (filters.motorista_id) params.motorista_id = filters.motorista_id;
+  if (filters.data) params.data = filters.data;
+  if (filters.tipo) params.tipo = filters.tipo;
   
-  const queryString = queryParams.toString();
-  const endpoint = queryString ? `/viagens?${queryString}` : '/viagens';
-  
-  return apiGet(endpoint);
+  const response = await api.get('/viagens/', { params });
+  return response.data;
 };
 
 /**
  * Get a single trip by ID
- * @param {number} viagemId - Trip ID
+ * @param {string} viagemId - Trip ID
  * @returns {Promise<Object>} Trip data
  */
 export const getViagem = async (viagemId) => {
-  return apiGet(`/viagens/${viagemId}`);
+  const response = await api.get(`/viagens/${viagemId}`);
+  return response.data;
 };
 
 /**
@@ -49,57 +40,72 @@ export const getViagem = async (viagemId) => {
  * @param {Object} viagemData - Trip data
  * @param {string} viagemData.data - Trip date (YYYY-MM-DD)
  * @param {string} viagemData.tipo - Trip type (IDA, VOLTA)
- * @param {number} viagemData.rota_id - Route ID
- * @param {number} viagemData.motorista_id - Driver ID
+ * @param {string} viagemData.rota_id - Route ID
+ * @param {string} [viagemData.motorista_id] - Driver ID
  * @returns {Promise<Object>} Created trip
  */
 export const createViagem = async (viagemData) => {
-  return apiPost('/viagens', viagemData);
+  const response = await api.post('/viagens/', viagemData);
+  return response.data;
 };
 
 /**
  * Start a trip
- * @param {number} viagemId - Trip ID
+ * @param {string} viagemId - Trip ID
  * @returns {Promise<Object>} Updated trip
  */
 export const startViagem = async (viagemId) => {
-  return apiPatch(`/viagens/${viagemId}/start`, {});
+  const response = await api.patch(`/viagens/${viagemId}/start`);
+  return response.data;
 };
 
 /**
  * End a trip
- * @param {number} viagemId - Trip ID
+ * @param {string} viagemId - Trip ID
  * @returns {Promise<Object>} Updated trip
  */
 export const endViagem = async (viagemId) => {
-  return apiPatch(`/viagens/${viagemId}/end`, {});
+  const response = await api.patch(`/viagens/${viagemId}/end`);
+  return response.data;
 };
 
 /**
  * Get upcoming trips for a student
- * @param {number} alunoId - Student ID
+ * @param {string} alunoId - Student ID
  * @returns {Promise<Array>} List of upcoming trips
  */
 export const getProximasViagensAluno = async (alunoId) => {
-  return apiGet(`/viagens/aluno/${alunoId}/proximas`);
+  const response = await api.get(`/viagens/aluno/${alunoId}/proximas`);
+  return response.data;
 };
 
 /**
  * Get upcoming trips for a driver
- * @param {number} motoristaId - Driver ID
+ * @param {string} motoristaId - Driver ID
  * @returns {Promise<Array>} List of upcoming trips
  */
 export const getProximasViagensMotorista = async (motoristaId) => {
-  return apiGet(`/viagens/motorista/${motoristaId}/proximas`);
+  const response = await api.get(`/viagens/motorista/${motoristaId}/proximas`);
+  return response.data;
 };
 
 /**
  * Get trip details with students
- * @param {number} viagemId - Trip ID
+ * @param {string} viagemId - Trip ID
  * @returns {Promise<Object>} Trip with student list
  */
 export const getViagemDetalhes = async (viagemId) => {
-  return apiGet(`/viagens/${viagemId}/detalhes`);
+  const response = await api.get(`/viagens/${viagemId}/detalhes`);
+  return response.data;
 };
 
-
+export default {
+  getViagens,
+  getViagem,
+  createViagem,
+  startViagem,
+  endViagem,
+  getProximasViagensAluno,
+  getProximasViagensMotorista,
+  getViagemDetalhes,
+};

@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useCallback} from 'react';
 import {
   View,
   Text,
@@ -6,68 +6,58 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import {motoristaService} from '../../services/motoristaService';
 import {useAuth} from '../../contexts/AuthContext';
-import {useToast} from '../../components/Toast';
+import { useFetch } from '../../hooks';
+import { LoadingView, ErrorView, EmptyView } from '../../components/LoadingState';
 import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
 
 const ListaViagens = ({navigation, route}) => {
   const { user } = useAuth();
-  const toast = useToast();
   const params = route?.params || {};
   const rotaFiltro = params.rota; // Optional: filter by specific route
   const isGestor = user?.role?.toLowerCase() === 'gestor';
   
-  const [viagens, setViagens] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadViagens = async () => {
-    try {
-      setLoading(true);
-      
-      let viagensData;
-      if (isGestor) {
-        // Gestor uses the full trips endpoint with optional filters
-        const filters = rotaFiltro?.id ? { rota_id: rotaFiltro.id } : {};
-        viagensData = await motoristaService.listarTodasViagens(filters);
-      } else {
-        // Motorista uses /viagens/minhas
-        viagensData = await motoristaService.listarViagens();
-        // Filter by route if specified (client-side for motorista)
-        if (rotaFiltro?.id) {
-          viagensData = (viagensData || []).filter(v => v.rota_id === rotaFiltro.id);
-        }
+  // Fetch function
+  const fetchViagens = useCallback(async () => {
+    let viagensData;
+    if (isGestor) {
+      // Gestor uses the full trips endpoint with optional filters
+      const filters = rotaFiltro?.id ? { rota_id: rotaFiltro.id } : {};
+      viagensData = await motoristaService.listarTodasViagens(filters);
+    } else {
+      // Motorista uses /viagens/minhas
+      viagensData = await motoristaService.listarViagens();
+      // Filter by route if specified (client-side for motorista)
+      if (rotaFiltro?.id) {
+        viagensData = (viagensData || []).filter(v => v.rota_id === rotaFiltro.id);
       }
-      
-      // Ordenar por data (mais recentes primeiro)
-      const viagensOrdenadas = (viagensData || []).sort((a, b) => {
-        const dataA = new Date(a.data);
-        const dataB = new Date(b.data);
-        return dataB - dataA;
-      });
-      
-      setViagens(viagensOrdenadas);
-    } catch (error) {
-      console.error('Error loading trips:', error);
-      toast.error(error?.message || 'Não foi possível carregar as viagens.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
     }
-  };
+    
+    // Ordenar por data (mais recentes primeiro)
+    return (viagensData || []).sort((a, b) => {
+      const dataA = new Date(a.data);
+      const dataB = new Date(b.data);
+      return dataB - dataA;
+    });
+  }, [isGestor, rotaFiltro?.id]);
 
-  useEffect(() => {
-    loadViagens();
-  }, [rotaFiltro?.id, isGestor]);
+  // Use the useFetch hook
+  const { data: viagens, isLoading, isError, error, refetch } = useFetch(
+    fetchViagens,
+    [rotaFiltro?.id, isGestor],
+    { showErrorToast: true }
+  );
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    loadViagens();
+    await refetch();
+    setRefreshing(false);
   };
 
   const getStatusLabel = (status) => {
@@ -132,79 +122,79 @@ const ListaViagens = ({navigation, route}) => {
         </View>
       </View>
 
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.secondary.main} />
-        </View>
+      {isLoading ? (
+        <LoadingView message="Carregando viagens..." />
+      ) : isError ? (
+        <ErrorView 
+          message={error?.message || 'Não foi possível carregar as viagens'} 
+          onRetry={refetch} 
+        />
+      ) : (viagens || []).length === 0 ? (
+        <EmptyView
+          title={rotaFiltro ? 'Nenhuma viagem nesta rota' : 'Nenhuma viagem atribuída'}
+          message={rotaFiltro 
+            ? 'Crie uma viagem para esta rota' 
+            : 'O gestor precisa atribuir viagens para você'}
+          icon={IconNames.route}
+        />
       ) : (
         <ScrollView
           style={styles.scrollView}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              colors={[colors.secondary.main]}
+              tintColor={colors.secondary.main}
+            />
           }>
           <View style={styles.content}>
-            {viagens.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Icon name={IconNames.route} size="xxl" color={colors.neutral[300]} />
-                <Text style={styles.emptyText}>
-                  {rotaFiltro ? 'Nenhuma viagem nesta rota' : 'Nenhuma viagem atribuída'}
-                </Text>
-                <Text style={styles.emptySubtext}>
-                  {rotaFiltro 
-                    ? 'Crie uma viagem para esta rota' 
-                    : 'O gestor precisa atribuir viagens para você'}
-                </Text>
-              </View>
-            ) : (
-              <>
-                {viagens.map((viagem) => {
-                  const statusLabel = getStatusLabel(viagem.status);
-                  const statusColor = getStatusColor(viagem.status);
-                  return (
-                    <TouchableOpacity
-                      key={viagem.id}
-                      style={styles.viagemCard}
-                      onPress={() =>
-                        navigation.navigate('DetalheViagemMotorista', {
-                          viagem,
-                        })
-                      }>
-                      <View style={styles.viagemHeader}>
-                        <View style={styles.viagemInfo}>
-                          <Text style={styles.viagemTipo}>
-                            {viagem.tipo || 'IDA'} - {viagem.rota_nome || 'Rota'}
-                          </Text>
-                          <Text style={styles.viagemData}>
-                            {viagem.data ? formatDate(viagem.data) : 'Data não disponível'}
-                          </Text>
-                          <Text style={styles.viagemHorario}>
-                            {viagem.horario_inicio ? formatTime(viagem.horario_inicio) : '--:--'}
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.statusBadge,
-                            {backgroundColor: statusColor + '20'},
-                          ]}>
-                          <Text
-                            style={[
-                              styles.statusText,
-                              {color: statusColor},
-                            ]}>
-                            {statusLabel}
-                          </Text>
-                        </View>
-                      </View>
-                      {viagem.origem && viagem.destino && (
-                        <Text style={styles.rotaInfo}>
-                          {viagem.origem} → {viagem.destino}
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </>
-            )}
+            {(viagens || []).map((viagem) => {
+              const statusLabel = getStatusLabel(viagem.status);
+              const statusColor = getStatusColor(viagem.status);
+              return (
+                <TouchableOpacity
+                  key={viagem.id}
+                  style={styles.viagemCard}
+                  onPress={() =>
+                    navigation.navigate('DetalheViagemMotorista', {
+                      viagem,
+                    })
+                  }>
+                  <View style={styles.viagemHeader}>
+                    <View style={styles.viagemInfo}>
+                      <Text style={styles.viagemTipo}>
+                        {viagem.tipo || 'IDA'} - {viagem.rota_nome || 'Rota'}
+                      </Text>
+                      <Text style={styles.viagemData}>
+                        {viagem.data ? formatDate(viagem.data) : 'Data não disponível'}
+                      </Text>
+                      <Text style={styles.viagemHorario}>
+                        {viagem.horario_inicio ? formatTime(viagem.horario_inicio) : '--:--'}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        {backgroundColor: statusColor + '20'},
+                      ]}>
+                      <Text
+                        style={[
+                          styles.statusText,
+                          {color: statusColor},
+                        ]}>
+                        {statusLabel}
+                      </Text>
+                    </View>
+                  </View>
+                  {viagem.origem && viagem.destino && (
+                    <Text style={styles.rotaInfo}>
+                      {viagem.origem} → {viagem.destino}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </ScrollView>
       )}
@@ -258,12 +248,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xxxl,
-  },
   scrollView: {
     flex: 1,
   },
@@ -315,22 +299,6 @@ const styles = StyleSheet.create({
     ...textStyles.bodySmall,
     color: colors.text.secondary,
     marginTop: spacing.sm,
-  },
-  emptyState: {
-    padding: spacing.xxxl,
-    alignItems: 'center',
-  },
-  emptyText: {
-    ...textStyles.h4,
-    color: colors.text.secondary,
-    marginTop: spacing.base,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
-  },
-  emptySubtext: {
-    ...textStyles.bodySmall,
-    color: colors.text.hint,
-    textAlign: 'center',
   },
 });
 

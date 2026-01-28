@@ -1,9 +1,9 @@
-import {apiGet, apiPost, apiPut, apiPatch} from '../utils/api';
-
 /**
  * Notifications Service
- * Handles notification operations
+ * Handles notification operations using Axios API
  */
+
+import api from './api';
 
 /**
  * Get notifications for current user
@@ -12,55 +12,63 @@ import {apiGet, apiPost, apiPut, apiPatch} from '../utils/api';
  * @returns {Promise<Array>} List of notifications
  */
 export const getNotificacoes = async (filters = {}) => {
-  const queryParams = new URLSearchParams();
+  const params = {};
   if (filters.enviada !== undefined) {
-    queryParams.append('enviada', filters.enviada);
+    params.enviada = filters.enviada;
   }
   
-  const queryString = queryParams.toString();
-  const endpoint = queryString ? `/notificacoes?${queryString}` : '/notificacoes';
-  
-  return apiGet(endpoint);
+  const response = await api.get('/notificacoes', { params });
+  return response.data;
 };
 
 /**
  * Get a single notification by ID
- * @param {number} notificacaoId - Notification ID
+ * @param {string} notificacaoId - Notification ID
  * @returns {Promise<Object>} Notification data
  */
 export const getNotificacao = async (notificacaoId) => {
-  return apiGet(`/notificacoes/${notificacaoId}`);
+  const response = await api.get(`/notificacoes/${notificacaoId}`);
+  return response.data;
 };
 
 /**
  * Create a new notification
  * @param {Object} notificacaoData - Notification data
- * @param {number} notificacaoData.usuario_id - User ID
+ * @param {string} notificacaoData.usuario_id - User ID
  * @param {string} notificacaoData.titulo - Notification title
  * @param {string} notificacaoData.mensagem - Notification message
  * @returns {Promise<Object>} Created notification
  */
 export const createNotificacao = async (notificacaoData) => {
-  return apiPost('/notificacoes', notificacaoData);
+  const response = await api.post('/notificacoes', notificacaoData);
+  return response.data;
 };
 
 /**
  * Mark notification as read/sent
- * @param {number} notificacaoId - Notification ID
+ * @param {string} notificacaoId - Notification ID
  * @returns {Promise<Object>} Updated notification
  */
 export const markNotificacaoAsSent = async (notificacaoId) => {
-  return apiPatch(`/notificacoes/${notificacaoId}`, {enviada: true});
+  const response = await api.patch(`/notificacoes/${notificacaoId}`, { enviada: true });
+  return response.data;
 };
 
 /**
  * Update notification settings for user
- * @param {number} usuarioId - User ID
+ * @param {string} usuarioId - User ID
  * @param {Object} settings - Notification settings
  * @returns {Promise<Object>} Updated settings
  */
 export const updateNotificacaoSettings = async (usuarioId, settings) => {
-  return apiPut(`/notificacoes/usuario/${usuarioId}/settings`, settings);
+  const response = await api.put(`/notificacoes/usuario/${usuarioId}/settings`, settings);
+  return response.data;
 };
 
-
+export default {
+  getNotificacoes,
+  getNotificacao,
+  createNotificacao,
+  markNotificacaoAsSent,
+  updateNotificacaoSettings,
+};
