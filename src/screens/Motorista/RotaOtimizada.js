@@ -7,6 +7,8 @@ import {
   SafeAreaView,
   ScrollView,
 } from 'react-native';
+import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight, lineHeight } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
 
 const RotaOtimizada = ({navigation, route}) => {
   const {viagem} = route?.params || {};
@@ -23,7 +25,8 @@ const RotaOtimizada = ({navigation, route}) => {
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← Voltar</Text>
+          <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
+          <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Rota Otimizada</Text>
       </View>
@@ -33,7 +36,7 @@ const RotaOtimizada = ({navigation, route}) => {
           {/* Aviso se não estiver totalmente otimizada */}
           {pontosForaDeOrdem.length > 0 && (
             <View style={styles.avisoBox}>
-              <Text style={styles.avisoIcon}>⚠️</Text>
+              <Icon name={IconNames.warning} size="md" color={colors.warning.main} />
               <View style={styles.avisoContent}>
                 <Text style={styles.avisoTitle}>
                   Rota não totalmente otimizada
@@ -48,7 +51,7 @@ const RotaOtimizada = ({navigation, route}) => {
 
           {totalmenteOtimizada && (
             <View style={styles.sucessoBox}>
-              <Text style={styles.sucessoIcon}>✓</Text>
+              <Icon name={IconNames.checkCircle} size="md" color={colors.success.main} />
               <Text style={styles.sucessoText}>
                 Rota totalmente otimizada!
               </Text>
@@ -94,7 +97,7 @@ const RotaOtimizada = ({navigation, route}) => {
                 </View>
                 {index < pontosOtimizados.length - 1 && (
                   <View style={styles.linhaConector}>
-                    <Text style={styles.linhaConectorText}>↓</Text>
+                    <Icon name={IconNames.expandMore} size="md" color={colors.secondary.main} />
                   </View>
                 )}
               </View>
@@ -138,108 +141,107 @@ const RotaOtimizada = ({navigation, route}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: '#fff',
-    padding: 16,
+    backgroundColor: colors.background.paper,
+    padding: spacing.base,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border.light,
+    ...shadows.sm,
   },
   backButton: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   backButtonText: {
-    fontSize: 16,
-    color: '#1a73e8',
+    ...textStyles.body,
+    color: colors.secondary.main,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    ...textStyles.h2,
+    color: colors.text.primary,
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: spacing.base,
   },
   avisoBox: {
-    backgroundColor: '#fff3cd',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: colors.warning.light,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.base,
     flexDirection: 'row',
     borderWidth: 2,
-    borderColor: '#fbbc04',
-  },
-  avisoIcon: {
-    fontSize: 24,
-    marginRight: 12,
+    borderColor: colors.warning.main,
+    gap: spacing.md,
+    ...shadows.sm,
   },
   avisoContent: {
     flex: 1,
   },
   avisoTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#856404',
-    marginBottom: 4,
+    ...textStyles.body,
+    fontWeight: fontWeight.bold,
+    color: colors.warning.dark,
+    marginBottom: spacing.xs,
   },
   avisoText: {
-    fontSize: 14,
-    color: '#856404',
-    lineHeight: 20,
+    ...textStyles.bodySmall,
+    color: colors.warning.dark,
+    lineHeight: lineHeight.relaxed,
   },
   sucessoBox: {
-    backgroundColor: '#e8f5e9',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: colors.success.light,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.base,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#34a853',
-  },
-  sucessoIcon: {
-    fontSize: 24,
-    marginRight: 12,
+    borderColor: colors.success.main,
+    gap: spacing.md,
+    ...shadows.sm,
   },
   sucessoText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2e7d32',
+    ...textStyles.body,
+    fontWeight: fontWeight.semiBold,
+    color: colors.success.dark,
   },
   pontosContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.base,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
+    ...shadows.sm,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 16,
+    ...textStyles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.base,
   },
   pontoCard: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   pontoCardForaOrdem: {
-    backgroundColor: '#fff3cd',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: colors.warning.light,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
     borderWidth: 1,
-    borderColor: '#fbbc04',
+    borderColor: colors.warning.main,
   },
   pontoCardDestino: {
-    backgroundColor: '#e8f5e9',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: colors.success.light,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
     borderWidth: 1,
-    borderColor: '#34a853',
+    borderColor: colors.success.main,
   },
   pontoHeader: {
     flexDirection: 'row',
@@ -248,100 +250,95 @@ const styles = StyleSheet.create({
   ordemContainer: {
     width: 50,
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   ordemNumero: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1a73e8',
+    ...textStyles.h2,
+    color: colors.secondary.main,
   },
   destinoLabel: {
-    fontSize: 10,
-    color: '#34a853',
-    fontWeight: '600',
-    marginTop: 2,
+    ...textStyles.caption,
+    color: colors.success.main,
+    fontWeight: fontWeight.semiBold,
+    marginTop: spacing.xxs,
   },
   pontoInfo: {
     flex: 1,
   },
   pontoNome: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
+    ...textStyles.body,
+    fontWeight: fontWeight.semiBold,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
   alunosInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
   alunosText: {
-    fontSize: 14,
-    color: '#666',
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
   },
   foraOrdemBadge: {
-    backgroundColor: '#ea4335',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
+    backgroundColor: colors.error.main,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: borderRadius.full,
   },
   foraOrdemText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '600',
+    ...textStyles.caption,
+    color: colors.text.inverse,
+    fontWeight: fontWeight.semiBold,
   },
   linhaConector: {
     alignItems: 'center',
-    marginVertical: 4,
-  },
-  linhaConectorText: {
-    fontSize: 20,
-    color: '#1a73e8',
+    marginVertical: spacing.xs,
   },
   infoCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.base,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
+    ...shadows.sm,
   },
   infoTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
+    ...textStyles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   infoLabel: {
-    fontSize: 14,
-    color: '#666',
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
   },
   infoValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    ...textStyles.bodySmall,
+    fontWeight: fontWeight.semiBold,
+    color: colors.text.primary,
   },
   aceitarButton: {
-    backgroundColor: '#34a853',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: colors.success.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.base,
     alignItems: 'center',
+    ...shadows.sm,
   },
   aceitarButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...textStyles.button,
+    color: colors.text.inverse,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#666',
+    ...textStyles.body,
+    color: colors.text.secondary,
     textAlign: 'center',
-    marginTop: 24,
+    marginTop: spacing.xl,
   },
 });
 

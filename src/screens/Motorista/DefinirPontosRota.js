@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import {motoristaService} from '../../services/motoristaService';
 import {useAuth} from '../../contexts/AuthContext';
+import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
 
 const DefinirPontosRota = ({navigation, route}) => {
   const params = route?.params || {};
@@ -308,22 +310,24 @@ const DefinirPontosRota = ({navigation, route}) => {
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← Voltar</Text>
+          <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
+          <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Definir Pontos da Rota</Text>
       </View>
 
       {loading && pontosRota.length === 0 && !isNovaRota ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#1a73e8" />
+          <ActivityIndicator size="large" color={colors.secondary.main} />
           <Text style={styles.loadingText}>Carregando pontos da rota...</Text>
         </View>
       ) : (
         <ScrollView style={styles.scrollView}>
           <View style={styles.content}>
           <View style={styles.infoBox}>
+            <Icon name={IconNames.warning} size="md" color={colors.warning.main} />
             <Text style={styles.infoText}>
-              ⚠️ Você pode editar os pontos da rota, mas eles devem estar
+              Você pode editar os pontos da rota, mas eles devem estar
               dentro de um raio de 2km dos colégios.
             </Text>
           </View>
@@ -334,14 +338,14 @@ const DefinirPontosRota = ({navigation, route}) => {
             <View style={styles.mapaPlaceholder}>
               {/* Pontos pré-definidos dos colégios */}
               {pontosPreDefinidos.map((ponto) => (
-                <View
+                  <View
                   key={ponto.id}
                   style={[
                     styles.pontoMapa,
                     styles.pontoColegio,
                     {left: ponto.x, top: ponto.y},
                   ]}>
-                  <Text style={styles.pontoMapaIcon}>🏫</Text>
+                  <Icon name={IconNames.badge} size="md" color={colors.primary.main} />
                   <Text style={styles.pontoMapaNome}>{ponto.nome}</Text>
                 </View>
               ))}
@@ -357,7 +361,7 @@ const DefinirPontosRota = ({navigation, route}) => {
                     {left: ponto.x, top: ponto.y},
                   ]}
                   onPress={() => handleEditarPonto(ponto)}>
-                  <Text style={styles.pontoMapaIcon}>📍</Text>
+                  <Icon name={IconNames.location} size="md" color={colors.secondary.main} />
                   <Text style={styles.pontoMapaNome}>{ponto.nome}</Text>
                   {editandoPonto === ponto.id && (
                     <View style={styles.editarIndicador}>
@@ -445,7 +449,7 @@ const DefinirPontosRota = ({navigation, route}) => {
               pontosRota.map((ponto) => (
                 <View key={ponto.id} style={styles.pontoItem}>
                   <View style={styles.pontoItemLeft}>
-                    <Text style={styles.pontoItemIcon}>📍</Text>
+                    <Icon name={IconNames.location} size="md" color={colors.secondary.main} />
                     <View style={styles.pontoItemInfo}>
                       <Text style={styles.pontoItemNome}>{ponto.nome}</Text>
                       <Text style={styles.pontoItemCoords}>
@@ -465,18 +469,20 @@ const DefinirPontosRota = ({navigation, route}) => {
 
           {limiteExcedido && (
             <View style={styles.avisoBox}>
+              <Icon name={IconNames.warning} size="sm" color={colors.error.main} />
               <Text style={styles.avisoText}>
-                ⚠️ Alguns pontos estão fora do limite de 2km
+                Alguns pontos estão fora do limite de 2km
               </Text>
             </View>
           )}
 
           {(limiteExcedido || pontosRota.length === 0) && (
             <View style={styles.infoBox}>
+              <Icon name={IconNames.warning} size="sm" color={colors.warning.main} />
               <Text style={styles.infoText}>
                 {pontosRota.length === 0
-                  ? '⚠️ Adicione pelo menos um ponto antes de salvar'
-                  : '⚠️ Verifique os pontos antes de salvar'}
+                  ? 'Adicione pelo menos um ponto antes de salvar'
+                  : 'Verifique os pontos antes de salvar'}
               </Text>
             </View>
           )}
@@ -498,7 +504,7 @@ const DefinirPontosRota = ({navigation, route}) => {
             }}
             disabled={limiteExcedido || salvando || pontosRota.length === 0}>
             {salvando ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.text.inverse} />
             ) : (
               <Text style={styles.salvarButtonText}>
                 Salvar Pontos da Rota ({pontosRota.length})
@@ -515,64 +521,70 @@ const DefinirPontosRota = ({navigation, route}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: '#fff',
-    padding: 16,
+    backgroundColor: colors.background.paper,
+    padding: spacing.base,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border.light,
+    ...shadows.sm,
   },
   backButton: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   backButtonText: {
-    fontSize: 16,
-    color: '#1a73e8',
+    ...textStyles.body,
+    color: colors.secondary.main,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    ...textStyles.h2,
+    color: colors.text.primary,
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: spacing.base,
   },
   infoBox: {
-    backgroundColor: '#fff3cd',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    backgroundColor: colors.warning.light,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.base,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
   },
   infoText: {
-    fontSize: 14,
-    color: '#856404',
-    lineHeight: 20,
+    ...textStyles.bodySmall,
+    color: colors.warning.dark,
+    flex: 1,
   },
   mapaContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.base,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
+    ...shadows.sm,
   },
   mapaTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
+    ...textStyles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
   },
   mapaPlaceholder: {
     height: 300,
-    backgroundColor: '#e8f5e9',
-    borderRadius: 8,
+    backgroundColor: colors.success.light,
+    borderRadius: borderRadius.md,
     position: 'relative',
     borderWidth: 2,
-    borderColor: '#c8e6c9',
+    borderColor: colors.success.main,
     borderStyle: 'dashed',
   },
   pontoMapa: {
@@ -588,97 +600,94 @@ const styles = StyleSheet.create({
   pontoEditando: {
     zIndex: 10,
     borderWidth: 2,
-    borderColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 4,
-  },
-  pontoMapaIcon: {
-    fontSize: 24,
-    marginBottom: 4,
+    borderColor: colors.secondary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.xs,
   },
   pontoMapaNome: {
-    fontSize: 10,
-    color: '#333',
-    fontWeight: '500',
-    backgroundColor: '#fff',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    ...textStyles.caption,
+    color: colors.text.primary,
+    fontWeight: fontWeight.medium,
+    backgroundColor: colors.background.paper,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: borderRadius.xs,
     textAlign: 'center',
   },
   editarIndicador: {
-    backgroundColor: '#1a73e8',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginTop: 4,
+    backgroundColor: colors.secondary.main,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: borderRadius.xs,
+    marginTop: spacing.xs,
   },
   editarIndicadorText: {
-    color: '#fff',
-    fontSize: 8,
-    fontWeight: 'bold',
+    ...textStyles.caption,
+    color: colors.text.inverse,
+    fontWeight: fontWeight.bold,
   },
   linhaRota: {
     position: 'absolute',
     width: '80%',
     height: 2,
-    backgroundColor: '#1a73e8',
+    backgroundColor: colors.secondary.main,
     opacity: 0.5,
     left: '10%',
     top: '50%',
     zIndex: 1,
   },
   listaPontos: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.base,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
+    ...shadows.sm,
   },
   listaHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   listaTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    ...textStyles.h4,
+    color: colors.text.primary,
     flex: 1,
   },
   adicionarButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: '#34a853',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.success.main,
+    ...shadows.xs,
   },
   adicionarButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    ...textStyles.buttonSmall,
+    color: colors.text.inverse,
   },
   formNovoPonto: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
+    backgroundColor: colors.background.default,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   input: {
-    backgroundColor: '#fff',
-    borderRadius: 6,
-    padding: 10,
-    fontSize: 14,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.sm,
+    padding: spacing.base,
+    ...textStyles.inputText,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    marginBottom: 8,
-    color: '#333',
+    borderColor: colors.border.light,
+    marginBottom: spacing.sm,
+    color: colors.text.primary,
   },
   coordenadasRow: {
     flexDirection: 'row',
     width: '100%',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
   },
   inputCoordenada: {
     flex: 1,
@@ -686,128 +695,129 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   inputCoordenadaLeft: {
-    marginRight: 6,
+    marginRight: spacing.sm,
   },
   inputCoordenadaRight: {
-    marginLeft: 6,
+    marginLeft: spacing.sm,
   },
   formButtons: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
+    gap: spacing.sm,
+    marginTop: spacing.xs,
   },
   cancelarButton: {
     flex: 1,
-    padding: 10,
-    borderRadius: 6,
-    backgroundColor: '#e0e0e0',
+    padding: spacing.base,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.border.light,
     alignItems: 'center',
   },
   cancelarButtonText: {
-    color: '#666',
-    fontSize: 14,
-    fontWeight: '600',
+    ...textStyles.buttonSmall,
+    color: colors.text.secondary,
   },
   confirmarButton: {
     flex: 1,
-    padding: 10,
-    borderRadius: 6,
-    backgroundColor: '#1a73e8',
+    padding: spacing.base,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.secondary.main,
     alignItems: 'center',
+    ...shadows.xs,
   },
   confirmarButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    ...textStyles.buttonSmall,
+    color: colors.text.inverse,
   },
   emptyState: {
-    padding: 24,
+    padding: spacing.xl,
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 4,
+    ...textStyles.body,
+    color: colors.text.secondary,
+    marginBottom: spacing.xs,
   },
   emptySubtext: {
-    fontSize: 12,
-    color: '#999',
+    ...textStyles.caption,
+    color: colors.text.hint,
   },
   pontoItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border.light,
   },
   pontoItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-  },
-  pontoItemIcon: {
-    fontSize: 20,
-    marginRight: 12,
+    gap: spacing.md,
   },
   pontoItemInfo: {
     flex: 1,
   },
   pontoItemNome: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 2,
+    ...textStyles.body,
+    fontWeight: fontWeight.medium,
+    color: colors.text.primary,
+    marginBottom: spacing.xxs,
   },
   pontoItemCoords: {
-    fontSize: 12,
-    color: '#666',
+    ...textStyles.caption,
+    color: colors.text.secondary,
   },
   removerButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: '#ea4335',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.error.main,
+    ...shadows.xs,
   },
   removerButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
+    ...textStyles.buttonSmall,
+    color: colors.text.inverse,
+    fontWeight: fontWeight.medium,
   },
   avisoBox: {
-    backgroundColor: '#ffebee',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    backgroundColor: colors.error.light,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.base,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   avisoText: {
-    fontSize: 14,
-    color: '#c62828',
+    ...textStyles.bodySmall,
+    color: colors.error.dark,
+    flex: 1,
   },
   salvarButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: colors.secondary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.base,
     alignItems: 'center',
+    ...shadows.sm,
   },
   salvarButtonDisabled: {
-    backgroundColor: '#e0e0e0',
+    backgroundColor: colors.border.light,
   },
   salvarButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...textStyles.button,
+    color: colors.text.inverse,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 48,
+    padding: spacing.xxxl,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    marginTop: spacing.base,
+    ...textStyles.body,
+    color: colors.text.secondary,
   },
 });
 

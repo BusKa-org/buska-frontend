@@ -11,6 +11,8 @@ import {
   Platform,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
+import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight, lineHeight } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
 
 const ConfigNotificacoesMotorista = ({navigation}) => {
   const { logout } = useAuth();
@@ -97,7 +99,8 @@ const ConfigNotificacoesMotorista = ({navigation}) => {
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← Voltar</Text>
+          <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
+          <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Configurações de Notificação</Text>
       </View>
@@ -119,8 +122,8 @@ const ConfigNotificacoesMotorista = ({navigation}) => {
               <Switch
                 value={notificacaoAlunos}
                 onValueChange={setNotificacaoAlunos}
-                trackColor={{false: '#e0e0e0', true: '#1a73e8'}}
-                thumbColor="#fff"
+                trackColor={{false: colors.border.light, true: colors.secondary.main}}
+                thumbColor={colors.background.paper}
               />
             </View>
           </View>
@@ -137,8 +140,8 @@ const ConfigNotificacoesMotorista = ({navigation}) => {
               <Switch
                 value={notificacaoAtrasos}
                 onValueChange={setNotificacaoAtrasos}
-                trackColor={{false: '#e0e0e0', true: '#1a73e8'}}
-                thumbColor="#fff"
+                trackColor={{false: colors.border.light, true: colors.secondary.main}}
+                thumbColor={colors.background.paper}
               />
             </View>
           </View>
@@ -157,8 +160,8 @@ const ConfigNotificacoesMotorista = ({navigation}) => {
               <Switch
                 value={notificacaoEmergencia}
                 onValueChange={setNotificacaoEmergencia}
-                trackColor={{false: '#e0e0e0', true: '#1a73e8'}}
-                thumbColor="#fff"
+                trackColor={{false: colors.border.light, true: colors.secondary.main}}
+                thumbColor={colors.background.paper}
               />
             </View>
           </View>
@@ -177,8 +180,8 @@ const ConfigNotificacoesMotorista = ({navigation}) => {
               <Switch
                 value={notificacaoRotas}
                 onValueChange={setNotificacaoRotas}
-                trackColor={{false: '#e0e0e0', true: '#1a73e8'}}
-                thumbColor="#fff"
+                trackColor={{false: colors.border.light, true: colors.secondary.main}}
+                thumbColor={colors.background.paper}
               />
             </View>
           </View>
@@ -199,7 +202,10 @@ const ConfigNotificacoesMotorista = ({navigation}) => {
               }}
               activeOpacity={0.7}
               testID="logout-button">
-              <Text style={styles.logoutButtonText}>🚪 Sair</Text>
+              <View style={styles.logoutButtonContent}>
+                <Icon name={IconNames.logout} size="sm" color={colors.error.main} />
+                <Text style={styles.logoutButtonText}>Sair</Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
@@ -211,39 +217,43 @@ const ConfigNotificacoesMotorista = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: '#fff',
-    padding: 16,
+    backgroundColor: colors.background.paper,
+    padding: spacing.base,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border.light,
+    ...shadows.sm,
   },
   backButton: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   backButtonText: {
-    fontSize: 16,
-    color: '#1a73e8',
+    ...textStyles.body,
+    color: colors.secondary.main,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    ...textStyles.h2,
+    color: colors.text.primary,
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: spacing.base,
   },
   section: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.base,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
+    ...shadows.sm,
   },
   settingRow: {
     flexDirection: 'row',
@@ -252,55 +262,58 @@ const styles = StyleSheet.create({
   },
   settingInfo: {
     flex: 1,
-    marginRight: 16,
+    marginRight: spacing.base,
   },
   settingTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
+    ...textStyles.inputLabel,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
   settingDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
+    lineHeight: lineHeight.relaxed,
   },
   saveButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: colors.secondary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.base,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
+    ...shadows.sm,
   },
   saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...textStyles.button,
+    color: colors.text.inverse,
   },
   accountSection: {
-    marginTop: 24,
-    paddingTop: 24,
+    marginTop: spacing.xl,
+    paddingTop: spacing.xl,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: colors.border.light,
   },
   accountSectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 16,
+    ...textStyles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.base,
   },
   logoutButton: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ffebee',
+    borderColor: colors.error.light,
+    ...shadows.xs,
+  },
+  logoutButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   logoutButtonText: {
-    fontSize: 16,
-    color: '#d32f2f',
-    fontWeight: '600',
+    ...textStyles.button,
+    color: colors.error.main,
   },
 });
 

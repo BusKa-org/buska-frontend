@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import {motoristaService} from '../../services/motoristaService';
+import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
 
 const DashboardMotorista = ({navigation}) => {
   const { user } = useAuth();
@@ -251,9 +253,12 @@ const DashboardMotorista = ({navigation}) => {
       <ScrollView style={styles.scrollView}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.greeting}>
-            Olá, {user?.nome || 'Motorista'}! 👋
-          </Text>
+          <View style={styles.greetingContainer}>
+            <Text style={styles.greeting}>
+              Olá, {user?.nome || 'Motorista'}!
+            </Text>
+            <Icon name={IconNames.person} size="md" color={colors.primary.main} />
+          </View>
           <Text style={styles.subtitle}>
             {getUserInfo()}
           </Text>
@@ -264,7 +269,7 @@ const DashboardMotorista = ({navigation}) => {
           <Text style={styles.cardTitle}>Próxima Viagem</Text>
           {loadingViagem ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color="#1a73e8" />
+              <ActivityIndicator size="small" color={colors.secondary.main} />
             </View>
           ) : proximaViagem ? (
             <>
@@ -286,12 +291,12 @@ const DashboardMotorista = ({navigation}) => {
 
                 <View style={styles.rotaInfo}>
                   <View style={styles.pontoRota}>
-                    <Text style={styles.pontoIcon}>📍</Text>
+                    <Icon name={IconNames.location} size="md" color={colors.secondary.main} />
                     <Text style={styles.pontoNome}>{proximaViagem.origem || 'N/A'}</Text>
                   </View>
                   <View style={styles.linhaRota} />
                   <View style={styles.pontoRota}>
-                    <Text style={styles.pontoIcon}>🎯</Text>
+                    <Icon name={IconNames.location} size="md" color={colors.accent.main} />
                     <Text style={styles.pontoNome}>{proximaViagem.destino || 'N/A'}</Text>
                   </View>
                 </View>
@@ -301,7 +306,7 @@ const DashboardMotorista = ({navigation}) => {
               <View style={styles.alunosInfo}>
                 {loadingAlunos ? (
                   <View style={styles.loadingAlunosContainer}>
-                    <ActivityIndicator size="small" color="#1a73e8" />
+                    <ActivityIndicator size="small" color={colors.secondary.main} />
                   </View>
                 ) : (
                   <>
@@ -366,14 +371,14 @@ const DashboardMotorista = ({navigation}) => {
             <TouchableOpacity
               style={styles.botaoRapido}
               onPress={() => navigation.navigate('RotaMotorista')}>
-              <Text style={styles.botaoRapidoIcon}>🚌</Text>
+              <Icon name={IconNames.bus} size="xl" color={colors.secondary.main} />
               <Text style={styles.botaoRapidoText}>Minhas Rotas</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.botaoRapido}
               onPress={() => navigation.navigate('CriarRota')}>
-              <Text style={styles.botaoRapidoIcon}>➕</Text>
+              <Icon name={IconNames.add} size="xl" color={colors.secondary.main} />
               <Text style={styles.botaoRapidoText}>Criar Rota</Text>
             </TouchableOpacity>
           </View>
@@ -382,14 +387,14 @@ const DashboardMotorista = ({navigation}) => {
             <TouchableOpacity
               style={styles.botaoRapido}
               onPress={() => navigation.navigate('CriarViagem')}>
-              <Text style={styles.botaoRapidoIcon}>🚗</Text>
+              <Icon name={IconNames.route} size="xl" color={colors.secondary.main} />
               <Text style={styles.botaoRapidoText}>Criar Viagem</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.botaoRapido}
               onPress={() => navigation.navigate('ChatGestor')}>
-              <Text style={styles.botaoRapidoIcon}>💬</Text>
+              <Icon name={IconNames.chat} size="xl" color={colors.secondary.main} />
               <Text style={styles.botaoRapidoText}>Chat Gestor</Text>
             </TouchableOpacity>
           </View>
@@ -398,7 +403,7 @@ const DashboardMotorista = ({navigation}) => {
             <TouchableOpacity
               style={styles.botaoRapido}
               onPress={() => navigation.navigate('ConfigNotificacoesMotorista')}>
-              <Text style={styles.botaoRapidoIcon}>⚙️</Text>
+              <Icon name={IconNames.settings} size="xl" color={colors.secondary.main} />
               <Text style={styles.botaoRapidoText}>Configurações</Text>
             </TouchableOpacity>
           </View>
@@ -411,234 +416,235 @@ const DashboardMotorista = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.default,
   },
   scrollView: {
     flex: 1,
   },
   header: {
-    padding: 24,
-    backgroundColor: '#fff',
+    padding: spacing.xl,
+    backgroundColor: colors.background.paper,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border.light,
+    ...shadows.sm,
+  },
+  greetingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   greeting: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    ...textStyles.h2,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    ...textStyles.body,
+    color: colors.text.secondary,
   },
   proximaViagemCard: {
-    margin: 16,
-    padding: 20,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    margin: spacing.base,
+    padding: spacing.lg,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
+    ...shadows.sm,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    ...textStyles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
   },
   viagemData: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
-    fontWeight: '500',
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
+    marginBottom: spacing.md,
+    fontWeight: fontWeight.medium,
     textTransform: 'capitalize',
   },
   loadingContainer: {
-    padding: 20,
+    padding: spacing.lg,
     alignItems: 'center',
   },
   viagemInfo: {
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   viagemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: spacing.base,
   },
   viagemTipo: {
-    fontSize: 16,
-    color: '#1a73e8',
-    fontWeight: '600',
-    marginBottom: 4,
+    ...textStyles.body,
+    color: colors.secondary.main,
+    fontWeight: fontWeight.semiBold,
+    marginBottom: spacing.xs,
   },
   viagemHorario: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
+    ...textStyles.h1,
+    color: colors.text.primary,
   },
   statusBadge: {
-    backgroundColor: '#fff3cd',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    backgroundColor: colors.warning.light,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
   },
   statusText: {
-    color: '#fbbc04',
-    fontSize: 12,
-    fontWeight: '600',
+    color: colors.warning.main,
+    ...textStyles.caption,
+    fontWeight: fontWeight.semiBold,
   },
   rotaInfo: {
-    marginBottom: 16,
+    marginBottom: spacing.base,
   },
   rotaIdText: {
-    fontSize: 14,
-    color: '#666',
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
   },
   pontoRota: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  pontoIcon: {
-    fontSize: 20,
-    marginRight: 8,
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
   },
   pontoNome: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
+    ...textStyles.body,
+    color: colors.text.primary,
+    fontWeight: fontWeight.medium,
   },
   linhaRota: {
     width: 2,
-    height: 20,
-    backgroundColor: '#e0e0e0',
-    marginLeft: 14,
-    marginBottom: 8,
-    marginTop: 4,
+    height: spacing.lg,
+    backgroundColor: colors.border.light,
+    marginLeft: spacing.md,
+    marginBottom: spacing.sm,
+    marginTop: spacing.xs,
   },
   alunosInfo: {
-    marginTop: 12,
-    marginBottom: 20,
+    marginTop: spacing.md,
+    marginBottom: spacing.lg,
   },
   alunosText: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
   },
   alunosBar: {
-    height: 8,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 4,
+    height: spacing.sm,
+    backgroundColor: colors.border.light,
+    borderRadius: borderRadius.xs,
     overflow: 'hidden',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   alunosBarFill: {
     height: '100%',
-    backgroundColor: '#34a853',
-    borderRadius: 4,
+    backgroundColor: colors.success.main,
+    borderRadius: borderRadius.xs,
   },
   loadingAlunosContainer: {
-    padding: 12,
+    padding: spacing.md,
     alignItems: 'center',
   },
   emptyAlunosText: {
-    fontSize: 14,
-    color: '#999',
+    ...textStyles.bodySmall,
+    color: colors.text.hint,
     fontStyle: 'italic',
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   acoesContainer: {
-    gap: 12,
+    gap: spacing.md,
   },
   verDetalhesButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 14,
+    backgroundColor: colors.secondary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
     alignItems: 'center',
+    ...shadows.xs,
   },
   verDetalhesButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    ...textStyles.button,
+    color: colors.text.inverse,
   },
   iniciarButton: {
-    backgroundColor: '#34a853',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: colors.success.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.base,
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: spacing.xs,
+    ...shadows.sm,
   },
   iniciarButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...textStyles.button,
+    color: colors.text.inverse,
+    fontSize: fontSize.h4,
+    fontWeight: fontWeight.bold,
   },
   botoesRapidos: {
-    paddingHorizontal: 16,
-    marginBottom: 24,
+    paddingHorizontal: spacing.base,
+    marginBottom: spacing.xl,
   },
   botoesRow: {
     flexDirection: 'row',
-    marginBottom: 12,
-    gap: 12,
+    marginBottom: spacing.md,
+    gap: spacing.md,
   },
   botaoRapido: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
     minHeight: 100,
     justifyContent: 'center',
-  },
-  botaoRapidoIcon: {
-    fontSize: 32,
-    marginBottom: 8,
+    ...shadows.xs,
   },
   botaoRapidoText: {
-    fontSize: 12,
-    color: '#333',
-    fontWeight: '500',
+    ...textStyles.caption,
+    color: colors.text.primary,
+    fontWeight: fontWeight.medium,
     textAlign: 'center',
+    marginTop: spacing.sm,
   },
   acessoRapido: {
-    padding: 16,
+    padding: spacing.base,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
+    ...textStyles.h3,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
   },
   rapidoCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
+    ...shadows.xs,
   },
   rapidoIcon: {
-    fontSize: 24,
-    marginRight: 12,
+    fontSize: fontSize.h3,
+    marginRight: spacing.md,
   },
   rapidoText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
+    ...textStyles.body,
+    color: colors.text.primary,
+    fontWeight: fontWeight.medium,
   },
   emptyState: {
-    padding: 24,
+    padding: spacing.xl,
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 16,
-    color: '#666',
+    ...textStyles.body,
+    color: colors.text.secondary,
   },
 });
 

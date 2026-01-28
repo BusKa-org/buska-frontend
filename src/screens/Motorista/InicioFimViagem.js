@@ -6,6 +6,8 @@ import {
   StyleSheet,
   SafeAreaView,
 } from 'react-native';
+import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
 
 const InicioFimViagem = ({navigation, route}) => {
   const viagem = route?.params?.viagem;
@@ -17,7 +19,8 @@ const InicioFimViagem = ({navigation, route}) => {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}>
-            <Text style={styles.backButtonText}>← Voltar</Text>
+            <Icon name={IconNames.back} size="md" color={viagemIniciada ? colors.text.hint : colors.secondary.main} />
+            <Text style={styles.backButtonText}>Voltar</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Iniciar Viagem</Text>
         </View>
@@ -105,12 +108,12 @@ const InicioFimViagem = ({navigation, route}) => {
           <Text style={styles.viagemHorario}>{viagem.horario}</Text>
           <View style={styles.rotaInfo}>
             <View style={styles.pontoRota}>
-              <Text style={styles.pontoIcon}>📍</Text>
+              <Icon name={IconNames.location} size="md" color={colors.secondary.main} />
               <Text style={styles.pontoNome}>{viagem.origem}</Text>
             </View>
             <View style={styles.linhaRota} />
             <View style={styles.pontoRota}>
-              <Text style={styles.pontoIcon}>🎯</Text>
+              <Icon name={IconNames.location} size="md" color={colors.accent.main} />
               <Text style={styles.pontoNome}>{viagem.destino}</Text>
             </View>
           </View>
@@ -129,14 +132,14 @@ const InicioFimViagem = ({navigation, route}) => {
           <TouchableOpacity
             style={styles.iniciarButton}
             onPress={handleIniciarViagem}>
-            <Text style={styles.iniciarButtonIcon}>▶</Text>
+            <Icon name={IconNames.play} size="xl" color={colors.text.inverse} />
             <Text style={styles.iniciarButtonText}>Iniciar Viagem</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
             style={styles.finalizarButton}
             onPress={handleFinalizarViagem}>
-            <Text style={styles.finalizarButtonIcon}>■</Text>
+            <Icon name={IconNames.stop} size="xl" color={colors.text.inverse} />
             <Text style={styles.finalizarButtonText}>Finalizar Viagem</Text>
           </TouchableOpacity>
         )}
@@ -171,49 +174,52 @@ const InicioFimViagem = ({navigation, route}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: '#fff',
-    padding: 16,
+    backgroundColor: colors.background.paper,
+    padding: spacing.base,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border.light,
+    ...shadows.sm,
   },
   backButton: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   backButtonText: {
-    fontSize: 16,
-    color: '#1a73e8',
+    ...textStyles.body,
+    color: colors.secondary.main,
   },
   backButtonDisabled: {
-    color: '#999',
+    color: colors.text.hint,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    ...textStyles.h2,
+    color: colors.text.primary,
   },
   content: {
     flex: 1,
-    padding: 24,
+    padding: spacing.xl,
     justifyContent: 'center',
   },
   viagemInfo: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: spacing.xxxl,
   },
   viagemTipo: {
-    fontSize: 18,
-    color: '#1a73e8',
-    fontWeight: '600',
-    marginBottom: 8,
+    ...textStyles.h4,
+    color: colors.secondary.main,
+    fontWeight: fontWeight.semiBold,
+    marginBottom: spacing.sm,
   },
   viagemHorario: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 24,
+    fontSize: fontSize.display1,
+    fontWeight: fontWeight.bold,
+    color: colors.text.primary,
+    marginBottom: spacing.xl,
   },
   rotaInfo: {
     width: '100%',
@@ -222,99 +228,82 @@ const styles = StyleSheet.create({
   pontoRota: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  pontoIcon: {
-    fontSize: 20,
-    marginRight: 8,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
   },
   pontoNome: {
-    fontSize: 18,
-    color: '#333',
-    fontWeight: '500',
+    ...textStyles.h4,
+    color: colors.text.primary,
+    fontWeight: fontWeight.medium,
   },
   linhaRota: {
     width: 2,
-    height: 20,
-    backgroundColor: '#e0e0e0',
-    marginBottom: 12,
+    height: spacing.lg,
+    backgroundColor: colors.border.light,
+    marginBottom: spacing.md,
   },
   cronometroContainer: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: spacing.xxxl,
   },
   cronometroLabel: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 12,
+    ...textStyles.body,
+    color: colors.text.secondary,
+    marginBottom: spacing.md,
   },
   cronometro: {
-    fontSize: 64,
-    fontWeight: 'bold',
-    color: '#1a73e8',
+    fontSize: fontSize.display1,
+    fontWeight: fontWeight.bold,
+    color: colors.secondary.main,
     fontFamily: 'monospace',
   },
   iniciarButton: {
-    backgroundColor: '#34a853',
-    borderRadius: 16,
-    padding: 32,
+    backgroundColor: colors.success.main,
+    borderRadius: borderRadius.xl,
+    padding: spacing.xxl,
     alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  iniciarButtonIcon: {
-    fontSize: 48,
-    color: '#fff',
-    marginBottom: 8,
+    marginBottom: spacing.xl,
+    gap: spacing.sm,
+    ...shadows.xl,
   },
   iniciarButtonText: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
+    ...textStyles.button,
+    color: colors.text.inverse,
+    fontSize: fontSize.h3,
+    fontWeight: fontWeight.bold,
   },
   finalizarButton: {
-    backgroundColor: '#ea4335',
-    borderRadius: 16,
-    padding: 32,
+    backgroundColor: colors.error.main,
+    borderRadius: borderRadius.xl,
+    padding: spacing.xxl,
     alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  finalizarButtonIcon: {
-    fontSize: 48,
-    color: '#fff',
-    marginBottom: 8,
+    marginBottom: spacing.xl,
+    gap: spacing.sm,
+    ...shadows.xl,
   },
   finalizarButtonText: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
+    ...textStyles.button,
+    color: colors.text.inverse,
+    fontSize: fontSize.h3,
+    fontWeight: fontWeight.bold,
   },
   acoesContainer: {
-    gap: 12,
+    gap: spacing.md,
   },
   acaoButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: colors.secondary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.base,
     alignItems: 'center',
+    ...shadows.sm,
   },
   acaoButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    ...textStyles.button,
+    color: colors.text.inverse,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#666',
+    ...textStyles.body,
+    color: colors.text.secondary,
     textAlign: 'center',
   },
 });

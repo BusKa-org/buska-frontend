@@ -7,6 +7,8 @@ import {
   SafeAreaView,
   ScrollView,
 } from 'react-native';
+import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
 
 const ListaAlunosConfirmados = ({navigation, route}) => {
   const viagem = route?.params?.viagem || {};
@@ -18,7 +20,8 @@ const ListaAlunosConfirmados = ({navigation, route}) => {
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← Voltar</Text>
+          <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
+          <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Alunos Confirmados</Text>
         <Text style={styles.subtitle}>
@@ -65,14 +68,14 @@ const ListaAlunosConfirmados = ({navigation, route}) => {
                     )}
                   </View>
                   <View style={styles.pontoContainer}>
-                    <Text style={styles.pontoIcon}>📍</Text>
+                    <Icon name={IconNames.location} size="sm" color={colors.text.secondary} />
                     <Text style={styles.pontoEmbarque}>
                       {aluno.pontoEmbarque}
                     </Text>
                   </View>
                 </View>
                 <View style={styles.confirmadoIcon}>
-                  <Text style={styles.confirmadoIconText}>✓</Text>
+                  <Icon name={IconNames.checkCircle} size="md" color={colors.text.inverse} />
                 </View>
               </View>
             </View>
@@ -94,67 +97,71 @@ const ListaAlunosConfirmados = ({navigation, route}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: '#fff',
-    padding: 16,
+    backgroundColor: colors.background.paper,
+    padding: spacing.base,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border.light,
+    ...shadows.sm,
   },
   backButton: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   backButtonText: {
-    fontSize: 16,
-    color: '#1a73e8',
+    ...textStyles.body,
+    color: colors.secondary.main,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    ...textStyles.h2,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    ...textStyles.body,
+    color: colors.text.secondary,
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: spacing.base,
   },
   resumo: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.base,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
+    ...shadows.sm,
   },
   resumoText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    ...textStyles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
   resumoSubtext: {
-    fontSize: 14,
-    color: '#666',
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
   },
   alunoCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
+    ...shadows.sm,
   },
   alunoCardNovo: {
-    borderColor: '#1a73e8',
+    borderColor: colors.secondary.main,
     borderWidth: 2,
-    backgroundColor: '#e3f2fd',
+    backgroundColor: colors.info.light,
   },
   alunoHeader: {
     flexDirection: 'row',
@@ -163,19 +170,19 @@ const styles = StyleSheet.create({
   alunoAvatar: {
     width: 50,
     height: 50,
-    borderRadius: 25,
-    backgroundColor: '#1a73e8',
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.main,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   alunoFoto: {
-    fontSize: 24,
+    fontSize: fontSize.h3,
   },
   alunoInicial: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
+    ...textStyles.h3,
+    fontWeight: fontWeight.bold,
+    color: colors.text.inverse,
   },
   alunoInfo: {
     flex: 1,
@@ -183,57 +190,49 @@ const styles = StyleSheet.create({
   alunoNomeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-    gap: 8,
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
   },
   alunoNome: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    ...textStyles.body,
+    fontWeight: fontWeight.semiBold,
+    color: colors.text.primary,
   },
   novoBadge: {
-    backgroundColor: '#1a73e8',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
+    backgroundColor: colors.secondary.main,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: borderRadius.full,
   },
   novoBadgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
+    ...textStyles.caption,
+    color: colors.text.inverse,
+    fontWeight: fontWeight.bold,
   },
   pontoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  pontoIcon: {
-    fontSize: 14,
-    marginRight: 4,
+    gap: spacing.xs,
   },
   pontoEmbarque: {
-    fontSize: 14,
-    color: '#666',
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
   },
   confirmadoIcon: {
     width: 32,
     height: 32,
-    borderRadius: 16,
-    backgroundColor: '#34a853',
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.success.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  confirmadoIconText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
   emptyState: {
     alignItems: 'center',
-    padding: 48,
+    padding: spacing.xxxl,
   },
   emptyStateText: {
-    fontSize: 16,
-    color: '#666',
+    ...textStyles.body,
+    color: colors.text.secondary,
   },
 });
 

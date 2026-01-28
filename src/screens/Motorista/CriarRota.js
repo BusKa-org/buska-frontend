@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import {motoristaService} from '../../services/motoristaService';
 import {useAuth} from '../../contexts/AuthContext';
+import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight, lineHeight } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
 
 const CriarRota = ({navigation}) => {
   const {user} = useAuth();
@@ -78,7 +80,8 @@ const CriarRota = ({navigation}) => {
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← Voltar</Text>
+          <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
+          <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Criar Nova Rota</Text>
       </View>
@@ -86,8 +89,9 @@ const CriarRota = ({navigation}) => {
       <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
           <View style={styles.infoBox}>
+            <Icon name={IconNames.location} size="md" color={colors.info.main} />
             <Text style={styles.infoText}>
-              📍 Crie uma nova rota para seu município. Após criar, você poderá
+              Crie uma nova rota para seu município. Após criar, você poderá
               adicionar os pontos de parada.
             </Text>
           </View>
@@ -123,7 +127,7 @@ const CriarRota = ({navigation}) => {
               onPress={handleCriarRota}
               disabled={loading || !nomeRota.trim()}>
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.text.inverse} />
               ) : (
                 <Text style={styles.criarButtonText}>Criar Rota</Text>
               )}
@@ -138,105 +142,112 @@ const CriarRota = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: '#fff',
-    padding: 16,
+    backgroundColor: colors.background.paper,
+    padding: spacing.base,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border.light,
+    ...shadows.sm,
   },
   backButton: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   backButtonText: {
-    fontSize: 16,
-    color: '#1a73e8',
+    ...textStyles.body,
+    color: colors.secondary.main,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    ...textStyles.h2,
+    color: colors.text.primary,
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: spacing.base,
   },
   infoBox: {
-    backgroundColor: '#e3f2fd',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 24,
+    backgroundColor: colors.info.light,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.xl,
     borderLeftWidth: 4,
-    borderLeftColor: '#1a73e8',
+    borderLeftColor: colors.info.main,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
   },
   infoText: {
-    fontSize: 14,
-    color: '#1565c0',
-    lineHeight: 20,
+    ...textStyles.bodySmall,
+    color: colors.info.dark,
+    lineHeight: lineHeight.relaxed,
+    flex: 1,
   },
   form: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
+    ...shadows.sm,
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    ...textStyles.inputLabel,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
   },
   input: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    padding: 14,
-    fontSize: 16,
+    backgroundColor: colors.background.default,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    ...textStyles.inputText,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    color: '#333',
+    borderColor: colors.border.light,
+    color: colors.text.primary,
   },
   helperText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 6,
+    ...textStyles.inputHelper,
+    color: colors.text.secondary,
+    marginTop: spacing.sm,
   },
   municipioInfo: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
+    backgroundColor: colors.background.default,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
   },
   municipioLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
+    ...textStyles.caption,
+    color: colors.text.secondary,
+    marginBottom: spacing.xs,
   },
   municipioNome: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    ...textStyles.body,
+    fontWeight: fontWeight.semiBold,
+    color: colors.text.primary,
   },
   criarButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: colors.secondary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.base,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
+    ...shadows.sm,
   },
   criarButtonDisabled: {
-    backgroundColor: '#e0e0e0',
+    backgroundColor: colors.border.light,
   },
   criarButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...textStyles.button,
+    color: colors.text.inverse,
   },
 });
 

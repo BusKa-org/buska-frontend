@@ -11,6 +11,8 @@ import {
   Alert,
 } from 'react-native';
 import {motoristaService} from '../../services/motoristaService';
+import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
 
 const RotaMotorista = ({navigation, route}) => {
   const [rotas, setRotas] = useState([]);
@@ -20,13 +22,13 @@ const RotaMotorista = ({navigation, route}) => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'A iniciar':
-        return '#fbbc04';
+        return colors.warning.main;
       case 'Em andamento':
-        return '#1a73e8';
+        return colors.secondary.main;
       case 'Finalizada':
-        return '#34a853';
+        return colors.success.main;
       default:
-        return '#999';
+        return colors.text.hint;
     }
   };
 
@@ -61,7 +63,8 @@ const RotaMotorista = ({navigation, route}) => {
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← Voltar</Text>
+          <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
+          <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.title}>Minhas Rotas</Text>
@@ -75,7 +78,7 @@ const RotaMotorista = ({navigation, route}) => {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#1a73e8" />
+          <ActivityIndicator size="large" color={colors.secondary.main} />
         </View>
       ) : (
         <ScrollView
@@ -118,8 +121,9 @@ const RotaMotorista = ({navigation, route}) => {
                             isNovaRota: false,
                           })
                         }>
+                        <Icon name={IconNames.location} size="sm" color={colors.text.inverse} />
                         <Text style={styles.acaoButtonText}>
-                          📍 Gerenciar Pontos
+                          Gerenciar Pontos
                         </Text>
                       </TouchableOpacity>
                       <TouchableOpacity
@@ -129,8 +133,9 @@ const RotaMotorista = ({navigation, route}) => {
                             rota: rota,
                           })
                         }>
+                        <Icon name={IconNames.route} size="sm" color={colors.text.inverse} />
                         <Text style={styles.acaoButtonText}>
-                          🚗 Criar Viagem
+                          Criar Viagem
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -148,20 +153,24 @@ const RotaMotorista = ({navigation, route}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: '#fff',
-    padding: 16,
+    backgroundColor: colors.background.paper,
+    padding: spacing.base,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border.light,
+    ...shadows.sm,
   },
   backButton: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   backButtonText: {
-    fontSize: 16,
-    color: '#1a73e8',
+    ...textStyles.body,
+    color: colors.secondary.main,
   },
   headerContent: {
     flexDirection: 'row',
@@ -169,104 +178,106 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    ...textStyles.h2,
+    color: colors.text.primary,
     flex: 1,
   },
   criarRotaButton: {
-    backgroundColor: '#34a853',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: colors.success.main,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    ...shadows.xs,
   },
   criarRotaButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    ...textStyles.buttonSmall,
+    color: colors.text.inverse,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 48,
+    padding: spacing.xxxl,
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: spacing.base,
   },
   rotaCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.base,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
+    ...shadows.sm,
   },
   rotaHeader: {
-    marginBottom: 16,
+    marginBottom: spacing.base,
   },
   rotaInfo: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   rotaNome: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
+    ...textStyles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
   rotaId: {
-    fontSize: 12,
-    color: '#999',
+    ...textStyles.caption,
+    color: colors.text.hint,
   },
   rotaActions: {
-    marginTop: 12,
-    paddingTop: 12,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: colors.border.light,
+    gap: spacing.sm,
   },
   acaoButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: colors.secondary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    ...shadows.xs,
   },
   acaoButtonSecondary: {
-    backgroundColor: '#34a853',
+    backgroundColor: colors.success.main,
   },
   acaoButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    ...textStyles.buttonSmall,
+    color: colors.text.inverse,
   },
   emptyState: {
-    padding: 48,
+    padding: spacing.xxxl,
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 8,
-    fontWeight: '600',
+    ...textStyles.h4,
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#999',
-    marginBottom: 24,
+    ...textStyles.bodySmall,
+    color: colors.text.hint,
+    marginBottom: spacing.xl,
   },
   emptyButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    backgroundColor: colors.secondary.main,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    ...shadows.xs,
   },
   emptyButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    ...textStyles.button,
+    color: colors.text.inverse,
   },
 });
 

@@ -11,6 +11,8 @@ import {
   Alert,
 } from 'react-native';
 import {motoristaService} from '../../services/motoristaService';
+import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
 
 const ListaViagens = ({navigation}) => {
   const [viagens, setViagens] = useState([]);
@@ -68,13 +70,13 @@ const ListaViagens = ({navigation}) => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'A iniciar':
-        return '#fbbc04';
+        return colors.warning.main;
       case 'Em andamento':
-        return '#1a73e8';
+        return colors.secondary.main;
       case 'Finalizada':
-        return '#34a853';
+        return colors.success.main;
       default:
-        return '#999';
+        return colors.text.hint;
     }
   };
 
@@ -98,7 +100,8 @@ const ListaViagens = ({navigation}) => {
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← Voltar</Text>
+          <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
+          <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.title}>Minhas Viagens</Text>
@@ -112,7 +115,7 @@ const ListaViagens = ({navigation}) => {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#1a73e8" />
+          <ActivityIndicator size="large" color={colors.secondary.main} />
         </View>
       ) : (
         <ScrollView
@@ -192,20 +195,24 @@ const ListaViagens = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: '#fff',
-    padding: 16,
+    backgroundColor: colors.background.paper,
+    padding: spacing.base,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border.light,
+    ...shadows.sm,
   },
   backButton: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   backButtonText: {
-    fontSize: 16,
-    color: '#1a73e8',
+    ...textStyles.body,
+    color: colors.secondary.main,
   },
   headerContent: {
     flexDirection: 'row',
@@ -213,105 +220,103 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    ...textStyles.h2,
+    color: colors.text.primary,
     flex: 1,
   },
   criarViagemButton: {
-    backgroundColor: '#34a853',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: colors.success.main,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    ...shadows.xs,
   },
   criarViagemButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    ...textStyles.buttonSmall,
+    color: colors.text.inverse,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 48,
+    padding: spacing.xxxl,
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: spacing.base,
   },
   viagemCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.base,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
+    ...shadows.sm,
   },
   viagemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   viagemInfo: {
     flex: 1,
   },
   viagemTipo: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
+    ...textStyles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
   viagemData: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
+    marginBottom: spacing.xs,
   },
   viagemHorario: {
-    fontSize: 14,
-    color: '#666',
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
   },
   statusText: {
-    fontSize: 12,
-    fontWeight: '600',
+    ...textStyles.caption,
+    fontWeight: fontWeight.semiBold,
   },
   rotaId: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 8,
+    ...textStyles.caption,
+    color: colors.text.hint,
+    marginTop: spacing.sm,
   },
   emptyState: {
-    padding: 48,
+    padding: spacing.xxxl,
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 8,
-    fontWeight: '600',
+    ...textStyles.h4,
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#999',
-    marginBottom: 24,
+    ...textStyles.bodySmall,
+    color: colors.text.hint,
+    marginBottom: spacing.xl,
   },
   emptyButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    backgroundColor: colors.secondary.main,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    ...shadows.xs,
   },
   emptyButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    ...textStyles.button,
+    color: colors.text.inverse,
   },
 });
 

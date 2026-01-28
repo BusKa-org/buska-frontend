@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {motoristaService} from '../../services/motoristaService';
+import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
 
 const DetalheViagemMotorista = ({navigation, route}) => {
   const {viagem} = route?.params || {};
@@ -20,7 +22,8 @@ const DetalheViagemMotorista = ({navigation, route}) => {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}>
-            <Text style={styles.backButtonText}>← Voltar</Text>
+            <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
+            <Text style={styles.backButtonText}>Voltar</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Detalhes da Viagem</Text>
         </View>
@@ -68,26 +71,26 @@ const DetalheViagemMotorista = ({navigation, route}) => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'A iniciar':
-        return '#fbbc04';
+        return colors.warning.main;
       case 'Em andamento':
-        return '#1a73e8';
+        return colors.secondary.main;
       case 'Finalizada':
-        return '#34a853';
+        return colors.success.main;
       default:
-        return '#999';
+        return colors.text.hint;
     }
   };
 
   const getStatusBgColor = (status) => {
     switch (status) {
       case 'A iniciar':
-        return '#fff3cd';
+        return colors.warning.light;
       case 'Em andamento':
-        return '#e3f2fd';
+        return colors.info.light;
       case 'Finalizada':
-        return '#e8f5e9';
+        return colors.success.light;
       default:
-        return '#f5f5f5';
+        return colors.background.default;
     }
   };
 
@@ -129,7 +132,7 @@ const DetalheViagemMotorista = ({navigation, route}) => {
             <View style={styles.rotaInfo}>
               <View style={styles.pontoRota}>
                 <View style={styles.pontoIcon}>
-                  <Text style={styles.pontoIconText}>📍</Text>
+                  <Icon name={IconNames.location} size="md" color={colors.secondary.main} />
                 </View>
                 <View style={styles.pontoInfo}>
                   <Text style={styles.pontoLabel}>Origem</Text>
@@ -141,7 +144,7 @@ const DetalheViagemMotorista = ({navigation, route}) => {
 
               <View style={styles.pontoRota}>
                 <View style={styles.pontoIcon}>
-                  <Text style={styles.pontoIconText}>🎯</Text>
+                  <Icon name={IconNames.location} size="md" color={colors.accent.main} />
                 </View>
                 <View style={styles.pontoInfo}>
                   <Text style={styles.pontoLabel}>Destino</Text>
@@ -156,7 +159,7 @@ const DetalheViagemMotorista = ({navigation, route}) => {
             <Text style={styles.cardTitle}>Alunos Confirmados</Text>
             {loadingAlunos ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color="#1a73e8" />
+                <ActivityIndicator size="small" color={colors.secondary.main} />
               </View>
             ) : (
               <View style={styles.alunosInfo}>
@@ -211,13 +214,19 @@ const DetalheViagemMotorista = ({navigation, route}) => {
                       ponto.tipo === 'origem' && styles.pontoItemIconOrigem,
                       ponto.tipo === 'destino' && styles.pontoItemIconDestino,
                     ]}>
-                    <Text style={styles.pontoItemIconText}>
-                      {ponto.tipo === 'origem'
-                        ? '📍'
+                    <Icon 
+                      name={ponto.tipo === 'origem' 
+                        ? IconNames.location 
                         : ponto.tipo === 'destino'
-                        ? '🎯'
-                        : '•'}
-                    </Text>
+                        ? IconNames.location
+                        : IconNames.location} 
+                      size="sm" 
+                      color={ponto.tipo === 'origem' 
+                        ? colors.secondary.main 
+                        : ponto.tipo === 'destino'
+                        ? colors.accent.main
+                        : colors.text.secondary} 
+                    />
                   </View>
                   {index < pontosRota.length - 1 && (
                     <View style={styles.pontoItemLine} />
@@ -243,7 +252,7 @@ const DetalheViagemMotorista = ({navigation, route}) => {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Mapa da Rota</Text>
             <View style={styles.mapaPlaceholder}>
-              <Text style={styles.mapaPlaceholderText}>🗺️</Text>
+              <Icon name={IconNames.map} size="xl" color={colors.text.secondary} />
               <Text style={styles.mapaPlaceholderLabel}>
                 Mapa com pontos da rota
               </Text>
@@ -266,8 +275,9 @@ const DetalheViagemMotorista = ({navigation, route}) => {
                     isNovaRota: false,
                   })
                 }>
+                <Icon name={IconNames.location} size="sm" color={colors.text.inverse} />
                 <Text style={styles.definirPontosButtonText}>
-                  📍 Definir Pontos da Rota
+                  Definir Pontos da Rota
                 </Text>
               </TouchableOpacity>
             </View>
@@ -304,261 +314,260 @@ const DetalheViagemMotorista = ({navigation, route}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: '#fff',
-    padding: 16,
+    backgroundColor: colors.background.paper,
+    padding: spacing.base,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border.light,
+    ...shadows.sm,
   },
   backButton: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   backButtonText: {
-    fontSize: 16,
-    color: '#1a73e8',
+    ...textStyles.body,
+    color: colors.secondary.main,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    ...textStyles.h2,
+    color: colors.text.primary,
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: spacing.base,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.base,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
+    ...shadows.sm,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
+    ...textStyles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.base,
   },
   viagemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   viagemTipo: {
-    fontSize: 16,
-    color: '#1a73e8',
-    fontWeight: '600',
-    marginBottom: 4,
+    ...textStyles.body,
+    color: colors.secondary.main,
+    fontWeight: fontWeight.semiBold,
+    marginBottom: spacing.xs,
   },
   viagemHorario: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
+    ...textStyles.h1,
+    color: colors.text.primary,
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
   },
   statusText: {
-    fontSize: 12,
-    fontWeight: '600',
+    ...textStyles.caption,
+    fontWeight: fontWeight.semiBold,
   },
   rotaInfo: {
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   pontoRota: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   pontoIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background.default,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-  },
-  pontoIconText: {
-    fontSize: 20,
+    marginRight: spacing.md,
   },
   pontoInfo: {
     flex: 1,
   },
   pontoLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 2,
+    ...textStyles.caption,
+    color: colors.text.secondary,
+    marginBottom: spacing.xxs,
   },
   pontoNome: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    ...textStyles.body,
+    fontWeight: fontWeight.semiBold,
+    color: colors.text.primary,
   },
   linhaRota: {
     width: 2,
-    height: 20,
-    backgroundColor: '#e0e0e0',
-    marginLeft: 20,
-    marginBottom: 12,
+    height: spacing.lg,
+    backgroundColor: colors.border.light,
+    marginLeft: spacing.lg,
+    marginBottom: spacing.md,
   },
   alunosInfo: {
-    marginBottom: 16,
+    marginBottom: spacing.base,
   },
   alunosText: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
   },
   alunosBar: {
-    height: 8,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 4,
+    height: spacing.sm,
+    backgroundColor: colors.border.light,
+    borderRadius: borderRadius.xs,
     overflow: 'hidden',
   },
   alunosBarFill: {
     height: '100%',
-    backgroundColor: '#34a853',
-    borderRadius: 4,
+    backgroundColor: colors.success.main,
+    borderRadius: borderRadius.xs,
   },
   verAlunosButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: colors.secondary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    ...shadows.xs,
   },
   verAlunosButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    ...textStyles.buttonSmall,
+    color: colors.text.inverse,
   },
   pontoItem: {
     flexDirection: 'row',
-    marginBottom: 16,
+    marginBottom: spacing.base,
   },
   pontoItemLeft: {
     width: 40,
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   pontoItemIcon: {
     width: 32,
     height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f5f5f5',
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background.default,
     justifyContent: 'center',
     alignItems: 'center',
   },
   pontoItemIconOrigem: {
-    backgroundColor: '#e3f2fd',
+    backgroundColor: colors.info.light,
   },
   pontoItemIconDestino: {
-    backgroundColor: '#e8f5e9',
-  },
-  pontoItemIconText: {
-    fontSize: 16,
+    backgroundColor: colors.success.light,
   },
   pontoItemLine: {
     width: 2,
     flex: 1,
-    backgroundColor: '#e0e0e0',
-    marginTop: 4,
+    backgroundColor: colors.border.light,
+    marginTop: spacing.xs,
   },
   pontoItemRight: {
     flex: 1,
   },
   pontoItemNome: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 2,
+    ...textStyles.body,
+    fontWeight: fontWeight.medium,
+    color: colors.text.primary,
+    marginBottom: spacing.xxs,
   },
   pontoItemTipo: {
-    fontSize: 12,
-    color: '#666',
+    ...textStyles.caption,
+    color: colors.text.secondary,
   },
   mapaPlaceholder: {
     height: 200,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
+    backgroundColor: colors.background.default,
+    borderRadius: borderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
     borderStyle: 'dashed',
-  },
-  mapaPlaceholderText: {
-    fontSize: 48,
-    marginBottom: 8,
+    gap: spacing.sm,
   },
   mapaPlaceholderLabel: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 4,
+    ...textStyles.body,
+    color: colors.text.secondary,
+    marginBottom: spacing.xs,
   },
   mapaPlaceholderSubtext: {
-    fontSize: 12,
-    color: '#999',
+    ...textStyles.caption,
+    color: colors.text.hint,
   },
   iniciarButton: {
-    backgroundColor: '#34a853',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: colors.success.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.base,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
+    ...shadows.sm,
   },
   iniciarButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...textStyles.button,
+    color: colors.text.inverse,
   },
   verRotaOtimizadaButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: colors.secondary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.base,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
+    ...shadows.sm,
   },
   verRotaOtimizadaButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...textStyles.button,
+    color: colors.text.inverse,
   },
   definirPontosButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 14,
+    backgroundColor: colors.secondary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    ...shadows.xs,
   },
   definirPontosButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    ...textStyles.button,
+    color: colors.text.inverse,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#666',
+    ...textStyles.body,
+    color: colors.text.secondary,
     textAlign: 'center',
-    marginTop: 24,
+    marginTop: spacing.xl,
   },
   loadingContainer: {
-    padding: 20,
+    padding: spacing.lg,
     alignItems: 'center',
   },
   emptyAlunosText: {
-    fontSize: 14,
-    color: '#999',
+    ...textStyles.bodySmall,
+    color: colors.text.hint,
     fontStyle: 'italic',
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
 });
 
