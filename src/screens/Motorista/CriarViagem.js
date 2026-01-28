@@ -21,12 +21,12 @@ const CriarViagem = ({navigation, route}) => {
   
   const [rotas, setRotas] = useState([]);
   const [rotaSelecionada, setRotaSelecionada] = useState(rotaParam?.id || null);
+  const [horarios, setHorarios] = useState([]);
+  const [horarioSelecionado, setHorarioSelecionado] = useState(null);
   const [data, setData] = useState('');
-  const [horarioInicio, setHorarioInicio] = useState('');
-  const [horarioFim, setHorarioFim] = useState('');
-  const [tipo, setTipo] = useState('IDA');
   const [loading, setLoading] = useState(false);
   const [loadingRotas, setLoadingRotas] = useState(true);
+  const [loadingHorarios, setLoadingHorarios] = useState(false);
 
   useEffect(() => {
     const loadRotas = async () => {
@@ -52,13 +52,31 @@ const CriarViagem = ({navigation, route}) => {
     loadRotas();
   }, []);
 
+  // Load schedules when route is selected
+  useEffect(() => {
+    const loadHorarios = async () => {
+      if (!rotaSelecionada) {
+        setHorarios([]);
+        return;
+      }
+      
+      try {
+        setLoadingHorarios(true);
+        const horariosData = await motoristaService.listarHorariosRota(rotaSelecionada);
+        setHorarios(horariosData || []);
+        setHorarioSelecionado(null);
+      } catch (error) {
+        console.error('Error loading schedules:', error);
+        setHorarios([]);
+      } finally {
+        setLoadingHorarios(false);
+      }
+    };
+
+    loadHorarios();
+  }, [rotaSelecionada]);
+
   const handleCriarViagem = async () => {
-    console.log('handleCriarViagem called');
-    console.log('rotaSelecionada:', rotaSelecionada);
-    console.log('data:', data);
-    console.log('horarioInicio:', horarioInicio);
-    console.log('tipo:', tipo);
-    
     if (!rotaSelecionada) {
       Alert.alert('Erro', 'Selecione uma rota');
       return;
@@ -69,70 +87,28 @@ const CriarViagem = ({navigation, route}) => {
       return;
     }
 
-    if (!horarioInicio.trim()) {
-      Alert.alert('Erro', 'Informe o horário de início');
-      return;
-    }
-
-    if (!tipo) {
-      Alert.alert('Erro', 'Selecione o tipo da viagem (IDA ou VOLTA)');
-      return;
-    }
-
     // Validar formato da data (YYYY-MM-DD)
-    console.log('Validating data format...');
     const dataRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dataRegex.test(data)) {
-      console.log('Data validation failed');
       Alert.alert('Erro', 'Formato de data inválido. Use YYYY-MM-DD (ex: 2024-12-25)');
       return;
     }
-    console.log('Data validation passed');
 
-    // Normalizar horário para HH:MM (adicionar zero à esquerda se necessário)
-    const normalizeHorario = (horario) => {
-      const parts = horario.trim().split(':');
-      if (parts.length === 2) {
-        const horas = parts[0].padStart(2, '0');
-        const minutos = parts[1].padStart(2, '0');
-        return `${horas}:${minutos}`;
-      }
-      return horario;
-    };
-
-    // Validar formato do horário (HH:MM)
-    console.log('Validating horario inicio format...');
-    const horarioInicioNormalizado = normalizeHorario(horarioInicio);
-    const horarioRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!horarioRegex.test(horarioInicioNormalizado)) {
-      console.log('Horario inicio validation failed:', horarioInicioNormalizado);
-      Alert.alert('Erro', 'Formato de horário inválido. Use HH:MM (ex: 08:30 ou 8:30)');
+    if (!horarioSelecionado && horarios.length > 0) {
+      Alert.alert('Erro', 'Selecione um horário');
       return;
-    }
-    console.log('Horario inicio validation passed');
-
-    if (horarioFim) {
-      console.log('Validating horario fim format...');
-      const horarioFimNormalizado = normalizeHorario(horarioFim);
-      if (!horarioRegex.test(horarioFimNormalizado)) {
-        console.log('Horario fim validation failed:', horarioFimNormalizado);
-        Alert.alert('Erro', 'Formato de horário de fim inválido. Use HH:MM (ex: 17:00 ou 17:0)');
-        return;
-      }
-      console.log('Horario fim validation passed');
     }
 
     try {
       setLoading(true);
+      
       const viagemData = {
         rota_id: rotaSelecionada,
         data: data.trim(),
-        horario_inicio: horarioInicioNormalizado,
-        horario_fim: horarioFim ? normalizeHorario(horarioFim) : null,
-        tipo: tipo,
+        horario_id: horarioSelecionado || undefined,
       };
-      console.log('All validations passed, creating viagem with data:', viagemData);
-      console.log('Calling motoristaService.criarViagem...');
+      
+      console.log('Creating viagem with data:', viagemData);
       const response = await motoristaService.criarViagem(viagemData);
       console.log('Viagem created successfully:', response);
 
@@ -140,7 +116,6 @@ const CriarViagem = ({navigation, route}) => {
         {
           text: 'OK',
           onPress: () => {
-            // Navegar para a lista de viagens
             navigation.navigate('ListaViagens');
           },
         },
@@ -163,6 +138,16 @@ const CriarViagem = ({navigation, route}) => {
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  };
+
+  const formatHorario = (horario) => {
+    const sentidoLabel = {
+      'IDA': 'Ida',
+      'VOLTA': 'Volta',
+      'CIRCULAR': 'Circular'
+    };
+    const diasLabel = (horario.dias || []).join(', ');
+    return `${horario.horario_saida} - ${sentidoLabel[horario.sentido] || horario.sentido}${diasLabel ? ` (${diasLabel})` : ''}`;
   };
 
   return (
@@ -225,6 +210,50 @@ const CriarViagem = ({navigation, route}) => {
               )}
             </View>
 
+            {/* Seleção de Horário */}
+            {rotaSelecionada && (
+              <View style={styles.section}>
+                <Text style={styles.label}>Horário</Text>
+                {loadingHorarios ? (
+                  <ActivityIndicator size="small" color={colors.secondary.main} />
+                ) : horarios.length === 0 ? (
+                  <View style={styles.infoBox}>
+                    <Icon name={IconNames.info} size="md" color={colors.info.main} />
+                    <Text style={styles.infoText}>
+                      Esta rota não possui horários cadastrados. A viagem será criada sem horário definido.
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.horariosContainer}>
+                    {horarios.map((horario) => (
+                      <TouchableOpacity
+                        key={horario.id}
+                        style={[
+                          styles.horarioOption,
+                          horarioSelecionado === horario.id && styles.horarioOptionSelected,
+                        ]}
+                        onPress={() => setHorarioSelecionado(horario.id)}>
+                        <View style={styles.horarioContent}>
+                          <Icon 
+                            name={IconNames.schedule} 
+                            size="md" 
+                            color={horarioSelecionado === horario.id ? colors.secondary.main : colors.text.secondary} 
+                          />
+                          <Text
+                            style={[
+                              styles.horarioText,
+                              horarioSelecionado === horario.id && styles.horarioTextSelected,
+                            ]}>
+                            {formatHorario(horario)}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
+
             {/* Data */}
             <View style={styles.section}>
               <Text style={styles.label}>Data *</Text>
@@ -241,77 +270,10 @@ const CriarViagem = ({navigation, route}) => {
               </Text>
             </View>
 
-            {/* Horário de Início */}
-            <View style={styles.section}>
-              <Text style={styles.label}>Horário de Início *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="HH:MM (ex: 08:30)"
-                placeholderTextColor="#999"
-                value={horarioInicio}
-                onChangeText={setHorarioInicio}
-                editable={!loading}
-              />
-            </View>
-
-            {/* Horário de Fim */}
-            <View style={styles.section}>
-              <Text style={styles.label}>Horário de Fim (opcional)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="HH:MM (ex: 17:00)"
-                placeholderTextColor="#999"
-                value={horarioFim}
-                onChangeText={setHorarioFim}
-                editable={!loading}
-              />
-            </View>
-
-            {/* Tipo */}
-            <View style={styles.section}>
-              <Text style={styles.label}>Tipo *</Text>
-              <View style={styles.tipoContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.tipoOption,
-                    tipo === 'IDA' && styles.tipoOptionSelected,
-                  ]}
-                  onPress={() => setTipo('IDA')}
-                  disabled={loading}>
-                  <Text
-                    style={[
-                      styles.tipoOptionText,
-                      tipo === 'IDA' && styles.tipoOptionTextSelected,
-                    ]}>
-                    IDA
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.tipoOption,
-                    tipo === 'VOLTA' && styles.tipoOptionSelected,
-                  ]}
-                  onPress={() => setTipo('VOLTA')}
-                  disabled={loading}>
-                  <Text
-                    style={[
-                      styles.tipoOptionText,
-                      tipo === 'VOLTA' && styles.tipoOptionTextSelected,
-                    ]}>
-                    VOLTA
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
             {/* Botão Criar */}
             <TouchableOpacity
               style={[styles.button, (loading || !rotaSelecionada || rotas.length === 0) && styles.buttonDisabled]}
-              onPress={() => {
-                console.log('Button pressed');
-                console.log('Button disabled?', loading || !rotaSelecionada || rotas.length === 0);
-                handleCriarViagem();
-              }}
+              onPress={handleCriarViagem}
               disabled={loading || !rotaSelecionada || rotas.length === 0}>
               {loading ? (
                 <ActivityIndicator color={colors.text.inverse} />
@@ -406,32 +368,48 @@ const styles = StyleSheet.create({
     color: colors.secondary.main,
     fontWeight: fontWeight.semiBold,
   },
-  tipoContainer: {
-    flexDirection: 'row',
-    gap: spacing.md,
+  horariosContainer: {
+    gap: spacing.sm,
   },
-  tipoOption: {
-    flex: 1,
+  horarioOption: {
     backgroundColor: colors.background.paper,
     borderRadius: borderRadius.md,
-    padding: spacing.base,
-    alignItems: 'center',
+    padding: spacing.md,
     borderWidth: 2,
     borderColor: colors.border.light,
     ...shadows.xs,
   },
-  tipoOptionSelected: {
+  horarioOptionSelected: {
     borderColor: colors.secondary.main,
     backgroundColor: colors.info.light,
   },
-  tipoOptionText: {
+  horarioContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  horarioText: {
     ...textStyles.body,
     color: colors.text.secondary,
-    fontWeight: fontWeight.medium,
   },
-  tipoOptionTextSelected: {
+  horarioTextSelected: {
     color: colors.secondary.main,
     fontWeight: fontWeight.semiBold,
+  },
+  infoBox: {
+    backgroundColor: colors.info.light,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.info.main,
+  },
+  infoText: {
+    ...textStyles.bodySmall,
+    color: colors.info.dark,
+    flex: 1,
   },
   button: {
     backgroundColor: colors.success.main,
@@ -485,4 +463,3 @@ const styles = StyleSheet.create({
 });
 
 export default CriarViagem;
-

@@ -166,135 +166,79 @@ const DefinirPontosRota = ({navigation, route}) => {
     console.log('route.params:', route?.params);
     console.log('rota:', rota);
     console.log('pontosRota:', pontosRota);
-    console.log('user:', user);
     
-    if (!rota || !rota.id) {
-      console.log('Erro: Rota não encontrada');
-      console.log('Tentando recuperar rota dos params...');
-      
-      // Tentar recuperar a rota dos params novamente
+    // Determine which route ID to use
+    let rotaId = rota?.id;
+    if (!rotaId) {
       const params = route?.params || {};
       const rotaFromParams = params.rota || (params.viagem?.rota_id ? {id: params.viagem.rota_id} : null);
-      
-      if (!rotaFromParams || !rotaFromParams.id) {
-        Alert.alert(
-          'Erro',
-          'Rota não encontrada. Por favor, volte e tente novamente.',
-          [
-            {
-              text: 'OK',
-              onPress: () => navigation.goBack(),
-            },
-          ],
-        );
-        return;
-      }
-      
-      // Usar a rota recuperada
-      const rotaToUse = rotaFromParams;
-      console.log('Usando rota recuperada:', rotaToUse);
-      
-      // Continuar com a rota recuperada
-      if (pontosRota.length === 0) {
-        Alert.alert('Erro', 'Adicione pelo menos um ponto à rota');
-        return;
-      }
-
-      if (!user?.municipio_id) {
-        Alert.alert(
-          'Erro',
-          'Você não possui um município cadastrado. Entre em contato com o gestor.',
-        );
-        return;
-      }
-
-      try {
-        setSalvando(true);
-        const pontosFormatados = pontosRota.map((p) => ({
-          nome: p.nome,
-          latitude: p.latitude,
-          longitude: p.longitude,
-        }));
-
-        console.log('Enviando pontos:', pontosFormatados);
-        console.log('rota.id:', rotaToUse.id);
-        console.log('user.municipio_id:', user.municipio_id);
-
-        const response = await motoristaService.adicionarPontos(
-          rotaToUse.id,
-          user.municipio_id,
-          pontosFormatados,
-        );
-
-        console.log('Resposta do servidor:', response);
-
-        Alert.alert('Sucesso', 'Pontos da rota salvos com sucesso!', [
-          {
-            text: 'OK',
-            onPress: () => {
-              navigation.goBack();
-            },
-          },
-        ]);
-      } catch (error) {
-        console.error('Error saving points:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
-        Alert.alert(
-          'Erro',
-          error?.message || 'Não foi possível salvar os pontos. Tente novamente.',
-        );
-      } finally {
-        setSalvando(false);
-      }
+      rotaId = rotaFromParams?.id;
+    }
+    
+    if (!rotaId) {
+      Alert.alert(
+        'Erro',
+        'Rota não encontrada. Por favor, volte e tente novamente.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }],
+      );
       return;
     }
 
     if (pontosRota.length === 0) {
-      console.log('Erro: Nenhum ponto adicionado');
       Alert.alert('Erro', 'Adicione pelo menos um ponto à rota');
-      return;
-    }
-
-    if (!user?.municipio_id) {
-      console.log('Erro: Município não encontrado');
-      Alert.alert(
-        'Erro',
-        'Você não possui um município cadastrado. Entre em contato com o gestor.',
-      );
       return;
     }
 
     try {
       setSalvando(true);
-      const pontosFormatados = pontosRota.map((p) => ({
-        nome: p.nome,
-        latitude: p.latitude,
-        longitude: p.longitude,
-      }));
+      
+      // Backend requires two steps:
+      // 1. Create each point (POST /pontos/)
+      // 2. Add point to route (POST /rotas/{id}/pontos)
+      
+      let addedCount = 0;
+      
+      for (let i = 0; i < pontosRota.length; i++) {
+        const ponto = pontosRota[i];
+        
+        try {
+          // Step 1: Create the point if it doesn't have a backend ID
+          let pontoId = ponto.backendId;
+          
+          if (!pontoId) {
+            console.log(`Creating point ${i + 1}:`, ponto.nome);
+            const createdPonto = await motoristaService.criarPonto({
+              apelido: ponto.nome,
+              latitude: ponto.latitude,
+              longitude: ponto.longitude,
+            });
+            pontoId = createdPonto.id;
+            console.log(`Point created with ID:`, pontoId);
+          }
+          
+          // Step 2: Add point to route with order
+          console.log(`Adding point ${pontoId} to route ${rotaId} at order ${i + 1}`);
+          await motoristaService.adicionarPontoRota(rotaId, pontoId, i + 1);
+          addedCount++;
+          
+        } catch (pointError) {
+          console.error(`Error processing point ${i + 1}:`, pointError);
+          // Continue with other points
+        }
+      }
 
-      console.log('Enviando pontos:', pontosFormatados);
-      console.log('rota.id:', rota.id);
-      console.log('user.municipio_id:', user.municipio_id);
-
-      const response = await motoristaService.adicionarPontos(
-        rota.id,
-        user.municipio_id,
-        pontosFormatados,
-      );
-
-      console.log('Resposta do servidor:', response);
-
-      Alert.alert('Sucesso', 'Pontos da rota salvos com sucesso!', [
-        {
-          text: 'OK',
-          onPress: () => {
-            navigation.goBack();
-          },
-        },
-      ]);
+      if (addedCount > 0) {
+        Alert.alert(
+          'Sucesso', 
+          `${addedCount} ponto(s) adicionado(s) à rota!`, 
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
+      } else {
+        Alert.alert('Erro', 'Não foi possível adicionar os pontos. Tente novamente.');
+      }
+      
     } catch (error) {
       console.error('Error saving points:', error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
       Alert.alert(
         'Erro',
         error?.message || 'Não foi possível salvar os pontos. Tente novamente.',

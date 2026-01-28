@@ -36,20 +36,25 @@ const CriarRota = ({navigation}) => {
 
     try {
       setLoading(true);
-      const response = await motoristaService.criarRota(nomeRota.trim());
+      const response = await motoristaService.criarRota({ nome: nomeRota.trim() });
       
       console.log('Response completo da criação de rota:', JSON.stringify(response, null, 2));
       
-      // Garantir que temos a rota no formato correto
-      const rotaData = response?.rota || response;
+      // Backend returns { message, id } - we need to build the rota object
+      const rotaId = response?.id;
       
-      console.log('Rota data a ser passada:', rotaData);
-      console.log('Rota ID:', rotaData?.id);
+      console.log('Rota ID:', rotaId);
       
-      if (!rotaData || !rotaData.id) {
-        Alert.alert('Erro', 'Rota criada mas dados não disponíveis. Tente novamente.');
+      if (!rotaId) {
+        Alert.alert('Erro', 'Rota criada mas ID não disponível. Tente novamente.');
         return;
       }
+      
+      // Create rota object with the info we have
+      const rotaData = {
+        id: rotaId,
+        nome: nomeRota.trim(),
+      };
       
       Alert.alert('Sucesso', 'Rota criada com sucesso!', [
         {
