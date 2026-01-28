@@ -184,31 +184,30 @@ const RotaMapaSimples = ({ pontos }) => {
             </TouchableOpacity>
           ))}
 
-          {/* Map controls (functional) */}
-          <View style={mapStyles.mapControls}>
-            <TouchableOpacity 
-              style={[mapStyles.controlButton, zoomLevel >= 2.5 && mapStyles.controlDisabled]}
-              onPress={handleZoomIn}
-              disabled={zoomLevel >= 2.5}
-            >
-              <Text style={[mapStyles.controlText, zoomLevel >= 2.5 && mapStyles.controlTextDisabled]}>+</Text>
-            </TouchableOpacity>
-            <View style={mapStyles.controlDivider} />
-            <TouchableOpacity 
-              style={[mapStyles.controlButton, zoomLevel <= 0.5 && mapStyles.controlDisabled]}
-              onPress={handleZoomOut}
-              disabled={zoomLevel <= 0.5}
-            >
-              <Text style={[mapStyles.controlText, zoomLevel <= 0.5 && mapStyles.controlTextDisabled]}>−</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Google logo placeholder */}
-          <View style={mapStyles.attribution}>
-            <Text style={mapStyles.attributionText}>Rota Escolar</Text>
-          </View>
         </View>
         </div>
+        
+        {/* Map controls (functional) - outside zoom container */}
+        <View style={mapStyles.mapControls}>
+          <TouchableOpacity 
+            style={mapStyles.controlButton}
+            onPress={handleZoomIn}
+          >
+            <Text style={mapStyles.controlText}>+</Text>
+          </TouchableOpacity>
+          <View style={mapStyles.controlDivider} />
+          <TouchableOpacity 
+            style={mapStyles.controlButton}
+            onPress={handleZoomOut}
+          >
+            <Text style={mapStyles.controlText}>−</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Attribution - outside zoom container */}
+        <View style={mapStyles.attribution}>
+          <Text style={mapStyles.attributionText}>Rota Escolar • Zoom: {zoomLevel.toFixed(1)}x</Text>
+        </View>
       </View>
 
       {/* Route info */}
