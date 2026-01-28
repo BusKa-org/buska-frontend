@@ -18,55 +18,97 @@ import {
 import {
   getErrorMessage,
   getHttpStatusMessage,
-  errorMessages,
 } from './errorMessages';
 
 /**
  * Known backend error messages mapping
- * Maps backend error strings to error codes
+ * Maps backend error strings to { code, field, message }
  */
-const backendErrorMap = {
-  // Portuguese messages from Flask backend
-  'credenciais inválidas': ErrorCode.INVALID_CREDENTIALS,
-  'email ou senha incorretos': ErrorCode.INVALID_CREDENTIALS,
-  'invalid credentials': ErrorCode.INVALID_CREDENTIALS,
-  'e-mail já cadastrado': ErrorCode.EMAIL_ALREADY_EXISTS,
-  'email already exists': ErrorCode.EMAIL_ALREADY_EXISTS,
-  'email já existe': ErrorCode.EMAIL_ALREADY_EXISTS,
-  'cpf já cadastrado': ErrorCode.CPF_ALREADY_EXISTS,
-  'cpf already exists': ErrorCode.CPF_ALREADY_EXISTS,
-  'usuário não encontrado': ErrorCode.USER_NOT_FOUND,
-  'user not found': ErrorCode.USER_NOT_FOUND,
-  'rota não encontrada': ErrorCode.ROUTE_NOT_FOUND,
-  'route not found': ErrorCode.ROUTE_NOT_FOUND,
-  'viagem não encontrada': ErrorCode.TRIP_NOT_FOUND,
-  'trip not found': ErrorCode.TRIP_NOT_FOUND,
-  'token expirado': ErrorCode.TOKEN_EXPIRED,
-  'token expired': ErrorCode.TOKEN_EXPIRED,
-  'token inválido': ErrorCode.TOKEN_INVALID,
-  'invalid token': ErrorCode.TOKEN_INVALID,
-  'acesso negado': ErrorCode.FORBIDDEN,
-  'access denied': ErrorCode.FORBIDDEN,
-  'permissão negada': ErrorCode.FORBIDDEN,
-  'já inscrito': ErrorCode.ALREADY_SUBSCRIBED,
-  'already subscribed': ErrorCode.ALREADY_SUBSCRIBED,
-  'viagem já iniciada': ErrorCode.TRIP_ALREADY_STARTED,
-  'viagem já finalizada': ErrorCode.TRIP_ALREADY_FINISHED,
-  'senha incorreta': ErrorCode.INVALID_CREDENTIALS,
-  'senha atual incorreta': ErrorCode.INVALID_CREDENTIALS,
-};
+const backendErrorPatterns = [
+  // Email errors
+  { pattern: /e-?mail.*(já|already|existe|exists|cadastrado|registered)/i, code: ErrorCode.EMAIL_ALREADY_EXISTS, field: 'email', message: 'Este e-mail já está cadastrado.' },
+  { pattern: /e-?mail.*(inválido|invalid|incorreto)/i, code: ErrorCode.INVALID_EMAIL, field: 'email', message: 'E-mail inválido.' },
+  { pattern: /(invalid|inválido).*e-?mail/i, code: ErrorCode.INVALID_EMAIL, field: 'email', message: 'E-mail inválido.' },
+  
+  // CPF errors
+  { pattern: /cpf.*(já|already|existe|exists|cadastrado|registered)/i, code: ErrorCode.CPF_ALREADY_EXISTS, field: 'cpf', message: 'Este CPF já está cadastrado.' },
+  { pattern: /cpf.*(inválido|invalid)/i, code: ErrorCode.INVALID_CPF, field: 'cpf', message: 'CPF inválido.' },
+  { pattern: /(invalid|inválido).*cpf/i, code: ErrorCode.INVALID_CPF, field: 'cpf', message: 'CPF inválido.' },
+  
+  // Password errors
+  { pattern: /senha.*(incorreta|errada|wrong|invalid|inválida)/i, code: ErrorCode.INVALID_PASSWORD, field: 'password', message: 'Senha incorreta.' },
+  { pattern: /senha.*(fraca|weak|curta|short)/i, code: ErrorCode.PASSWORD_TOO_WEAK, field: 'password', message: 'Senha muito fraca. Use pelo menos 6 caracteres.' },
+  { pattern: /password.*(incorrect|wrong|invalid)/i, code: ErrorCode.INVALID_PASSWORD, field: 'password', message: 'Senha incorreta.' },
+  
+  // Auth errors
+  { pattern: /credenciais?.*(inválid|invalid|incorrect)/i, code: ErrorCode.INVALID_CREDENTIALS, field: null, message: 'E-mail ou senha incorretos.' },
+  { pattern: /(invalid|incorrect).*credentials/i, code: ErrorCode.INVALID_CREDENTIALS, field: null, message: 'E-mail ou senha incorretos.' },
+  { pattern: /email.*ou.*senha.*incorre/i, code: ErrorCode.INVALID_CREDENTIALS, field: null, message: 'E-mail ou senha incorretos.' },
+  
+  // Token errors
+  { pattern: /token.*(expirado|expired)/i, code: ErrorCode.TOKEN_EXPIRED, field: null, message: 'Sua sessão expirou. Faça login novamente.' },
+  { pattern: /token.*(inválido|invalid)/i, code: ErrorCode.TOKEN_INVALID, field: null, message: 'Sessão inválida. Faça login novamente.' },
+  { pattern: /sessão.*(expirad|invalid)/i, code: ErrorCode.SESSION_EXPIRED, field: null, message: 'Sua sessão expirou. Faça login novamente.' },
+  
+  // Authorization
+  { pattern: /(acesso|access).*(negado|denied)/i, code: ErrorCode.FORBIDDEN, field: null, message: 'Você não tem permissão para esta ação.' },
+  { pattern: /permissão.*(negad|denied)/i, code: ErrorCode.FORBIDDEN, field: null, message: 'Você não tem permissão para esta ação.' },
+  
+  // Resource conflicts
+  { pattern: /já.*(inscrito|subscribed|cadastrado)/i, code: ErrorCode.ALREADY_SUBSCRIBED, field: null, message: 'Você já está inscrito.' },
+  { pattern: /already.*(subscribed|registered)/i, code: ErrorCode.ALREADY_SUBSCRIBED, field: null, message: 'Você já está inscrito.' },
+  
+  // Not found
+  { pattern: /usuário.*(não|not).*(encontrado|found)/i, code: ErrorCode.USER_NOT_FOUND, field: null, message: 'Usuário não encontrado.' },
+  { pattern: /user.*(not|não).*(found|encontrado)/i, code: ErrorCode.USER_NOT_FOUND, field: null, message: 'Usuário não encontrado.' },
+  { pattern: /rota.*(não|not).*(encontrad|found)/i, code: ErrorCode.ROUTE_NOT_FOUND, field: null, message: 'Rota não encontrada.' },
+  { pattern: /viagem.*(não|not).*(encontrad|found)/i, code: ErrorCode.TRIP_NOT_FOUND, field: null, message: 'Viagem não encontrada.' },
+  
+  // Required fields
+  { pattern: /nome.*(obrigatório|required|vazio|empty)/i, code: ErrorCode.REQUIRED_FIELD, field: 'nome', message: 'Nome é obrigatório.' },
+  { pattern: /e-?mail.*(obrigatório|required|vazio|empty)/i, code: ErrorCode.REQUIRED_FIELD, field: 'email', message: 'E-mail é obrigatório.' },
+  { pattern: /cpf.*(obrigatório|required|vazio|empty)/i, code: ErrorCode.REQUIRED_FIELD, field: 'cpf', message: 'CPF é obrigatório.' },
+  { pattern: /matrícula.*(obrigatório|required|vazio|empty)/i, code: ErrorCode.REQUIRED_FIELD, field: 'matricula', message: 'Matrícula é obrigatória.' },
+  { pattern: /senha.*(obrigatório|required|vazio|empty)/i, code: ErrorCode.REQUIRED_FIELD, field: 'password', message: 'Senha é obrigatória.' },
+  { pattern: /instituição.*(obrigatório|required)/i, code: ErrorCode.REQUIRED_FIELD, field: 'instituicao_id', message: 'Instituição é obrigatória.' },
+];
 
 /**
- * Parse backend error message to error code
+ * Parse backend error message using regex patterns
  */
 function parseBackendMessage(message) {
-  if (!message) return null;
+  if (!message || typeof message !== 'string') return null;
   
-  const lowerMessage = message.toLowerCase().trim();
+  for (const { pattern, code, field, message: friendlyMessage } of backendErrorPatterns) {
+    if (pattern.test(message)) {
+      return { code, field, message: friendlyMessage };
+    }
+  }
   
-  for (const [pattern, code] of Object.entries(backendErrorMap)) {
-    if (lowerMessage.includes(pattern)) {
-      return code;
+  return null;
+}
+
+/**
+ * Extract field from error based on known field names in message
+ */
+function extractFieldFromMessage(message) {
+  if (!message || typeof message !== 'string') return null;
+  
+  const lowerMessage = message.toLowerCase();
+  
+  const fieldPatterns = [
+    { fields: ['email', 'e-mail'], name: 'email' },
+    { fields: ['cpf'], name: 'cpf' },
+    { fields: ['senha', 'password'], name: 'password' },
+    { fields: ['nome', 'name'], name: 'nome' },
+    { fields: ['matrícula', 'matricula'], name: 'matricula' },
+    { fields: ['telefone', 'phone'], name: 'telefone' },
+    { fields: ['instituição', 'instituicao'], name: 'instituicao_id' },
+  ];
+  
+  for (const { fields, name } of fieldPatterns) {
+    if (fields.some(f => lowerMessage.includes(f))) {
+      return name;
     }
   }
   
@@ -75,27 +117,94 @@ function parseBackendMessage(message) {
 
 /**
  * Extract error details from various API response formats
+ * Handles Flask-RESTX, Marshmallow, and custom error formats
  */
 function extractErrorDetails(responseData) {
-  if (!responseData) return { message: null, field: null, details: null };
+  if (!responseData) return { message: null, field: null, details: null, fieldErrors: {} };
   
-  // Handle different response formats
-  const message = 
-    responseData.message ||
-    responseData.error ||
-    responseData.msg ||
-    responseData.detail ||
-    (typeof responseData === 'string' ? responseData : null);
+  let message = null;
+  let field = null;
+  let details = null;
+  let fieldErrors = {};
   
-  const field = responseData.field || responseData.loc?.[0] || null;
+  // Handle string response
+  if (typeof responseData === 'string') {
+    message = responseData;
+    field = extractFieldFromMessage(message);
+    return { message, field, details, fieldErrors };
+  }
   
-  const details = 
-    responseData.errors ||
-    responseData.details ||
-    responseData.validation_errors ||
-    null;
+  // Extract main message
+  message = responseData.message || responseData.error || responseData.msg || responseData.detail;
   
-  return { message, field, details };
+  // Extract explicit field
+  field = responseData.field || responseData.loc?.[0] || responseData.location;
+  
+  // Handle Flask-RESTX validation errors: { "errors": { "field": "message" } }
+  if (responseData.errors && typeof responseData.errors === 'object') {
+    details = responseData.errors;
+    
+    // Convert errors object to fieldErrors map
+    for (const [fieldName, errorMsg] of Object.entries(responseData.errors)) {
+      if (typeof errorMsg === 'string') {
+        fieldErrors[fieldName] = errorMsg;
+      } else if (Array.isArray(errorMsg) && errorMsg.length > 0) {
+        fieldErrors[fieldName] = errorMsg[0];
+      } else if (typeof errorMsg === 'object' && errorMsg.message) {
+        fieldErrors[fieldName] = errorMsg.message;
+      }
+    }
+    
+    // If there's only one field error and no main message, use it
+    const fieldKeys = Object.keys(fieldErrors);
+    if (fieldKeys.length === 1 && !message) {
+      field = fieldKeys[0];
+      message = fieldErrors[field];
+    } else if (fieldKeys.length > 0 && !message) {
+      message = 'Verifique os campos destacados.';
+    }
+  }
+  
+  // Handle Marshmallow errors: { "email": ["Invalid email"] }
+  if (!details && !message) {
+    const possibleFields = ['email', 'cpf', 'nome', 'password', 'senha', 'matricula', 'telefone'];
+    for (const fieldName of possibleFields) {
+      if (responseData[fieldName]) {
+        const errorVal = responseData[fieldName];
+        if (typeof errorVal === 'string') {
+          fieldErrors[fieldName] = errorVal;
+        } else if (Array.isArray(errorVal) && errorVal.length > 0) {
+          fieldErrors[fieldName] = errorVal[0];
+        }
+      }
+    }
+    
+    if (Object.keys(fieldErrors).length > 0) {
+      details = fieldErrors;
+      const firstField = Object.keys(fieldErrors)[0];
+      field = firstField;
+      message = fieldErrors[firstField];
+    }
+  }
+  
+  // Handle validation_errors array
+  if (responseData.validation_errors && Array.isArray(responseData.validation_errors)) {
+    details = responseData.validation_errors;
+    for (const err of responseData.validation_errors) {
+      if (err.field && err.message) {
+        fieldErrors[err.field] = err.message;
+      } else if (err.loc && err.msg) {
+        fieldErrors[err.loc[0] || err.loc] = err.msg;
+      }
+    }
+  }
+  
+  // Try to extract field from message if not found
+  if (!field && message) {
+    field = extractFieldFromMessage(message);
+  }
+  
+  return { message, field, details, fieldErrors };
 }
 
 /**
@@ -126,49 +235,58 @@ export function parseApiError(error) {
     if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
       return new NetworkError('A requisição demorou muito. Tente novamente.');
     }
-    if (error.message?.includes('Network Error') || !navigator?.onLine) {
+    if (error.message?.includes('Network Error') || (typeof navigator !== 'undefined' && !navigator.onLine)) {
       return new NetworkError('Sem conexão com a internet. Verifique sua rede.');
     }
     return new NetworkError('Não foi possível conectar ao servidor.');
   }
   
   const { status, data } = error.response;
-  const { message: backendMessage, field, details } = extractErrorDetails(data);
+  const { message: backendMessage, field, details, fieldErrors } = extractErrorDetails(data);
   
-  // Try to match backend message to known error code
-  const matchedCode = parseBackendMessage(backendMessage);
+  // Try to match backend message to known error patterns
+  const matchedPattern = parseBackendMessage(backendMessage);
+  
+  // Use matched pattern if found
+  const errorCode = matchedPattern?.code;
+  const errorField = matchedPattern?.field || field;
+  const errorMessage = matchedPattern?.message || backendMessage;
   
   // Authentication errors (401)
   if (status === 401) {
-    const code = matchedCode || ErrorCode.UNAUTHORIZED;
-    const message = getErrorMessage(code);
+    const code = errorCode || ErrorCode.UNAUTHORIZED;
+    const message = matchedPattern?.message || getErrorMessage(code);
     return new AuthenticationError(message, code);
   }
   
   // Authorization errors (403)
   if (status === 403) {
     return new AuthorizationError(
-      backendMessage || 'Você não tem permissão para esta ação.'
+      errorMessage || 'Você não tem permissão para esta ação.'
     );
   }
   
   // Not found (404)
   if (status === 404) {
-    return new NotFoundError(backendMessage || 'Recurso');
+    return new NotFoundError(errorMessage || 'Recurso');
   }
   
-  // Conflict (409)
+  // Conflict (409) - usually duplicate entries
   if (status === 409) {
-    const code = matchedCode || ErrorCode.DUPLICATE_ENTRY;
-    const message = matchedCode ? getErrorMessage(code) : (backendMessage || 'Este registro já existe.');
-    return new ConflictError(message, code);
+    const code = errorCode || ErrorCode.DUPLICATE_ENTRY;
+    const message = errorMessage || 'Este registro já existe.';
+    const conflictError = new ConflictError(message, code);
+    conflictError.field = errorField;
+    return conflictError;
   }
   
   // Validation errors (400, 422)
   if (status === 400 || status === 422) {
-    const code = matchedCode || ErrorCode.VALIDATION_ERROR;
-    const message = matchedCode ? getErrorMessage(code) : (backendMessage || 'Dados inválidos.');
-    return new ValidationError(message, field, details);
+    const code = errorCode || ErrorCode.VALIDATION_ERROR;
+    const message = errorMessage || 'Dados inválidos. Verifique as informações.';
+    const validationError = new ValidationError(message, errorField, details);
+    validationError.fieldErrors = fieldErrors;
+    return validationError;
   }
   
   // Server errors (5xx)
@@ -180,17 +298,15 @@ export function parseApiError(error) {
   }
   
   // Generic client error
-  const code = matchedCode || ErrorCode.UNKNOWN_ERROR;
-  const message = matchedCode 
-    ? getErrorMessage(code) 
-    : (backendMessage || getHttpStatusMessage(status));
+  const code = errorCode || ErrorCode.UNKNOWN_ERROR;
+  const finalMessage = errorMessage || getHttpStatusMessage(status);
   
   return new AppError({
-    message,
+    message: finalMessage,
     code,
     category: getCategoryFromStatus(status),
     statusCode: status,
-    field,
+    field: errorField,
     details,
     originalError: error,
   });

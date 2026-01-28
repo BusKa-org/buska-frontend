@@ -94,6 +94,7 @@ export const AuthProvider = ({ children }) => {
         errorCode: parsedError.code,
         errorCategory: parsedError.category,
         field: parsedError.field,
+        fieldErrors: parsedError.fieldErrors || {},
       };
     }
   };

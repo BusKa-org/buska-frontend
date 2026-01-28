@@ -167,11 +167,36 @@ const CriarConta = ({navigation}) => {
   };
 
   const handleRegistrationError = (result) => {
-    const { error, errorCode, field } = result;
+    const { error, errorCode, field, fieldErrors } = result;
     
-    // Handle field-specific errors
+    // Handle multiple field errors from backend
+    if (fieldErrors && Object.keys(fieldErrors).length > 0) {
+      // Map backend field names to form field names
+      const fieldMapping = {
+        'password': 'senha',
+        'instituicao_id': 'instituicaoId',
+      };
+      
+      const mappedErrors = {};
+      for (const [fieldName, errorMsg] of Object.entries(fieldErrors)) {
+        const mappedField = fieldMapping[fieldName] || fieldName;
+        mappedErrors[mappedField] = errorMsg;
+      }
+      
+      setErrors(prev => ({ ...prev, ...mappedErrors }));
+      
+      // Only show general error if there are multiple field errors
+      if (Object.keys(fieldErrors).length > 1) {
+        setGeneralError('Verifique os campos destacados em vermelho.');
+      }
+      return;
+    }
+    
+    // Handle single field-specific error
     if (field) {
-      setErrors(prev => ({ ...prev, [field]: error }));
+      const fieldMapping = { 'password': 'senha', 'instituicao_id': 'instituicaoId' };
+      const mappedField = fieldMapping[field] || field;
+      setErrors(prev => ({ ...prev, [mappedField]: error }));
       return;
     }
     
@@ -188,6 +213,20 @@ const CriarConta = ({navigation}) => {
         break;
       case ErrorCode.INVALID_CPF:
         setErrors(prev => ({ ...prev, cpf: 'CPF inválido.' }));
+        break;
+      case ErrorCode.INVALID_PASSWORD:
+      case ErrorCode.PASSWORD_TOO_WEAK:
+        setErrors(prev => ({ ...prev, senha: error || 'Senha inválida.' }));
+        break;
+      case ErrorCode.REQUIRED_FIELD:
+        // Field should be set by the parser
+        if (field) {
+          const fieldMapping = { 'password': 'senha' };
+          const mappedField = fieldMapping[field] || field;
+          setErrors(prev => ({ ...prev, [mappedField]: error }));
+        } else {
+          setGeneralError(error || 'Preencha todos os campos obrigatórios.');
+        }
         break;
       case ErrorCode.NETWORK_ERROR:
         setGeneralError('Sem conexão. Verifique sua internet e tente novamente.');

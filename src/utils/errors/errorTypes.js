@@ -160,7 +160,7 @@ export class AuthorizationError extends AppError {
  * Validation Error
  */
 export class ValidationError extends AppError {
-  constructor(message, field = null, details = null) {
+  constructor(message, field = null, details = null, fieldErrors = {}) {
     super({
       message,
       code: ErrorCode.VALIDATION_ERROR,
@@ -171,6 +171,7 @@ export class ValidationError extends AppError {
       isRetryable: false,
     });
     this.name = 'ValidationError';
+    this.fieldErrors = fieldErrors;
   }
 }
 
