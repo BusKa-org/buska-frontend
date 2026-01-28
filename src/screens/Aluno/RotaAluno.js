@@ -97,7 +97,9 @@ const RotaAluno = ({navigation, route}) => {
       }
       
       await alunoService.alterarPresencaViagem(viagem.id, novoStatus, pontoEmbarqueId);
-      setPresencasStatus({ ...presencasStatus, [viagem.id]: novoStatus });
+      
+      // Reload data from backend to get fresh status
+      await loadViagens();
       
       toast.success(novoStatus ? 'Presença confirmada!' : 'Presença cancelada.');
     } catch (error) {
