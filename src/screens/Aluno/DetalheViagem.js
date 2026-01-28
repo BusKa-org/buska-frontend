@@ -34,28 +34,14 @@ const DetalheViagem = ({navigation, route}) => {
   }
 
   const [situacaoViagem, setSituacaoViagem] = useState('não iniciada');
-  const [presencaConfirmada, setPresencaConfirmada] = useState(false);
-  const [carregandoPresenca, setCarregandoPresenca] = useState(true);
+  const [presencaConfirmada, setPresencaConfirmada] = useState(viagem?.status_confirmacao || false);
   const [pontosRota, setPontosRota] = useState([]);
   const [carregandoPontos, setCarregandoPontos] = useState(true);
 
+  // Update presence status when viagem changes
   useEffect(() => {
-    const carregarPresenca = async () => {
-      if (viagem?.id) {
-        try {
-          const presencaData = await alunoService.obterPresencaViagem(viagem.id);
-          setPresencaConfirmada(presencaData.presente || false);
-        } catch (error) {
-          setPresencaConfirmada(false);
-        } finally {
-          setCarregandoPresenca(false);
-        }
-      } else {
-        setCarregandoPresenca(false);
-      }
-    };
-    carregarPresenca();
-  }, [viagem?.id]);
+    setPresencaConfirmada(viagem?.status_confirmacao || false);
+  }, [viagem?.status_confirmacao]);
 
   useEffect(() => {
     const carregarPontos = async () => {
@@ -80,10 +66,19 @@ const DetalheViagem = ({navigation, route}) => {
 
   const handleConfirmarPresenca = async () => {
     try {
+      // Get ponto_embarque_id from viagem or use first route point
+      let pontoEmbarqueId = viagem.ponto_embarque_id;
+      if (!pontoEmbarqueId && pontosRota.length > 0) {
+        pontoEmbarqueId = pontosRota[0].id;
+      }
+      
+      if (!pontoEmbarqueId) {
+        Alert.alert('Erro', 'Não foi possível encontrar um ponto de embarque.');
+        return;
+      }
+      
       setPresencaConfirmada(true);
-      await alunoService.alterarPresencaViagem(viagem.id, true);
-      const presencaData = await alunoService.obterPresencaViagem(viagem.id);
-      setPresencaConfirmada(presencaData.presente || false);
+      await alunoService.alterarPresencaViagem(viagem.id, true, pontoEmbarqueId);
       Alert.alert('Sucesso', 'Presença confirmada com sucesso!');
     } catch (error) {
       setPresencaConfirmada(false);
