@@ -15,7 +15,7 @@ import Icon, { IconNames } from '../../components/Icon';
 import { useToast } from '../../components/Toast';
 
 const RotaAluno = ({navigation, route}) => {
-  const rota = route?.params?.rota || { id: 1, nome: 'Rota' };
+  const rota = route?.params?.rota; // Can be null to show all trips
   const toast = useToast();
   const [viagens, setViagens] = useState([]);
   const [presencasStatus, setPresencasStatus] = useState({});
@@ -24,15 +24,23 @@ const RotaAluno = ({navigation, route}) => {
   const [updatingPresenca, setUpdatingPresenca] = useState(null);
   const isMountedRef = useRef(true);
 
+  const isAllTrips = !rota; // Show all trips mode
+  const screenTitle = isAllTrips ? 'Minhas Viagens' : rota.nome;
+
   const loadViagens = async () => {
     try {
       const todasViagens = await alunoService.listarViagens();
-      const viagensRota = todasViagens.filter((v) => v.rota_id === rota.id);
-      setViagens(viagensRota || []);
+      
+      // Filter by route if a specific route is provided, otherwise show all
+      const viagensFiltradas = isAllTrips 
+        ? todasViagens 
+        : todasViagens.filter((v) => v.rota_id === rota.id);
+      
+      setViagens(viagensFiltradas || []);
       
       // Use status_confirmacao from the agenda response directly
       const statusMap = {};
-      viagensRota.forEach((viagem) => {
+      viagensFiltradas.forEach((viagem) => {
         statusMap[viagem.id] = viagem.status_confirmacao || false;
       });
       setPresencasStatus(statusMap);
@@ -47,14 +55,14 @@ const RotaAluno = ({navigation, route}) => {
   useEffect(() => {
     loadViagens();
     return () => { isMountedRef.current = false; };
-  }, [rota.id]);
+  }, [rota?.id]);
 
   useEffect(() => {
     const unsubscribe = navigation?.addListener?.('focus', () => {
       if (isMountedRef.current) loadViagens();
     });
     return unsubscribe;
-  }, [navigation, rota.id]);
+  }, [navigation, rota?.id]);
 
   const getStatusConfig = (status) => {
     switch (status) {
@@ -145,7 +153,7 @@ const RotaAluno = ({navigation, route}) => {
           <Icon name={IconNames.back} size="base" color={colors.secondary.main} />
           <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>{rota.nome}</Text>
+        <Text style={styles.title}>{screenTitle}</Text>
       </View>
 
       <ScrollView
@@ -176,6 +184,12 @@ const RotaAluno = ({navigation, route}) => {
                       <Icon name={IconNames.calendarToday} size="sm" color={colors.text.secondary} />
                       <Text style={styles.viagemData}>{formatDate(viagem.data)}</Text>
                     </View>
+                    {isAllTrips && viagem.rota_nome && (
+                      <View style={styles.dateRow}>
+                        <Icon name={IconNames.route} size="sm" color={colors.text.secondary} />
+                        <Text style={styles.viagemData}>{viagem.rota_nome}</Text>
+                      </View>
+                    )}
                   </View>
                   <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
                     <Icon name={statusConfig.icon} size="xs" color={statusConfig.color} />
@@ -211,7 +225,10 @@ const RotaAluno = ({navigation, route}) => {
 
                 <TouchableOpacity
                   style={styles.detalhesButton}
-                  onPress={() => navigation.navigate('DetalheViagem', { rota, viagem })}>
+                  onPress={() => navigation.navigate('DetalheViagem', { 
+                    rota: rota || { id: viagem.rota_id, nome: viagem.rota_nome }, 
+                    viagem 
+                  })}>
                   <Text style={styles.detalhesButtonText}>Ver Detalhes</Text>
                   <Icon name={IconNames.chevronRight} size="md" color={colors.secondary.main} />
                 </TouchableOpacity>
@@ -220,7 +237,11 @@ const RotaAluno = ({navigation, route}) => {
           }) : (
             <View style={styles.emptyState}>
               <Icon name={IconNames.schedule} size="huge" color={colors.neutral[300]} />
-              <Text style={styles.emptyStateText}>Nenhuma viagem encontrada para esta rota</Text>
+              <Text style={styles.emptyStateText}>
+                {isAllTrips 
+                  ? 'Nenhuma viagem agendada nas suas rotas' 
+                  : 'Nenhuma viagem encontrada para esta rota'}
+              </Text>
             </View>
           )}
         </View>
