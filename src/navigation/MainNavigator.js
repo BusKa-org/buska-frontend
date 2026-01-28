@@ -27,6 +27,22 @@ if (!isWeb) {
   }
 }
 
+// Get the correct navigator based on user role
+const getInitialRoute = (role) => {
+  const normalizedRole = role?.toUpperCase?.() || '';
+  switch (normalizedRole) {
+    case 'ALUNO':
+      return 'AlunoNavigator';
+    case 'MOTORISTA':
+      return 'MotoristaNavigator';
+    case 'GESTOR':
+      // Gestores usam MotoristaNavigator por enquanto (têm acesso às mesmas telas + admin)
+      return 'MotoristaNavigator';
+    default:
+      return 'SelecaoFluxo';
+  }
+};
+
 const MainNavigator = () => {
   const { isAuthenticated, user, loading } = useAuth();
 
@@ -44,11 +60,12 @@ const MainNavigator = () => {
     return <AuthNavigator />;
   }
 
+  const initialRoute = getInitialRoute(user?.role);
+
   // If authenticated, show role-based navigator
-  // Se estiver na web ou React Navigation não estiver disponível, usa navegação simples
   if (isWeb || !createNativeStackNavigator) {
     return (
-      <NavigationProvider initialRoute={user?.role === 'aluno' ? 'AlunoNavigator' : 'MotoristaNavigator'}>
+      <NavigationProvider initialRoute={initialRoute}>
         <Navigator>
           <Screen name="SelecaoFluxo" component={SelecaoFluxo} />
           <Screen name="AlunoNavigator" component={AlunoNavigator} />
@@ -67,7 +84,7 @@ const MainNavigator = () => {
 
   return (
     <Stack.Navigator
-      initialRouteName={user?.role === 'aluno' ? 'AlunoNavigator' : 'MotoristaNavigator'}
+      initialRouteName={initialRoute}
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',

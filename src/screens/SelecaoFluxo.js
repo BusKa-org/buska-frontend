@@ -8,9 +8,14 @@ import {
 } from 'react-native';
 import { colors, spacing, borderRadius, shadows, textStyles } from '../theme';
 import Icon, { IconNames } from '../components/Icon';
+import { useAuth } from '../contexts/AuthContext';
 
 const SelecaoFluxo = ({navigation}) => {
-  const userTypes = [
+  const { user } = useAuth();
+  const userRole = user?.role?.toUpperCase?.() || '';
+
+  // Define all user types with role requirements
+  const allUserTypes = [
     {
       id: 'aluno',
       label: 'Aluno',
@@ -19,7 +24,7 @@ const SelecaoFluxo = ({navigation}) => {
       color: colors.roles.aluno,
       bgColor: colors.secondary.lighter,
       route: 'AlunoNavigator',
-      disabled: false,
+      allowedRoles: ['ALUNO'],
     },
     {
       id: 'motorista',
@@ -29,19 +34,24 @@ const SelecaoFluxo = ({navigation}) => {
       color: colors.roles.motorista,
       bgColor: colors.neutral[100],
       route: 'MotoristaNavigator',
-      disabled: false,
+      allowedRoles: ['MOTORISTA', 'GESTOR'],
     },
     {
       id: 'gestor',
       label: 'Gestor',
-      description: 'Acompanhe relatórios e estatísticas',
+      description: 'Gerencie usuários, rotas e viagens',
       icon: IconNames.badge,
       color: colors.roles.gestor,
       bgColor: colors.accent.light,
-      route: 'GestorNavigator',
-      disabled: true,
+      route: 'MotoristaNavigator', // Gestores usam mesmas telas por enquanto
+      allowedRoles: ['GESTOR'],
     },
   ];
+
+  // Filter to only show roles the user has access to
+  const userTypes = allUserTypes.filter(
+    type => type.allowedRoles.includes(userRole)
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -56,33 +66,30 @@ const SelecaoFluxo = ({navigation}) => {
         </View>
 
         <View style={styles.fluxosContainer}>
-          {userTypes.map((type) => (
-            <TouchableOpacity
-              key={type.id}
-              style={[
-                styles.fluxoCard,
-                type.disabled && styles.fluxoCardDisabled,
-              ]}
-              onPress={() => !type.disabled && navigation.navigate(type.route)}
-              disabled={type.disabled}>
-              <View style={[styles.iconContainer, { backgroundColor: type.bgColor }]}>
-                <Icon name={type.icon} size="xxl" color={type.color} />
-              </View>
-              <View style={styles.fluxoTextContainer}>
-                <Text style={styles.fluxoTitle}>{type.label}</Text>
-                <Text style={styles.fluxoDescription}>{type.description}</Text>
-                {type.disabled && (
-                  <View style={styles.comingSoonBadge}>
-                    <Icon name={IconNames.schedule} size="xs" color={colors.text.hint} />
-                    <Text style={styles.comingSoon}>Em breve</Text>
-                  </View>
-                )}
-              </View>
-              {!type.disabled && (
+          {userTypes.length > 0 ? (
+            userTypes.map((type) => (
+              <TouchableOpacity
+                key={type.id}
+                style={styles.fluxoCard}
+                onPress={() => navigation.navigate(type.route)}>
+                <View style={[styles.iconContainer, { backgroundColor: type.bgColor }]}>
+                  <Icon name={type.icon} size="xxl" color={type.color} />
+                </View>
+                <View style={styles.fluxoTextContainer}>
+                  <Text style={styles.fluxoTitle}>{type.label}</Text>
+                  <Text style={styles.fluxoDescription}>{type.description}</Text>
+                </View>
                 <Icon name={IconNames.chevronRight} size="lg" color={colors.neutral[400]} />
-              )}
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={styles.noAccessContainer}>
+              <Icon name={IconNames.warning} size="xl" color={colors.warning.main} />
+              <Text style={styles.noAccessText}>
+                Seu perfil ({userRole || 'indefinido'}) não tem acesso a nenhuma área.
+              </Text>
+            </View>
+          )}
         </View>
       </View>
     </SafeAreaView>
@@ -134,8 +141,17 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     ...shadows.md,
   },
-  fluxoCardDisabled: {
-    opacity: 0.6,
+  noAccessContainer: {
+    alignItems: 'center',
+    padding: spacing.xl,
+    backgroundColor: colors.warning.lighter,
+    borderRadius: borderRadius.lg,
+    gap: spacing.sm,
+  },
+  noAccessText: {
+    ...textStyles.body,
+    color: colors.warning.dark,
+    textAlign: 'center',
   },
   iconContainer: {
     width: 64,
@@ -156,17 +172,6 @@ const styles = StyleSheet.create({
   fluxoDescription: {
     ...textStyles.bodySmall,
     color: colors.text.secondary,
-  },
-  comingSoonBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xxs,
-    marginTop: spacing.sm,
-  },
-  comingSoon: {
-    ...textStyles.caption,
-    color: colors.text.hint,
-    fontStyle: 'italic',
   },
 });
 
