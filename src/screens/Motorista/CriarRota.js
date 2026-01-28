@@ -26,7 +26,7 @@ const CriarRota = ({navigation}) => {
       return;
     }
 
-    if (!user?.municipio_id) {
+    if (!user?.prefeitura_id) {
       Alert.alert(
         'Erro',
         'Você não possui um município cadastrado. Entre em contato com o gestor.',
@@ -110,12 +110,12 @@ const CriarRota = ({navigation}) => {
               </Text>
             </View>
 
-            {user?.municipio && (
+            {user?.prefeitura_id && (
               <View style={styles.municipioInfo}>
                 <Text style={styles.municipioLabel}>Município:</Text>
                 <Text style={styles.municipioNome}>
-                  {user.municipio.nome}
-                  {user.municipio.uf ? ` - ${user.municipio.uf}` : ''}
+                  {user.municipio_nome || user.prefeitura_nome || 'Configurado'}
+                  {user.municipio_uf ? ` - ${user.municipio_uf}` : ''}
                 </Text>
               </View>
             )}
