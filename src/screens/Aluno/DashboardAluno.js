@@ -205,12 +205,20 @@ const DashboardAluno = ({navigation}) => {
         {/* Botões Rápidos */}
         <View style={styles.botoesRapidos}>
           <TouchableOpacity
-            style={styles.botaoRapido}
-            onPress={() => navigation.navigate('SelecaoRotas')}>
+            style={[styles.botaoRapido, !proximaViagem && styles.botaoRapidoDisabled]}
+            disabled={!proximaViagem}
+            onPress={() => {
+              if (proximaViagem) {
+                const rotaViagem = rotasCadastradas.find(r => r.id === proximaViagem.rota_id);
+                if (rotaViagem) {
+                  navigation.navigate('RotaAluno', { rota: rotaViagem });
+                }
+              }
+            }}>
             <View style={[styles.botaoIconContainer, { backgroundColor: colors.secondary.lighter }]}>
               <Icon name={IconNames.bus} size="lg" color={colors.secondary.dark} />
             </View>
-            <Text style={styles.botaoRapidoText}>Minhas Rotas</Text>
+            <Text style={styles.botaoRapidoText}>Minhas Viagens</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
