@@ -210,8 +210,10 @@ export const motoristaService = {
    * For now, try getting trip details
    */
   async listarAlunosViagem(viagemId) {
+    if (!viagemId) {
+      return { total_alunos: 0, alunos_confirmados: 0 };
+    }
     try {
-      // Try to get boarding points which should include confirmed students
       const response = await api.get(`/viagens/${viagemId}/pontos-embarque`);
       return response.data;
     } catch (error) {

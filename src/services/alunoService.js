@@ -89,6 +89,9 @@ export const alunoService = {
    * Backend: GET /v1/viagens/{id}/pontos-embarque
    */
   async listarPontosEmbarque(viagemId) {
+    if (!viagemId) {
+      return [];
+    }
     try {
       const response = await api.get(`/viagens/${viagemId}/pontos-embarque`);
       return response.data;
@@ -99,18 +102,16 @@ export const alunoService = {
 
   /**
    * Get presence/confirmation status for a trip
-   * Note: Backend doesn't have a dedicated endpoint for this
-   * We'll need to infer from the trip data or use a workaround
    */
   async obterPresencaViagem(viagemId) {
+    if (!viagemId) {
+      return { presente: false };
+    }
     try {
-      // Try to get trip details which might include confirmation status
       const response = await api.get(`/viagens/${viagemId}/pontos-embarque`);
-      // If the student has a ponto_embarque, they're confirmed
       const data = response.data;
       return { presente: data.confirmado || false, ponto_embarque: data.ponto_embarque };
     } catch (error) {
-      // If 404 or error, student hasn't confirmed
       return { presente: false };
     }
   },
