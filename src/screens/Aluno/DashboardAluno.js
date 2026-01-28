@@ -214,8 +214,16 @@ const DashboardAluno = ({navigation}) => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.botaoRapido}
-            onPress={() => navigation.navigate('LocalizacaoOnibus')}>
+            style={[styles.botaoRapido, !proximaViagem && styles.botaoRapidoDisabled]}
+            disabled={!proximaViagem}
+            onPress={() => {
+              if (proximaViagem) {
+                const rotaViagem = rotasCadastradas.find(r => r.id === proximaViagem.rota_id);
+                if (rotaViagem) {
+                  navigation.navigate('LocalizacaoOnibus', { rota: rotaViagem, viagem: proximaViagem });
+                }
+              }
+            }}>
             <View style={[styles.botaoIconContainer, { backgroundColor: colors.success.light }]}>
               <Icon name={IconNames.location} size="lg" color={colors.success.dark} />
             </View>
@@ -452,6 +460,9 @@ const styles = StyleSheet.create({
     padding: spacing.base,
     alignItems: 'center',
     ...shadows.sm,
+  },
+  botaoRapidoDisabled: {
+    opacity: 0.5,
   },
   botaoIconContainer: {
     width: 48,
