@@ -11,141 +11,84 @@ import {
   Platform,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
+import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
 
 const ConfigNotificacoesAluno = ({navigation}) => {
   const { logout } = useAuth();
   const [lembretePresenca, setLembretePresenca] = useState(true);
-  const [antecedenciaLembrete, setAntecedenciaLembrete] = useState(30); // minutos
+  const [antecedenciaLembrete, setAntecedenciaLembrete] = useState(30);
   const [notificacaoAproximacao, setNotificacaoAproximacao] = useState(true);
-  const [distanciaAproximacao, setDistanciaAproximacao] = useState(500); // metros
+  const [distanciaAproximacao, setDistanciaAproximacao] = useState(500);
 
   const opcoesAntecedencia = [15, 30, 45, 60];
   const opcoesDistancia = [200, 500, 1000, 1500];
 
   const handleLogout = async () => {
-    console.log('handleLogout chamado');
-    
-    // Usar window.confirm na web, Alert.alert no mobile
     const isWeb = Platform.OS === 'web';
     
-    let shouldLogout = false;
-    
     if (isWeb) {
-      // Na web, usar window.confirm que funciona melhor
-      shouldLogout = window.confirm('Tem certeza que deseja sair?');
-      console.log('Confirmação web:', shouldLogout);
+      if (window.confirm('Tem certeza que deseja sair?')) {
+        await performLogout();
+      }
     } else {
-      // No mobile, usar Alert
-      return new Promise((resolve) => {
-        Alert.alert(
-          'Sair',
-          'Tem certeza que deseja sair?',
-          [
-            {
-              text: 'Cancelar',
-              style: 'cancel',
-              onPress: () => {
-                console.log('Logout cancelado');
-                resolve(false);
-              },
-            },
-            {
-              text: 'Sair',
-              style: 'destructive',
-              onPress: async () => {
-                shouldLogout = true;
-                resolve(true);
-              },
-            },
-          ],
-          { 
-            cancelable: true,
-            onDismiss: () => {
-              console.log('Alert fechado sem ação');
-              resolve(false);
-            }
-          }
-        );
-      }).then(async (confirmed) => {
-        if (confirmed) {
-          await performLogout();
-        }
-      });
-    }
-    
-    if (shouldLogout) {
-      await performLogout();
+      Alert.alert('Sair', 'Tem certeza que deseja sair?', [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Sair', style: 'destructive', onPress: performLogout },
+      ], { cancelable: true });
     }
   };
 
   const performLogout = async () => {
-    console.log('Iniciando logout...');
     try {
       await logout();
-      console.log('Logout concluído');
     } catch (error) {
       console.error('Erro no logout:', error);
-      // Mesmo em caso de erro, tentar limpar o estado novamente
-      try {
-        await logout();
-      } catch (e) {
-        console.error('Erro ao tentar logout novamente:', e);
-      }
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← Voltar</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Icon name={IconNames.back} size="base" color={colors.secondary.main} />
+          <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Configurações de Notificação</Text>
+        <Text style={styles.title}>Configurações</Text>
       </View>
 
       <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
-          {/* Lembrete de Presença */}
+          {/* Presence Reminder */}
           <View style={styles.section}>
             <View style={styles.settingRow}>
+              <View style={styles.settingIconContainer}>
+                <Icon name={IconNames.notifications} size="lg" color={colors.secondary.main} />
+              </View>
               <View style={styles.settingInfo}>
                 <Text style={styles.settingTitle}>Lembrete de Presença</Text>
                 <Text style={styles.settingDescription}>
-                  Receber notificações para confirmar sua presença antes da
-                  viagem
+                  Receber notificações para confirmar sua presença antes da viagem
                 </Text>
               </View>
               <Switch
                 value={lembretePresenca}
                 onValueChange={setLembretePresenca}
-                trackColor={{false: '#e0e0e0', true: '#1a73e8'}}
-                thumbColor="#fff"
+                trackColor={{false: colors.neutral[200], true: colors.secondary.main}}
+                thumbColor={colors.background.paper}
               />
             </View>
 
             {lembretePresenca && (
               <View style={styles.subSetting}>
-                <Text style={styles.subSettingTitle}>
-                  Antecedência do Lembrete
-                </Text>
+                <Text style={styles.subSettingTitle}>Antecedência do Lembrete</Text>
                 <View style={styles.optionsContainer}>
                   {opcoesAntecedencia.map((minutos) => (
                     <TouchableOpacity
                       key={minutos}
-                      style={[
-                        styles.optionButton,
-                        antecedenciaLembrete === minutos &&
-                          styles.optionButtonActive,
-                      ]}
+                      style={[styles.optionButton, antecedenciaLembrete === minutos && styles.optionButtonActive]}
                       onPress={() => setAntecedenciaLembrete(minutos)}>
-                      <Text
-                        style={[
-                          styles.optionText,
-                          antecedenciaLembrete === minutos &&
-                            styles.optionTextActive,
-                        ]}>
+                      <Text style={[styles.optionText, antecedenciaLembrete === minutos && styles.optionTextActive]}>
                         {minutos} min
                       </Text>
                     </TouchableOpacity>
@@ -155,13 +98,14 @@ const ConfigNotificacoesAluno = ({navigation}) => {
             )}
           </View>
 
-          {/* Notificação de Aproximação */}
+          {/* Proximity Notification */}
           <View style={styles.section}>
             <View style={styles.settingRow}>
+              <View style={styles.settingIconContainer}>
+                <Icon name={IconNames.myLocation} size="lg" color={colors.success.main} />
+              </View>
               <View style={styles.settingInfo}>
-                <Text style={styles.settingTitle}>
-                  Notificação de Aproximação
-                </Text>
+                <Text style={styles.settingTitle}>Notificação de Aproximação</Text>
                 <Text style={styles.settingDescription}>
                   Receber notificação quando o ônibus estiver próximo
                 </Text>
@@ -169,32 +113,21 @@ const ConfigNotificacoesAluno = ({navigation}) => {
               <Switch
                 value={notificacaoAproximacao}
                 onValueChange={setNotificacaoAproximacao}
-                trackColor={{false: '#e0e0e0', true: '#1a73e8'}}
-                thumbColor="#fff"
+                trackColor={{false: colors.neutral[200], true: colors.success.main}}
+                thumbColor={colors.background.paper}
               />
             </View>
 
             {notificacaoAproximacao && (
               <View style={styles.subSetting}>
-                <Text style={styles.subSettingTitle}>
-                  Distância para Notificação
-                </Text>
+                <Text style={styles.subSettingTitle}>Distância para Notificação</Text>
                 <View style={styles.optionsContainer}>
                   {opcoesDistancia.map((metros) => (
                     <TouchableOpacity
                       key={metros}
-                      style={[
-                        styles.optionButton,
-                        distanciaAproximacao === metros &&
-                          styles.optionButtonActive,
-                      ]}
+                      style={[styles.optionButton, distanciaAproximacao === metros && styles.optionButtonActive]}
                       onPress={() => setDistanciaAproximacao(metros)}>
-                      <Text
-                        style={[
-                          styles.optionText,
-                          distanciaAproximacao === metros &&
-                            styles.optionTextActive,
-                        ]}>
+                      <Text style={[styles.optionText, distanciaAproximacao === metros && styles.optionTextActive]}>
                         {metros}m
                       </Text>
                     </TouchableOpacity>
@@ -204,23 +137,18 @@ const ConfigNotificacoesAluno = ({navigation}) => {
             )}
           </View>
 
-          {/* Botão Salvar */}
+          {/* Save Button */}
           <TouchableOpacity style={styles.saveButton}>
+            <Icon name={IconNames.checkCircle} size="md" color={colors.primary.contrast} />
             <Text style={styles.saveButtonText}>Salvar Configurações</Text>
           </TouchableOpacity>
 
-          {/* Seção de Conta */}
+          {/* Account Section */}
           <View style={styles.accountSection}>
             <Text style={styles.accountSectionTitle}>Conta</Text>
-            <TouchableOpacity
-              style={styles.logoutButton}
-              onPress={() => {
-                console.log('Botão Sair pressionado!');
-                handleLogout();
-              }}
-              activeOpacity={0.7}
-              testID="logout-button">
-              <Text style={styles.logoutButtonText}>🚪 Sair</Text>
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.7}>
+              <Icon name={IconNames.logout} size="md" color={colors.error.main} />
+              <Text style={styles.logoutButtonText}>Sair da conta</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -230,138 +158,76 @@ const ConfigNotificacoesAluno = ({navigation}) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
+  container: { flex: 1, backgroundColor: colors.background.default },
   header: {
-    backgroundColor: '#fff',
-    padding: 16,
+    backgroundColor: colors.background.paper,
+    padding: spacing.base,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border.light,
   },
-  backButton: {
-    marginBottom: 8,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#1a73e8',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-  },
+  backButton: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
+  backButtonText: { ...textStyles.body, color: colors.secondary.main },
+  title: { ...textStyles.h2, color: colors.text.primary },
+  scrollView: { flex: 1 },
+  content: { padding: spacing.base },
   section: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.base,
+    ...shadows.sm,
   },
-  settingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+  settingRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  settingIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.neutral[100],
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
   },
-  settingInfo: {
-    flex: 1,
-    marginRight: 16,
-  },
-  settingTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  settingDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-  },
-  subSetting: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  subSettingTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
-  },
-  optionsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
+  settingInfo: { flex: 1, marginRight: spacing.md },
+  settingTitle: { ...textStyles.h5, color: colors.text.primary, marginBottom: spacing.xxs },
+  settingDescription: { ...textStyles.bodySmall, color: colors.text.secondary, lineHeight: 20 },
+  subSetting: { marginTop: spacing.base, paddingTop: spacing.base, borderTopWidth: 1, borderTopColor: colors.border.light },
+  subSettingTitle: { ...textStyles.bodySmall, color: colors.text.primary, fontWeight: '600', marginBottom: spacing.md },
+  optionsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   optionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.neutral[100],
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
   },
-  optionButtonActive: {
-    backgroundColor: '#1a73e8',
-    borderColor: '#1a73e8',
-  },
-  optionText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  optionTextActive: {
-    color: '#fff',
-  },
+  optionButtonActive: { backgroundColor: colors.secondary.main, borderColor: colors.secondary.main },
+  optionText: { ...textStyles.bodySmall, color: colors.text.secondary, fontWeight: '500' },
+  optionTextActive: { color: colors.primary.contrast },
   saveButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.base,
+    marginTop: spacing.sm,
+    ...shadows.sm,
   },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  accountSection: {
-    marginTop: 24,
-    paddingTop: 24,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  accountSectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 16,
-  },
+  saveButtonText: { ...textStyles.button, color: colors.primary.contrast },
+  accountSection: { marginTop: spacing.xl, paddingTop: spacing.xl, borderTopWidth: 1, borderTopColor: colors.border.light },
+  accountSectionTitle: { ...textStyles.h4, color: colors.text.primary, marginBottom: spacing.base },
   logoutButton: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ffebee',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.error.light,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
   },
-  logoutButtonText: {
-    fontSize: 16,
-    color: '#d32f2f',
-    fontWeight: '600',
-  },
+  logoutButtonText: { ...textStyles.button, color: colors.error.main },
 });
 
 export default ConfigNotificacoesAluno;
-
-

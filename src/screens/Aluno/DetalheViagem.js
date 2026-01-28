@@ -9,6 +9,8 @@ import {
   Alert,
 } from 'react-native';
 import { alunoService } from '../../services';
+import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
 
 const DetalheViagem = ({navigation, route}) => {
   const {rota, viagem} = route?.params || {};
@@ -17,14 +19,14 @@ const DetalheViagem = ({navigation, route}) => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}>
-            <Text style={styles.backButtonText}>← Voltar</Text>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Icon name={IconNames.back} size="base" color={colors.secondary.main} />
+            <Text style={styles.backButtonText}>Voltar</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Detalhes da Viagem</Text>
         </View>
-        <View style={styles.content}>
+        <View style={styles.emptyContent}>
+          <Icon name={IconNames.warning} size="huge" color={colors.neutral[300]} />
           <Text style={styles.emptyText}>Dados da viagem não disponíveis</Text>
         </View>
       </SafeAreaView>
@@ -44,7 +46,6 @@ const DetalheViagem = ({navigation, route}) => {
           const presencaData = await alunoService.obterPresencaViagem(viagem.id);
           setPresencaConfirmada(presencaData.presente || false);
         } catch (error) {
-          console.error('Erro ao carregar presença:', error);
           setPresencaConfirmada(false);
         } finally {
           setCarregandoPresenca(false);
@@ -53,7 +54,6 @@ const DetalheViagem = ({navigation, route}) => {
         setCarregandoPresenca(false);
       }
     };
-
     carregarPresenca();
   }, [viagem?.id]);
 
@@ -65,7 +65,6 @@ const DetalheViagem = ({navigation, route}) => {
           const pontos = await alunoService.listarPontosRota(rota.id);
           setPontosRota(pontos || []);
         } catch (error) {
-          console.error('Erro ao carregar pontos da rota:', error);
           setPontosRota([]);
         } finally {
           setCarregandoPontos(false);
@@ -74,103 +73,58 @@ const DetalheViagem = ({navigation, route}) => {
         setCarregandoPontos(false);
       }
     };
-
     carregarPontos();
   }, [rota?.id]);
 
-  const podeConfirmarPresenca = () => {
-    // Pode confirmar se estiver dentro da janela de 10 minutos após início
-    return situacaoViagem === 'em andamento';
-  };
+  const podeConfirmarPresenca = () => situacaoViagem === 'em andamento';
 
   const handleConfirmarPresenca = async () => {
     try {
-      // Atualizar o estado imediatamente para feedback visual
-      console.log('Confirmando presença, estado atual:', presencaConfirmada);
       setPresencaConfirmada(true);
-      console.log('Estado atualizado para: true');
-      
       await alunoService.alterarPresencaViagem(viagem.id, true);
-      
-      // Buscar o status atualizado da API para garantir consistência
       const presencaData = await alunoService.obterPresencaViagem(viagem.id);
-      console.log('Dados da API:', presencaData);
       setPresencaConfirmada(presencaData.presente || false);
-      console.log('Estado final:', presencaData.presente || false);
-      
       Alert.alert('Sucesso', 'Presença confirmada com sucesso!');
     } catch (error) {
-      console.error('Erro ao confirmar presença:', error);
-      // Reverter o estado em caso de erro
       setPresencaConfirmada(false);
       Alert.alert('Erro', error.message || 'Não foi possível confirmar a presença.');
-      // Em caso de erro, tentar recarregar o status atual
-      try {
-        const presencaData = await alunoService.obterPresencaViagem(viagem.id);
-        setPresencaConfirmada(presencaData.presente || false);
-      } catch (e) {
-        // Ignorar erro ao recarregar
-      }
     }
   };
 
-  const getSituacaoColor = (situacao) => {
+  const getSituacaoConfig = (situacao) => {
     switch (situacao) {
-      case 'não iniciada':
-        return '#999';
-      case 'em andamento':
-        return '#1a73e8';
-      case 'finalizada':
-        return '#34a853';
-      default:
-        return '#999';
+      case 'não iniciada': return { color: colors.text.hint, bg: colors.neutral[100] };
+      case 'em andamento': return { color: colors.secondary.main, bg: colors.secondary.lighter };
+      case 'finalizada': return { color: colors.success.main, bg: colors.success.light };
+      default: return { color: colors.text.hint, bg: colors.neutral[100] };
     }
   };
 
-  // Memoizar os estilos de presença para garantir que sejam recalculados quando o estado mudar
-  const presencaContainerStyle = useMemo(() => [
-    styles.presencaStatus,
-    presencaConfirmada
-      ? styles.presencaConfirmada
-      : styles.presencaNaoConfirmada,
-  ], [presencaConfirmada]);
-
-  const presencaTextStyle = useMemo(() => 
-    presencaConfirmada
-      ? [styles.presencaText, styles.presencaTextConfirmada]
-      : styles.presencaText,
-  [presencaConfirmada]);
+  const situacaoConfig = getSituacaoConfig(situacaoViagem);
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← Voltar</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Icon name={IconNames.back} size="base" color={colors.secondary.main} />
+          <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Detalhes da Viagem</Text>
       </View>
 
       <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
-          {/* Informações Principais */}
+          {/* Main Info Card */}
           <View style={styles.card}>
             <View style={styles.viagemHeader}>
               <View>
-                <Text style={styles.viagemTipo}>{viagem.tipo}</Text>
+                <View style={styles.tipoBadge}>
+                  <Text style={styles.viagemTipo}>{viagem.tipo}</Text>
+                </View>
                 <Text style={styles.viagemHorario}>{viagem.horario}</Text>
               </View>
-              <View
-                style={[
-                  styles.situacaoBadge,
-                  {backgroundColor: getSituacaoColor(situacaoViagem) + '20'},
-                ]}>
-                <Text
-                  style={[
-                    styles.situacaoText,
-                    {color: getSituacaoColor(situacaoViagem)},
-                  ]}>
+              <View style={[styles.situacaoBadge, { backgroundColor: situacaoConfig.bg }]}>
+                <Text style={[styles.situacaoText, { color: situacaoConfig.color }]}>
                   {situacaoViagem.toUpperCase()}
                 </Text>
               </View>
@@ -178,123 +132,106 @@ const DetalheViagem = ({navigation, route}) => {
 
             <View style={styles.rotaInfo}>
               <View style={styles.pontoRota}>
-                <View style={styles.pontoIcon}>
-                  <Text style={styles.pontoIconText}>📍</Text>
+                <View style={[styles.pontoIcon, { backgroundColor: colors.secondary.lighter }]}>
+                  <Icon name={IconNames.location} size="md" color={colors.secondary.main} />
                 </View>
                 <View style={styles.pontoInfo}>
                   <Text style={styles.pontoLabel}>Origem</Text>
-                  <Text style={styles.pontoNome}>{viagem.origem}</Text>
+                  <Text style={styles.pontoNome}>{viagem.origem || 'Não informado'}</Text>
                 </View>
               </View>
-
               <View style={styles.linhaRota} />
-
               <View style={styles.pontoRota}>
-                <View style={styles.pontoIcon}>
-                  <Text style={styles.pontoIconText}>🎯</Text>
+                <View style={[styles.pontoIcon, { backgroundColor: colors.success.light }]}>
+                  <Icon name="flag" size="md" color={colors.success.main} />
                 </View>
                 <View style={styles.pontoInfo}>
                   <Text style={styles.pontoLabel}>Destino</Text>
-                  <Text style={styles.pontoNome}>{viagem.destino}</Text>
+                  <Text style={styles.pontoNome}>{viagem.destino || 'Não informado'}</Text>
                 </View>
               </View>
             </View>
           </View>
 
-          {/* Status de Presença */}
+          {/* Presence Status Card */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Status de Presença</Text>
-            <View
-              style={presencaContainerStyle}>
-              <Text
-                style={presencaTextStyle}>
-                {presencaConfirmada
-                  ? '✓ Presença Confirmada'
-                  : '✗ Presença Não Confirmada'}
+            <View style={[
+              styles.presencaStatus,
+              presencaConfirmada ? styles.presencaConfirmada : styles.presencaNaoConfirmada,
+            ]}>
+              <Icon 
+                name={presencaConfirmada ? IconNames.checkCircle : IconNames.warning} 
+                size="lg" 
+                color={presencaConfirmada ? colors.success.main : colors.warning.main} 
+              />
+              <Text style={[
+                styles.presencaText,
+                { color: presencaConfirmada ? colors.success.main : colors.warning.main }
+              ]}>
+                {presencaConfirmada ? 'Presença Confirmada' : 'Presença Não Confirmada'}
               </Text>
             </View>
 
             {podeConfirmarPresenca() && !presencaConfirmada && (
-              <TouchableOpacity
-                style={styles.confirmarButton}
-                onPress={handleConfirmarPresenca}>
-                <Text style={styles.confirmarButtonText}>
-                  Confirmar Presença
-                </Text>
-                <Text style={styles.confirmarSubtext}>
-                  (Janela de 10 minutos após início)
-                </Text>
+              <TouchableOpacity style={styles.confirmarButton} onPress={handleConfirmarPresenca}>
+                <Icon name={IconNames.checkCircle} size="md" color={colors.primary.contrast} />
+                <Text style={styles.confirmarButtonText}>Confirmar Presença</Text>
               </TouchableOpacity>
             )}
           </View>
 
-          {/* Pontos da Rota */}
+          {/* Route Points Card */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Pontos da Rota</Text>
             {carregandoPontos ? (
               <Text style={styles.loadingText}>Carregando pontos...</Text>
             ) : pontosRota.length > 0 ? (
               pontosRota.map((ponto, index) => (
-              <View key={ponto.id} style={styles.pontoItem}>
-                <View style={styles.pontoItemLeft}>
-                  <View
-                    style={[
+                <View key={ponto.id} style={styles.pontoItem}>
+                  <View style={styles.pontoItemLeft}>
+                    <View style={[
                       styles.pontoItemIcon,
-                      ponto.tipo === 'origem' && styles.pontoItemIconOrigem,
-                      ponto.tipo === 'destino' && styles.pontoItemIconDestino,
+                      ponto.tipo === 'origem' && { backgroundColor: colors.secondary.lighter },
+                      ponto.tipo === 'destino' && { backgroundColor: colors.success.light },
                     ]}>
-                    <Text style={styles.pontoItemIconText}>
-                      {ponto.tipo === 'origem'
-                        ? '📍'
-                        : ponto.tipo === 'destino'
-                        ? '🎯'
-                        : '•'}
+                      <Icon 
+                        name={ponto.tipo === 'origem' ? IconNames.location : ponto.tipo === 'destino' ? 'flag' : 'circle'} 
+                        size="sm" 
+                        color={ponto.tipo === 'origem' ? colors.secondary.main : ponto.tipo === 'destino' ? colors.success.main : colors.text.secondary} 
+                      />
+                    </View>
+                    {index < pontosRota.length - 1 && <View style={styles.pontoItemLine} />}
+                  </View>
+                  <View style={styles.pontoItemRight}>
+                    <Text style={styles.pontoItemNome}>{ponto.nome}</Text>
+                    <Text style={styles.pontoItemTipo}>
+                      {ponto.tipo === 'origem' ? 'Origem' : ponto.tipo === 'destino' ? 'Destino' : 'Parada'}
                     </Text>
                   </View>
-                  {index < pontosRota.length - 1 && (
-                    <View style={styles.pontoItemLine} />
-                  )}
                 </View>
-                <View style={styles.pontoItemRight}>
-                  <Text style={styles.pontoItemNome}>{ponto.nome}</Text>
-                  <Text style={styles.pontoItemTipo}>
-                    {ponto.tipo === 'origem'
-                      ? 'Origem'
-                      : ponto.tipo === 'destino'
-                      ? 'Destino'
-                      : 'Parada'}
-                  </Text>
-                </View>
-              </View>
-            ))
+              ))
             ) : (
               <Text style={styles.emptyText}>Nenhum ponto cadastrado para esta rota</Text>
             )}
           </View>
 
-          {/* Mapa Simplificado */}
+          {/* Map Placeholder */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Mapa da Rota</Text>
             <View style={styles.mapaPlaceholder}>
-              <Text style={styles.mapaPlaceholderText}>🗺️</Text>
-              <Text style={styles.mapaPlaceholderLabel}>
-                Mapa com pontos da rota
-              </Text>
-              <Text style={styles.mapaPlaceholderSubtext}>
-                (Em implementação)
-              </Text>
+              <Icon name={IconNames.map} size="huge" color={colors.neutral[300]} />
+              <Text style={styles.mapaPlaceholderLabel}>Mapa com pontos da rota</Text>
+              <Text style={styles.mapaPlaceholderSubtext}>(Em implementação)</Text>
             </View>
           </View>
 
-          {/* Ações */}
+          {/* Actions */}
           <TouchableOpacity
             style={styles.localizacaoButton}
-            onPress={() =>
-              navigation.navigate('LocalizacaoOnibus', {rota, viagem})
-            }>
-            <Text style={styles.localizacaoButtonText}>
-              📍 Ver Localização do Ônibus
-            </Text>
+            onPress={() => navigation.navigate('LocalizacaoOnibus', { rota, viagem })}>
+            <Icon name={IconNames.myLocation} size="md" color={colors.primary.contrast} />
+            <Text style={styles.localizacaoButtonText}>Ver Localização do Ônibus</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -303,244 +240,117 @@ const DetalheViagem = ({navigation, route}) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
+  container: { flex: 1, backgroundColor: colors.background.default },
   header: {
-    backgroundColor: '#fff',
-    padding: 16,
+    backgroundColor: colors.background.paper,
+    padding: spacing.base,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border.light,
   },
-  backButton: {
-    marginBottom: 8,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#1a73e8',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-  },
+  backButton: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
+  backButtonText: { ...textStyles.body, color: colors.secondary.main },
+  title: { ...textStyles.h2, color: colors.text.primary },
+  scrollView: { flex: 1 },
+  content: { padding: spacing.base },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.base,
+    ...shadows.sm,
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
+  cardTitle: { ...textStyles.h4, color: colors.text.primary, marginBottom: spacing.base },
+  viagemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.lg },
+  tipoBadge: {
+    backgroundColor: colors.secondary.lighter,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.xs,
+    alignSelf: 'flex-start',
   },
-  viagemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-  },
-  viagemTipo: {
-    fontSize: 16,
-    color: '#1a73e8',
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  viagemHorario: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  situacaoBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  situacaoText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  rotaInfo: {
-    marginTop: 8,
-  },
-  pontoRota: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
+  viagemTipo: { ...textStyles.caption, color: colors.secondary.dark, fontWeight: '600' },
+  viagemHorario: { ...textStyles.display2, color: colors.text.primary },
+  situacaoBadge: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: borderRadius.full },
+  situacaoText: { ...textStyles.caption, fontWeight: '600' },
+  rotaInfo: { marginTop: spacing.sm },
+  pontoRota: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
   pontoIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    borderRadius: borderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: spacing.md,
   },
-  pontoIconText: {
-    fontSize: 20,
-  },
-  pontoInfo: {
-    flex: 1,
-  },
-  pontoLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 2,
-  },
-  pontoNome: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  linhaRota: {
-    width: 2,
-    height: 20,
-    backgroundColor: '#e0e0e0',
-    marginLeft: 20,
-    marginBottom: 12,
-  },
+  pontoInfo: { flex: 1 },
+  pontoLabel: { ...textStyles.caption, color: colors.text.secondary, marginBottom: spacing.xxs },
+  pontoNome: { ...textStyles.h5, color: colors.text.primary },
+  linhaRota: { width: 2, height: 20, backgroundColor: colors.border.light, marginLeft: 19, marginBottom: spacing.md },
   presencaStatus: {
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  presencaConfirmada: {
-    backgroundColor: '#e8f5e9',
-  },
-  presencaNaoConfirmada: {
-    backgroundColor: '#fff3cd',
-  },
-  presencaText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fbbc04', // Cor padrão (amarelo) quando não confirmado
-  },
-  presencaTextConfirmada: {
-    color: '#34a853', // Cor verde quando confirmado (sobrescreve a cor padrão)
-  },
-  confirmarButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-  },
-  confirmarButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  confirmarSubtext: {
-    fontSize: 12,
-    color: '#fff',
-    opacity: 0.8,
-    marginTop: 4,
-  },
-  pontoItem: {
     flexDirection: 'row',
-    marginBottom: 16,
-  },
-  pontoItemLeft: {
-    width: 40,
     alignItems: 'center',
-    marginRight: 12,
+    gap: spacing.md,
+    padding: spacing.base,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.md,
   },
+  presencaConfirmada: { backgroundColor: colors.success.light },
+  presencaNaoConfirmada: { backgroundColor: colors.warning.light },
+  presencaText: { ...textStyles.h5 },
+  confirmarButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.base,
+    ...shadows.xs,
+  },
+  confirmarButtonText: { ...textStyles.button, color: colors.primary.contrast },
+  pontoItem: { flexDirection: 'row', marginBottom: spacing.base },
+  pontoItemLeft: { width: 40, alignItems: 'center', marginRight: spacing.md },
   pontoItemIcon: {
     width: 32,
     height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f5f5f5',
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.neutral[100],
     justifyContent: 'center',
     alignItems: 'center',
   },
-  pontoItemIconOrigem: {
-    backgroundColor: '#e3f2fd',
-  },
-  pontoItemIconDestino: {
-    backgroundColor: '#e8f5e9',
-  },
-  pontoItemIconText: {
-    fontSize: 16,
-  },
-  pontoItemLine: {
-    width: 2,
-    flex: 1,
-    backgroundColor: '#e0e0e0',
-    marginTop: 4,
-  },
-  pontoItemRight: {
-    flex: 1,
-  },
-  pontoItemNome: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 2,
-  },
-  pontoItemTipo: {
-    fontSize: 12,
-    color: '#666',
-  },
+  pontoItemLine: { width: 2, flex: 1, backgroundColor: colors.border.light, marginTop: spacing.xs },
+  pontoItemRight: { flex: 1 },
+  pontoItemNome: { ...textStyles.body, color: colors.text.primary, marginBottom: spacing.xxs },
+  pontoItemTipo: { ...textStyles.caption, color: colors.text.secondary },
   mapaPlaceholder: {
     height: 200,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
+    backgroundColor: colors.neutral[100],
+    borderRadius: borderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
     borderStyle: 'dashed',
+    gap: spacing.sm,
   },
-  mapaPlaceholderText: {
-    fontSize: 48,
-    marginBottom: 8,
-  },
-  mapaPlaceholderLabel: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 4,
-  },
-  mapaPlaceholderSubtext: {
-    fontSize: 12,
-    color: '#999',
-  },
+  mapaPlaceholderLabel: { ...textStyles.body, color: colors.text.secondary },
+  mapaPlaceholderSubtext: { ...textStyles.caption, color: colors.text.hint },
   localizacaoButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.base,
+    marginTop: spacing.sm,
+    ...shadows.sm,
   },
-  localizacaoButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 24,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-    padding: 16,
-  },
+  localizacaoButtonText: { ...textStyles.button, color: colors.primary.contrast },
+  emptyContent: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.base },
+  emptyText: { ...textStyles.body, color: colors.text.secondary, textAlign: 'center' },
+  loadingText: { ...textStyles.bodySmall, color: colors.text.hint, textAlign: 'center', padding: spacing.base },
 });
 
 export default DetalheViagem;
-
-

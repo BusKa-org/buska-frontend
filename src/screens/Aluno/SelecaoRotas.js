@@ -12,6 +12,8 @@ import {
   RefreshControl,
 } from 'react-native';
 import { alunoService } from '../../services';
+import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
 
 const SelecaoRotas = ({navigation}) => {
   const [busca, setBusca] = useState('');
@@ -23,20 +25,13 @@ const SelecaoRotas = ({navigation}) => {
 
   const loadRotas = async () => {
     try {
-      // Carregar todas as rotas disponíveis
       const rotas = await alunoService.listarRotas();
-      
-      // Carregar rotas em que o aluno já está inscrito
       const rotasInscritasData = await alunoService.listarMinhasRotas();
-      
       setRotasDisponiveis(rotas || []);
       setRotasInscritas(rotasInscritasData || []);
     } catch (error) {
       console.error('Error loading routes:', error);
-      Alert.alert(
-        'Erro',
-        'Não foi possível carregar as rotas. Tente novamente.',
-      );
+      Alert.alert('Erro', 'Não foi possível carregar as rotas. Tente novamente.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -47,43 +42,28 @@ const SelecaoRotas = ({navigation}) => {
     loadRotas();
   }, []);
 
-  // Filtrar rotas: excluir as que o aluno já está inscrito
   const rotasIdsInscritas = rotasInscritas.map((r) => r.id);
   const rotasDisponiveisFiltradas = rotasDisponiveis.filter(
     (rota) => !rotasIdsInscritas.includes(rota.id),
   );
 
   const rotasFiltradas = rotasDisponiveisFiltradas.filter(
-    (rota) =>
-      rota.nome.toLowerCase().includes(busca.toLowerCase()),
+    (rota) => rota.nome.toLowerCase().includes(busca.toLowerCase()),
   );
 
   const handleCadastrar = async (rota) => {
     try {
       setSubscribing(rota.id);
       await alunoService.gerenciarInscricaoRota(rota.id, 'inscrever');
-      
-      // Atualizar a lista de rotas inscritas e remover da lista de disponíveis
       const rotasInscritasAtualizadas = await alunoService.listarMinhasRotas();
       setRotasInscritas(rotasInscritasAtualizadas || []);
-      
-      // Remover a rota da lista de disponíveis
       setRotasDisponiveis(rotasDisponiveis.filter((r) => r.id !== rota.id));
-      
       Alert.alert('Sucesso', 'Você foi cadastrado nesta rota!', [
-        {
-          text: 'OK',
-          onPress: () => {
-            navigation.goBack();
-          },
-        },
+        { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (error) {
       console.error('Error subscribing to route:', error);
-      Alert.alert(
-        'Erro',
-        error?.message || 'Não foi possível cadastrar na rota. Tente novamente.',
-      );
+      Alert.alert('Erro', error?.message || 'Não foi possível cadastrar na rota. Tente novamente.');
     } finally {
       setSubscribing(null);
     }
@@ -97,34 +77,46 @@ const SelecaoRotas = ({navigation}) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← Voltar</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Icon name={IconNames.back} size="base" color={colors.secondary.main} />
+          <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Selecionar Rota</Text>
       </View>
 
-      {/* Busca */}
       <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Buscar rota ou bairro..."
-          placeholderTextColor="#999"
-          value={busca}
-          onChangeText={setBusca}
-        />
+        <View style={styles.searchInputContainer}>
+          <Icon name={IconNames.search} size="md" color={colors.text.hint} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar rota..."
+            placeholderTextColor={colors.text.hint}
+            value={busca}
+            onChangeText={setBusca}
+          />
+          {busca.length > 0 && (
+            <TouchableOpacity onPress={() => setBusca('')}>
+              <Icon name={IconNames.close} size="md" color={colors.text.hint} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#1a73e8" />
+          <ActivityIndicator size="large" color={colors.secondary.main} />
+          <Text style={styles.loadingText}>Carregando rotas...</Text>
         </View>
       ) : (
         <ScrollView
           style={styles.scrollView}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              colors={[colors.secondary.main]}
+              tintColor={colors.secondary.main}
+            />
           }>
           <View style={styles.content}>
             <Text style={styles.sectionTitle}>
@@ -133,51 +125,49 @@ const SelecaoRotas = ({navigation}) => {
 
             {rotasFiltradas.map((rota) => {
               const isSubscribing = subscribing === rota.id;
-
-            return (
-              <View key={rota.id} style={styles.rotaCard}>
-                <View style={styles.rotaHeader}>
-                  <View style={styles.rotaInfo}>
-                    <Text style={styles.rotaNome}>{rota.nome}</Text>
-                    <View style={styles.rotaMeta}>
-                      <Text style={styles.rotaBairro}>
-                        📍 {rota.municipio_nome || `Município ID: ${rota.municipio_id}`}
-                      </Text>
+              return (
+                <View key={rota.id} style={styles.rotaCard}>
+                  <View style={styles.rotaHeader}>
+                    <View style={styles.rotaIconContainer}>
+                      <Icon name={IconNames.route} size="lg" color={colors.secondary.main} />
+                    </View>
+                    <View style={styles.rotaInfo}>
+                      <Text style={styles.rotaNome}>{rota.nome}</Text>
+                      <View style={styles.rotaMeta}>
+                        <Icon name={IconNames.location} size="sm" color={colors.text.secondary} />
+                        <Text style={styles.rotaBairro}>
+                          {rota.municipio_nome || `Município ID: ${rota.municipio_id}`}
+                        </Text>
+                      </View>
                     </View>
                   </View>
-                </View>
 
-                <View style={styles.rotaFooter}>
                   <TouchableOpacity
-                    style={[
-                      styles.cadastrarButton,
-                      isSubscribing && styles.cadastrarButtonDisabled,
-                    ]}
+                    style={[styles.cadastrarButton, isSubscribing && styles.cadastrarButtonDisabled]}
                     onPress={() => handleCadastrar(rota)}
                     disabled={isSubscribing}>
                     {isSubscribing ? (
-                      <ActivityIndicator color="#fff" />
+                      <ActivityIndicator color={colors.primary.contrast} />
                     ) : (
-                      <Text style={styles.cadastrarButtonText}>
-                        Cadastrar nesta rota
-                      </Text>
+                      <>
+                        <Icon name={IconNames.add} size="md" color={colors.primary.contrast} />
+                        <Text style={styles.cadastrarButtonText}>Cadastrar nesta rota</Text>
+                      </>
                     )}
                   </TouchableOpacity>
                 </View>
-              </View>
-            );
-          })}
+              );
+            })}
 
-          {rotasFiltradas.length === 0 && (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>
-                Nenhuma rota encontrada
-              </Text>
-              <Text style={styles.emptyStateSubtext}>
-                Tente buscar com outros termos
-              </Text>
-            </View>
-          )}
+            {rotasFiltradas.length === 0 && (
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIconContainer}>
+                  <Icon name={IconNames.search} size="huge" color={colors.neutral[300]} />
+                </View>
+                <Text style={styles.emptyStateTitle}>Nenhuma rota encontrada</Text>
+                <Text style={styles.emptyStateText}>Tente buscar com outros termos</Text>
+              </View>
+            )}
           </View>
         </ScrollView>
       )}
@@ -188,157 +178,139 @@ const SelecaoRotas = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: '#fff',
-    padding: 16,
+    backgroundColor: colors.background.paper,
+    padding: spacing.base,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border.light,
   },
   backButton: {
-    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
   },
   backButtonText: {
-    fontSize: 16,
-    color: '#1a73e8',
+    ...textStyles.body,
+    color: colors.secondary.main,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    ...textStyles.h2,
+    color: colors.text.primary,
   },
   searchContainer: {
-    padding: 16,
-    backgroundColor: '#fff',
+    padding: spacing.base,
+    backgroundColor: colors.background.paper,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border.light,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.neutral[100],
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
   },
   searchInput: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    flex: 1,
+    paddingVertical: spacing.md,
+    ...textStyles.body,
+    color: colors.text.primary,
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: spacing.base,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
+    ...textStyles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.base,
   },
   rotaCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.md,
+    ...shadows.sm,
   },
   rotaHeader: {
-    marginBottom: 12,
+    flexDirection: 'row',
+    marginBottom: spacing.base,
+  },
+  rotaIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.secondary.lighter,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
   },
   rotaInfo: {
-    marginBottom: 8,
+    flex: 1,
   },
   rotaNome: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    ...textStyles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
   rotaMeta: {
-    gap: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   rotaBairro: {
-    fontSize: 14,
-    color: '#666',
-  },
-  rotaDistancia: {
-    fontSize: 14,
-    color: '#666',
-  },
-  rotaFooter: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  vagasInfo: {
-    marginBottom: 12,
-  },
-  vagasText: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 6,
-  },
-  vagasBar: {
-    height: 6,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  vagasBarOk: {
-    backgroundColor: '#e8f5e9',
-  },
-  vagasBarFull: {
-    backgroundColor: '#ffebee',
-  },
-  vagasBarFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  vagasBarFillOk: {
-    backgroundColor: '#34a853',
-  },
-  vagasBarFillFull: {
-    backgroundColor: '#ea4335',
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
   },
   cadastrarButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 14,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    ...shadows.xs,
   },
   cadastrarButtonDisabled: {
-    backgroundColor: '#e0e0e0',
+    opacity: 0.6,
   },
   cadastrarButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  cadastrarButtonTextDisabled: {
-    color: '#999',
+    ...textStyles.button,
+    color: colors.primary.contrast,
   },
   emptyState: {
     alignItems: 'center',
-    padding: 48,
+    padding: spacing.xxxl,
+  },
+  emptyIconContainer: {
+    marginBottom: spacing.base,
+  },
+  emptyStateTitle: {
+    ...textStyles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
   },
   emptyStateText: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 8,
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: '#999',
+    ...textStyles.body,
+    color: colors.text.secondary,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 48,
+    gap: spacing.md,
+  },
+  loadingText: {
+    ...textStyles.body,
+    color: colors.text.secondary,
   },
 });
 
 export default SelecaoRotas;
-
-
