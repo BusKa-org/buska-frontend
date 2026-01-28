@@ -60,6 +60,12 @@ export const authService = {
     if (!userData.matricula?.trim()) {
       throw new ValidationError('Matrícula é obrigatória', 'matricula');
     }
+    if (!userData.instituicao_id) {
+      throw new ValidationError('Instituição é obrigatória', 'instituicao_id');
+    }
+    if (!userData.endereco_casa) {
+      throw new ValidationError('Endereço é obrigatório', 'endereco_casa');
+    }
 
     const response = await api.post('/alunos/signup', {
       nome: userData.nome.trim(),

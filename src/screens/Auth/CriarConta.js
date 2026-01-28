@@ -130,6 +130,11 @@ const CriarConta = ({navigation}) => {
       newErrors.confirmarSenha = getFieldValidationMessage('password', 'mismatch');
     }
     
+    // Instituição
+    if (!instituicaoId) {
+      newErrors.instituicaoId = 'Selecione uma instituição de ensino.';
+    }
+    
     // Endereço
     if (!cep.trim()) {
       newErrors.cep = 'CEP é obrigatório.';
@@ -421,6 +426,48 @@ const CriarConta = ({navigation}) => {
               />
               {renderFieldError('matricula')}
 
+              {/* Institution selection - moved before telefone for better UX */}
+              <Text style={styles.label}>Instituição de Ensino *</Text>
+              {loadingInstituicoes ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color={colors.primary.main} />
+                  <Text style={styles.loadingText}>Carregando instituições...</Text>
+                </View>
+              ) : instituicoes.length > 0 ? (
+                <>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.instituicoesScroll, errors.instituicaoId && styles.instituicoesScrollError]}>
+                    <View style={styles.instituicoesContainer}>
+                      {instituicoes.map((inst) => (
+                        <TouchableOpacity
+                          key={inst.id}
+                          style={[
+                            styles.instituicaoButton,
+                            instituicaoId === inst.id && styles.instituicaoButtonActive,
+                            errors.instituicaoId && !instituicaoId && styles.instituicaoButtonError,
+                          ]}
+                          onPress={() => {
+                            setInstituicaoId(inst.id);
+                            clearFieldError('instituicaoId');
+                          }}>
+                          <Text style={[
+                            styles.instituicaoText,
+                            instituicaoId === inst.id && styles.instituicaoTextActive,
+                          ]}>
+                            {inst.nome}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </ScrollView>
+                  {renderFieldError('instituicaoId')}
+                </>
+              ) : (
+                <View style={styles.noInstituicoesContainer}>
+                  <Icon name={IconNames.warning} size="sm" color={colors.warning.main} />
+                  <Text style={styles.noInstituicoesText}>Nenhuma instituição disponível. Contate o suporte.</Text>
+                </View>
+              )}
+
               {/* Telefone */}
               <Text style={styles.label}>Telefone</Text>
               <TextInput
@@ -514,38 +561,6 @@ const CriarConta = ({navigation}) => {
                 }}
               />
               {renderFieldError('cidade')}
-
-              {/* Institution selection */}
-              {instituicoes.length > 0 && (
-                <>
-                  <Text style={styles.label}>Instituição de Ensino *</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.instituicoesScroll, errors.instituicaoId && styles.instituicoesScrollError]}>
-                    <View style={styles.instituicoesContainer}>
-                      {instituicoes.map((inst) => (
-                        <TouchableOpacity
-                          key={inst.id}
-                          style={[
-                            styles.instituicaoButton,
-                            instituicaoId === inst.id && styles.instituicaoButtonActive,
-                            errors.instituicaoId && styles.instituicaoButtonError,
-                          ]}
-                          onPress={() => {
-                            setInstituicaoId(inst.id);
-                            clearFieldError('instituicaoId');
-                          }}>
-                          <Text style={[
-                            styles.instituicaoText,
-                            instituicaoId === inst.id && styles.instituicaoTextActive,
-                          ]}>
-                            {inst.nome}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </ScrollView>
-                  {renderFieldError('instituicaoId')}
-                </>
-              )}
 
               {/* Senha */}
               <Text style={styles.label}>Senha *</Text>
@@ -741,6 +756,33 @@ const styles = StyleSheet.create({
   instituicaoText: {
     ...textStyles.bodySmall,
     color: colors.text.secondary,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.base,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.md,
+  },
+  loadingText: {
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
+  },
+  noInstituicoesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.base,
+    backgroundColor: colors.warning.lighter,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.warning.main,
+  },
+  noInstituicoesText: {
+    ...textStyles.bodySmall,
+    color: colors.warning.dark,
+    flex: 1,
   },
   instituicaoTextActive: {
     color: colors.secondary.dark,
