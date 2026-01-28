@@ -124,24 +124,27 @@ export const alunoService = {
   },
 
   /**
-   * Confirm presence in a trip by selecting boarding point
+   * Confirm or cancel presence in a trip
    * Backend: PUT /v1/viagens/{id}/confirmacao
    * @param {string} viagemId - Trip UUID
-   * @param {boolean} presente - Whether to confirm presence
+   * @param {boolean} confirmacao - Whether to confirm (true) or cancel (false)
    * @param {string} pontoEmbarqueId - Boarding point UUID (required for confirmation)
    */
-  async alterarPresencaViagem(viagemId, presente, pontoEmbarqueId = null) {
+  async alterarPresencaViagem(viagemId, confirmacao, pontoEmbarqueId = null) {
+    if (!viagemId) {
+      throw new Error('ID da viagem é obrigatório');
+    }
     try {
-      if (presente && pontoEmbarqueId) {
-        const response = await api.put(`/viagens/${viagemId}/confirmacao`, {
-          ponto_embarque_id: pontoEmbarqueId,
-        });
-        return response.data;
-      } else {
-        // To cancel, we might need a different approach
-        // For now, just return success - backend may need this endpoint
-        return { message: 'Presença atualizada' };
+      const payload = {
+        confirmacao: confirmacao,
+      };
+      
+      if (confirmacao && pontoEmbarqueId) {
+        payload.ponto_embarque_id = pontoEmbarqueId;
       }
+      
+      const response = await api.put(`/viagens/${viagemId}/confirmacao`, payload);
+      return response.data;
     } catch (error) {
       throw this.handleError(error);
     }
