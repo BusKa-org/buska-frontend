@@ -53,6 +53,73 @@ const InicioFimViagem = ({navigation, route}) => {
     loadTripStatus();
   }, [viagemParam?.id]);
 
+  // Timer effect for trip duration
+  useEffect(() => {
+    let id = null;
+    if (viagemIniciada) {
+      id = setInterval(() => {
+        setTempoDecorrido((prev) => prev + 1);
+      }, 1000);
+      setIntervalId(id);
+    } else {
+      if (intervalId) {
+        clearInterval(intervalId);
+        setIntervalId(null);
+      }
+    }
+
+    return () => {
+      if (id) {
+        clearInterval(id);
+      }
+    };
+  }, [viagemIniciada]);
+
+  // Helper functions
+  const formatarTempo = (segundos) => {
+    const horas = Math.floor(segundos / 3600);
+    const minutos = Math.floor((segundos % 3600) / 60);
+    const segs = segundos % 60;
+
+    if (horas > 0) {
+      return `${horas.toString().padStart(2, '0')}:${minutos
+        .toString()
+        .padStart(2, '0')}:${segs.toString().padStart(2, '0')}`;
+    }
+    return `${minutos.toString().padStart(2, '0')}:${segs
+      .toString()
+      .padStart(2, '0')}`;
+  };
+
+  const handleIniciarViagem = async () => {
+    try {
+      setLoading(true);
+      await motoristaService.iniciarViagem(viagem?.id || viagemParam?.id);
+      setViagemIniciada(true);
+      setTempoDecorrido(0);
+      toast.success('Viagem iniciada!');
+    } catch (error) {
+      console.error('Error starting trip:', error);
+      toast.error(error?.message || 'Erro ao iniciar viagem');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFinalizarViagem = async () => {
+    try {
+      setLoading(true);
+      await motoristaService.finalizarViagem(viagem?.id || viagemParam?.id);
+      toast.success('Viagem finalizada!');
+      navigation.goBack();
+    } catch (error) {
+      console.error('Error finishing trip:', error);
+      toast.error(error?.message || 'Erro ao finalizar viagem');
+      setLoading(false);
+    }
+  };
+
+  // Conditional renders AFTER all hooks
   if (!viagemParam) {
     return (
       <SafeAreaView style={styles.container}>
@@ -90,69 +157,6 @@ const InicioFimViagem = ({navigation, route}) => {
       </SafeAreaView>
     );
   }
-
-  useEffect(() => {
-    if (viagemIniciada) {
-      const id = setInterval(() => {
-        setTempoDecorrido((prev) => prev + 1);
-      }, 1000);
-      setIntervalId(id);
-    } else {
-      if (intervalId) {
-        clearInterval(intervalId);
-        setIntervalId(null);
-      }
-    }
-
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [viagemIniciada]);
-
-  const formatarTempo = (segundos) => {
-    const horas = Math.floor(segundos / 3600);
-    const minutos = Math.floor((segundos % 3600) / 60);
-    const segs = segundos % 60;
-
-    if (horas > 0) {
-      return `${horas.toString().padStart(2, '0')}:${minutos
-        .toString()
-        .padStart(2, '0')}:${segs.toString().padStart(2, '0')}`;
-    }
-    return `${minutos.toString().padStart(2, '0')}:${segs
-      .toString()
-      .padStart(2, '0')}`;
-  };
-
-  const handleIniciarViagem = async () => {
-    try {
-      setLoading(true);
-      await motoristaService.iniciarViagem(viagem.id);
-      setViagemIniciada(true);
-      setTempoDecorrido(0);
-      toast.success('Viagem iniciada!');
-    } catch (error) {
-      console.error('Error starting trip:', error);
-      toast.error(error?.message || 'Erro ao iniciar viagem');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleFinalizarViagem = async () => {
-    try {
-      setLoading(true);
-      await motoristaService.finalizarViagem(viagem.id);
-      toast.success('Viagem finalizada!');
-      navigation.goBack();
-    } catch (error) {
-      console.error('Error finishing trip:', error);
-      toast.error(error?.message || 'Erro ao finalizar viagem');
-      setLoading(false);
-    }
-  };
 
   return (
     <SafeAreaView style={styles.container}>
