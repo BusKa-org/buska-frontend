@@ -80,12 +80,23 @@ const RotaAluno = ({navigation, route}) => {
     }
   };
 
-  const handleConfirmarPresenca = async (viagemId, currentStatus) => {
+  const handleConfirmarPresenca = async (viagem, currentStatus) => {
     try {
-      setUpdatingPresenca(viagemId);
+      setUpdatingPresenca(viagem.id);
       const novoStatus = currentStatus !== 'Confirmado';
-      await alunoService.alterarPresencaViagem(viagemId, novoStatus);
-      setPresencasStatus({ ...presencasStatus, [viagemId]: novoStatus });
+      
+      // Use ponto_embarque_id from viagem data, or first route point as fallback
+      let pontoEmbarqueId = viagem.ponto_embarque_id;
+      if (novoStatus && !pontoEmbarqueId) {
+        // If no ponto set, try to get from route points
+        const pontos = await alunoService.listarPontosRota(viagem.rota_id);
+        if (pontos && pontos.length > 0) {
+          pontoEmbarqueId = pontos[0].id;
+        }
+      }
+      
+      await alunoService.alterarPresencaViagem(viagem.id, novoStatus, pontoEmbarqueId);
+      setPresencasStatus({ ...presencasStatus, [viagem.id]: novoStatus });
     } catch (error) {
       Alert.alert('Erro', error?.message || 'Não foi possível atualizar a presença.');
     } finally {
@@ -94,19 +105,18 @@ const RotaAluno = ({navigation, route}) => {
   };
 
   const podeConfirmar = (viagem) => {
-    if (viagem.horario_fim) {
-      const fimViagem = new Date(`${viagem.data}T${viagem.horario_fim}`);
-      return new Date() < fimViagem;
-    }
-    return true;
+    // Can confirm if trip date is today or future
+    const tripDate = new Date(viagem.data);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return tripDate >= today;
   };
 
   const getStatusFromViagem = (viagem) => {
-    if (viagem.horario_fim) {
-      const fimViagem = new Date(`${viagem.data}T${viagem.horario_fim}`);
-      if (new Date() > fimViagem) return 'Encerrada';
-    }
-    return presencasStatus[viagem.id] ? 'Confirmado' : 'Não confirmado';
+    // Check based on status_confirmacao from backend
+    if (viagem.status_confirmacao) return 'Confirmado';
+    if (presencasStatus[viagem.id]) return 'Confirmado';
+    return 'Não confirmado';
   };
 
   const formatTime = (t) => t ? (t.includes('T') ? t.substring(11, 16) : t.substring(0, 5)) : '--:--';
@@ -174,7 +184,7 @@ const RotaAluno = ({navigation, route}) => {
                       status === 'Confirmado' && styles.confirmarButtonActive,
                       isUpdating && styles.confirmarButtonDisabled,
                     ]}
-                    onPress={() => handleConfirmarPresenca(viagem.id, status)}
+                    onPress={() => handleConfirmarPresenca(viagem, status)}
                     disabled={isUpdating}>
                     {isUpdating ? (
                       <ActivityIndicator color={colors.primary.contrast} />

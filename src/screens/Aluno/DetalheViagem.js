@@ -81,7 +81,20 @@ const DetalheViagem = ({navigation, route}) => {
   const handleConfirmarPresenca = async () => {
     try {
       setPresencaConfirmada(true);
-      await alunoService.alterarPresencaViagem(viagem.id, true);
+      
+      // Get boarding point - use from viagem or first route point
+      let pontoEmbarqueId = viagem.ponto_embarque_id;
+      if (!pontoEmbarqueId && pontosRota.length > 0) {
+        pontoEmbarqueId = pontosRota[0].id;
+      }
+      
+      if (!pontoEmbarqueId) {
+        Alert.alert('Erro', 'Não foi possível encontrar um ponto de embarque.');
+        setPresencaConfirmada(false);
+        return;
+      }
+      
+      await alunoService.alterarPresencaViagem(viagem.id, true, pontoEmbarqueId);
       const presencaData = await alunoService.obterPresencaViagem(viagem.id);
       setPresencaConfirmada(presencaData.presente || false);
       Alert.alert('Sucesso', 'Presença confirmada com sucesso!');
