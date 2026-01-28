@@ -11,7 +11,7 @@ import Icon, { IconNames } from './Icon';
 // Toast types configuration
 const TOAST_CONFIG = {
   success: {
-    icon: IconNames.check,
+    icon: IconNames.checkCircle,
     backgroundColor: colors.success.main,
     iconColor: colors.text.inverse,
   },

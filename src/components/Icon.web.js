@@ -22,6 +22,7 @@ const sizeMap = {
 
 // Map icon names from kebab-case to snake_case for Material Icons font
 const normalizeIconName = (name) => {
+  if (!name) return 'help_outline'; // fallback icon
   return name.replace(/-/g, '_');
 };
 
