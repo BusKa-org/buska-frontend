@@ -120,9 +120,18 @@ const RotaAluno = ({navigation, route}) => {
 
   const podeConfirmar = (viagem) => {
     // Can confirm if trip date is today or future
-    const tripDate = new Date(viagem.data);
+    if (!viagem.data) return true;
+    
+    // Parse date as local time (not UTC) to avoid timezone issues
+    // '2026-01-28' -> new Date(2026, 0, 28) in local timezone
+    const [year, month, day] = viagem.data.split('-').map(Number);
+    const tripDate = new Date(year, month - 1, day); // month is 0-indexed
+    
+    if (isNaN(tripDate.getTime())) return true;
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    
     return tripDate >= today;
   };
 
