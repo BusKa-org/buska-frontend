@@ -126,6 +126,8 @@ const styles = StyleSheet.create({
     padding: spacing.base,
     flexDirection: 'row',
     alignItems: 'center',
+    zIndex: 100,
+    elevation: 10,
   },
   backButton: {
     width: 40,
@@ -143,6 +145,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.neutral[100],
     position: 'relative',
+    overflow: 'hidden',
   },
   mapPlaceholder: {
     position: 'absolute',
