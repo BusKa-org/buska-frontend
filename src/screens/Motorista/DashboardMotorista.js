@@ -52,6 +52,11 @@ const DashboardMotorista = ({navigation}) => {
           
           const viagensFuturas = viagens
             .filter((v) => {
+              // Exclude finished and cancelled trips
+              if (v.status === 'FINALIZADA' || v.status === 'CANCELADA') {
+                return false;
+              }
+              
               const viagemDateStr = v.data.split('T')[0];
               const [year, month, day] = viagemDateStr.split('-').map(Number);
               const viagemDate = new Date(year, month - 1, day);
@@ -107,10 +112,18 @@ const DashboardMotorista = ({navigation}) => {
               }
             }
             
+            // Map backend status to display status
+            const statusMap = {
+              'AGENDADA': 'A iniciar',
+              'EM_ANDAMENTO': 'Em andamento',
+              'FINALIZADA': 'Finalizada',
+              'CANCELADA': 'Cancelada',
+            };
+            
             setProximaViagem({
               ...proxima, // Keep all original data including 'alunos' array
               horario: horarioFormatado,
-              status: proxima.horario_fim ? 'Finalizada' : 'A iniciar',
+              status: statusMap[proxima.status] || 'A iniciar',
               origem: proxima.origem || origem,
               destino: proxima.destino || destino,
             });
