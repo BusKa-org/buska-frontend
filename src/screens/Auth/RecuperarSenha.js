@@ -10,16 +10,16 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
 
 const RecuperarSenha = ({navigation}) => {
   const [email, setEmail] = useState('');
   const [enviado, setEnviado] = useState(false);
 
   const handleRecuperarSenha = () => {
-    // Simulação de recuperação de senha
     console.log('Recuperar senha:', {email});
     setEnviado(true);
-    // Aqui você enviaria o email de recuperação
   };
 
   if (enviado) {
@@ -27,12 +27,14 @@ const RecuperarSenha = ({navigation}) => {
       <SafeAreaView style={styles.container}>
         <View style={styles.content}>
           <View style={styles.successContainer}>
-            <Text style={styles.successIcon}>✓</Text>
+            <View style={styles.successIconContainer}>
+              <Icon name={IconNames.checkCircle} size="huge" color={colors.success.main} />
+            </View>
             <Text style={styles.successTitle}>E-mail Enviado!</Text>
             <Text style={styles.successText}>
-              Enviamos um link de recuperação para{'\n'}
-              <Text style={styles.emailText}>{email}</Text>
+              Enviamos um link de recuperação para
             </Text>
+            <Text style={styles.emailText}>{email}</Text>
             <Text style={styles.successSubtext}>
               Verifique sua caixa de entrada e siga as instruções para
               redefinir sua senha.
@@ -40,6 +42,7 @@ const RecuperarSenha = ({navigation}) => {
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.navigate('Login')}>
+              <Icon name={IconNames.back} size="md" color={colors.primary.contrast} />
               <Text style={styles.backButtonText}>Voltar ao Login</Text>
             </TouchableOpacity>
           </View>
@@ -57,31 +60,45 @@ const RecuperarSenha = ({navigation}) => {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled">
           <View style={styles.content}>
+            {/* Back Button */}
+            <TouchableOpacity
+              style={styles.navBackButton}
+              onPress={() => navigation.goBack()}>
+              <Icon name={IconNames.back} size="base" color={colors.text.secondary} />
+            </TouchableOpacity>
+
             {/* Header */}
             <View style={styles.header}>
+              <View style={styles.headerIconContainer}>
+                <Icon name="lock-reset" size="xxl" color={colors.secondary.main} />
+              </View>
               <Text style={styles.title}>Recuperar Senha</Text>
               <Text style={styles.subtitle}>
                 Digite seu e-mail para receber{'\n'}um link de recuperação
               </Text>
             </View>
 
-            {/* Formulário */}
+            {/* Form */}
             <View style={styles.form}>
               <Text style={styles.label}>E-mail</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="seu@email.com"
-                placeholderTextColor="#999"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
+              <View style={styles.inputContainer}>
+                <Icon name="email" size="md" color={colors.text.hint} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="seu@email.com"
+                  placeholderTextColor={colors.text.hint}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
 
               <TouchableOpacity
                 style={styles.recuperarButton}
                 onPress={handleRecuperarSenha}>
+                <Icon name="send" size="md" color={colors.primary.contrast} />
                 <Text style={styles.recuperarButtonText}>
                   Enviar Link de Recuperação
                 </Text>
@@ -90,6 +107,7 @@ const RecuperarSenha = ({navigation}) => {
               <TouchableOpacity
                 style={styles.backLink}
                 onPress={() => navigation.navigate('Login')}>
+                <Icon name={IconNames.back} size="sm" color={colors.secondary.main} />
                 <Text style={styles.backLinkText}>Voltar ao Login</Text>
               </TouchableOpacity>
             </View>
@@ -103,7 +121,7 @@ const RecuperarSenha = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.default,
   },
   keyboardView: {
     flex: 1,
@@ -113,22 +131,42 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 24,
+    padding: spacing.xl,
     justifyContent: 'center',
+  },
+  navBackButton: {
+    position: 'absolute',
+    top: spacing.xl,
+    left: spacing.xl,
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.background.paper,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadows.xs,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: spacing.xxl,
+  },
+  headerIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.lighter,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1a73e8',
-    marginBottom: 16,
+    ...textStyles.h1,
+    color: colors.primary.main,
+    marginBottom: spacing.base,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    ...textStyles.body,
+    color: colors.text.secondary,
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -136,90 +174,103 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    ...textStyles.inputLabel,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.base,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    marginBottom: spacing.xl,
+    gap: spacing.md,
   },
   input: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 16,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    color: '#333',
-    marginBottom: 24,
+    flex: 1,
+    paddingVertical: spacing.base,
+    fontSize: textStyles.inputText.fontSize,
+    color: colors.text.primary,
   },
   recuperarButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.base,
+    ...shadows.sm,
   },
   recuperarButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...textStyles.button,
+    color: colors.primary.contrast,
   },
   backLink: {
-    alignSelf: 'center',
-    marginTop: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xl,
   },
   backLinkText: {
-    color: '#1a73e8',
-    fontSize: 14,
+    ...textStyles.bodySmall,
+    color: colors.secondary.main,
   },
   successContainer: {
     alignItems: 'center',
-    padding: 24,
+    padding: spacing.xl,
   },
-  successIcon: {
-    fontSize: 64,
-    color: '#34a853',
-    marginBottom: 24,
+  successIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.success.light,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.xl,
   },
   successTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 16,
+    ...textStyles.h2,
+    color: colors.text.primary,
+    marginBottom: spacing.base,
   },
   successText: {
-    fontSize: 16,
-    color: '#666',
+    ...textStyles.body,
+    color: colors.text.secondary,
     textAlign: 'center',
-    marginBottom: 8,
-    lineHeight: 24,
   },
   emailText: {
-    fontWeight: '600',
-    color: '#1a73e8',
+    ...textStyles.h5,
+    color: colors.secondary.main,
+    marginVertical: spacing.sm,
   },
   successSubtext: {
-    fontSize: 14,
-    color: '#999',
+    ...textStyles.bodySmall,
+    color: colors.text.hint,
     textAlign: 'center',
-    marginTop: 16,
-    marginBottom: 32,
+    marginTop: spacing.base,
+    marginBottom: spacing.xxl,
     lineHeight: 20,
   },
   backButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 16,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.base,
     width: '100%',
-    marginTop: 16,
+    ...shadows.sm,
   },
   backButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...textStyles.button,
+    color: colors.primary.contrast,
   },
 });
 
 export default RecuperarSenha;
-
-

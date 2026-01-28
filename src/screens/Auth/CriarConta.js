@@ -13,6 +13,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
+import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
 
 const CriarConta = ({navigation}) => {
   const [nome, setNome] = useState('');
@@ -20,16 +22,14 @@ const CriarConta = ({navigation}) => {
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [municipio, setMunicipio] = useState('');
-  const [tipoUsuario, setTipoUsuario] = useState('aluno'); // aluno, motorista, gestor
+  const [tipoUsuario, setTipoUsuario] = useState('aluno');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { register } = useAuth();
 
   const handleCriarConta = async () => {
-    // Clear previous errors
     setError('');
 
-    // Validation
     if (!nome.trim() || !email.trim() || !senha.trim() || !municipio.trim()) {
       setError('Por favor, preencha todos os campos');
       return;
@@ -56,25 +56,27 @@ const CriarConta = ({navigation}) => {
       });
 
       if (result.success) {
-        // Navigate immediately to login screen
         navigation.navigate('Login');
-        // Show success message after navigation
         setTimeout(() => {
           Alert.alert('Sucesso', 'Conta criada com sucesso! Faça login para continuar.');
         }, 300);
       } else {
-        // Display error message from backend
         const errorMessage = result.error || 'Não foi possível criar a conta';
         setError(errorMessage);
       }
     } catch (error) {
-      // Handle unexpected errors
       const errorMessage = error?.message || 'Ocorreu um erro ao criar a conta. Verifique sua conexão e tente novamente.';
       setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
+
+  const userTypes = [
+    { id: 'aluno', label: 'Aluno', icon: IconNames.person, color: colors.roles.aluno },
+    { id: 'motorista', label: 'Motorista', icon: IconNames.bus, color: colors.roles.motorista },
+    { id: 'gestor', label: 'Gestor', icon: IconNames.badge, color: colors.roles.gestor },
+  ];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -85,19 +87,27 @@ const CriarConta = ({navigation}) => {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled">
           <View style={styles.content}>
+            {/* Back Button */}
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}>
+              <Icon name={IconNames.back} size="base" color={colors.text.secondary} />
+            </TouchableOpacity>
+
             {/* Header */}
             <View style={styles.header}>
+              <Text style={styles.brandName}>BusKá</Text>
               <Text style={styles.title}>Criar Conta</Text>
               <Text style={styles.subtitle}>Preencha os dados abaixo</Text>
             </View>
 
-            {/* Formulário */}
+            {/* Form */}
             <View style={styles.form}>
               <Text style={styles.label}>Nome Completo</Text>
               <TextInput
                 style={[styles.input, error && styles.inputError]}
                 placeholder="Seu nome completo"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.text.hint}
                 value={nome}
                 onChangeText={(text) => {
                   setNome(text);
@@ -110,7 +120,7 @@ const CriarConta = ({navigation}) => {
               <TextInput
                 style={[styles.input, error && styles.inputError]}
                 placeholder="seu@email.com"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.text.hint}
                 value={email}
                 onChangeText={(text) => {
                   setEmail(text);
@@ -123,59 +133,35 @@ const CriarConta = ({navigation}) => {
 
               <Text style={styles.label}>Tipo de Usuário</Text>
               <View style={styles.tipoUsuarioContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.tipoUsuarioButton,
-                    tipoUsuario === 'aluno' && styles.tipoUsuarioButtonActive,
-                  ]}
-                  onPress={() => setTipoUsuario('aluno')}>
-                  <Text
+                {userTypes.map((type) => (
+                  <TouchableOpacity
+                    key={type.id}
                     style={[
-                      styles.tipoUsuarioText,
-                      tipoUsuario === 'aluno' &&
-                        styles.tipoUsuarioTextActive,
-                    ]}>
-                    Aluno
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.tipoUsuarioButton,
-                    tipoUsuario === 'motorista' &&
-                      styles.tipoUsuarioButtonActive,
-                  ]}
-                  onPress={() => setTipoUsuario('motorista')}>
-                  <Text
-                    style={[
-                      styles.tipoUsuarioText,
-                      tipoUsuario === 'motorista' &&
-                        styles.tipoUsuarioTextActive,
-                    ]}>
-                    Motorista
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.tipoUsuarioButton,
-                    tipoUsuario === 'gestor' &&
-                      styles.tipoUsuarioButtonActive,
-                  ]}
-                  onPress={() => setTipoUsuario('gestor')}>
-                  <Text
-                    style={[
-                      styles.tipoUsuarioText,
-                      tipoUsuario === 'gestor' && styles.tipoUsuarioTextActive,
-                    ]}>
-                    Gestor
-                  </Text>
-                </TouchableOpacity>
+                      styles.tipoUsuarioButton,
+                      tipoUsuario === type.id && [styles.tipoUsuarioButtonActive, { borderColor: type.color }],
+                    ]}
+                    onPress={() => setTipoUsuario(type.id)}>
+                    <Icon 
+                      name={type.icon} 
+                      size="md" 
+                      color={tipoUsuario === type.id ? type.color : colors.text.secondary} 
+                    />
+                    <Text
+                      style={[
+                        styles.tipoUsuarioText,
+                        tipoUsuario === type.id && { color: type.color, fontWeight: '600' },
+                      ]}>
+                      {type.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
 
               <Text style={styles.label}>Senha</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Mínimo 6 caracteres"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.text.hint}
                 value={senha}
                 onChangeText={setSenha}
                 secureTextEntry
@@ -186,7 +172,7 @@ const CriarConta = ({navigation}) => {
               <TextInput
                 style={styles.input}
                 placeholder="Digite a senha novamente"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.text.hint}
                 value={confirmarSenha}
                 onChangeText={setConfirmarSenha}
                 secureTextEntry
@@ -197,7 +183,7 @@ const CriarConta = ({navigation}) => {
               <TextInput
                 style={[styles.input, error && styles.inputError]}
                 placeholder="Ex: CAMPINA GRANDE"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.text.hint}
                 value={municipio}
                 onChangeText={(text) => {
                   setMunicipio(text);
@@ -206,9 +192,9 @@ const CriarConta = ({navigation}) => {
                 autoCapitalize="characters"
               />
 
-              {/* Error message display */}
               {error ? (
                 <View style={styles.errorContainer}>
+                  <Icon name={IconNames.error} size="sm" color={colors.error.main} />
                   <Text style={styles.errorText}>{error}</Text>
                 </View>
               ) : null}
@@ -218,9 +204,12 @@ const CriarConta = ({navigation}) => {
                 onPress={handleCriarConta}
                 disabled={loading}>
                 {loading ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={colors.primary.contrast} />
                 ) : (
-                  <Text style={styles.criarContaButtonText}>Criar Conta</Text>
+                  <>
+                    <Icon name={IconNames.add} size="md" color={colors.primary.contrast} />
+                    <Text style={styles.criarContaButtonText}>Criar Conta</Text>
+                  </>
                 )}
               </TouchableOpacity>
 
@@ -241,7 +230,7 @@ const CriarConta = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.default,
   },
   keyboardView: {
     flex: 1,
@@ -251,80 +240,89 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 24,
+    padding: spacing.xl,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.background.paper,
     justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    ...shadows.xs,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: spacing.xxl,
+  },
+  brandName: {
+    ...textStyles.h3,
+    color: colors.primary.main,
+    marginBottom: spacing.xs,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1a73e8',
-    marginBottom: 8,
+    ...textStyles.h1,
+    color: colors.secondary.main,
+    marginBottom: spacing.xs,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    ...textStyles.body,
+    color: colors.text.secondary,
   },
   form: {
     width: '100%',
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-    marginTop: 16,
+    ...textStyles.inputLabel,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
+    marginTop: spacing.base,
   },
   input: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 16,
-    fontSize: 16,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.md,
+    padding: spacing.base,
+    fontSize: textStyles.inputText.fontSize,
     borderWidth: 1,
-    borderColor: '#ddd',
-    color: '#333',
+    borderColor: colors.border.light,
+    color: colors.text.primary,
   },
   tipoUsuarioContainer: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
+    gap: spacing.sm,
   },
   tipoUsuarioButton: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
+    borderWidth: 2,
+    borderColor: colors.border.light,
+    gap: spacing.xs,
   },
   tipoUsuarioButtonActive: {
-    backgroundColor: '#1a73e8',
-    borderColor: '#1a73e8',
+    backgroundColor: colors.neutral[50],
   },
   tipoUsuarioText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  tipoUsuarioTextActive: {
-    color: '#fff',
-    fontWeight: '600',
+    ...textStyles.caption,
+    color: colors.text.secondary,
   },
   criarContaButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 24,
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.base,
+    marginTop: spacing.xl,
+    ...shadows.sm,
   },
   criarContaButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...textStyles.button,
+    color: colors.primary.contrast,
   },
   criarContaButtonDisabled: {
     opacity: 0.6,
@@ -332,37 +330,36 @@ const styles = StyleSheet.create({
   loginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 24,
+    marginTop: spacing.xl,
   },
   loginText: {
-    color: '#666',
-    fontSize: 14,
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
   },
   loginLink: {
-    color: '#1a73e8',
-    fontSize: 14,
+    ...textStyles.bodySmall,
+    color: colors.secondary.main,
     fontWeight: '600',
   },
   errorContainer: {
-    backgroundColor: '#ffebee',
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 8,
-    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.error.light,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginTop: spacing.sm,
     borderLeftWidth: 4,
-    borderLeftColor: '#d32f2f',
+    borderLeftColor: colors.error.main,
   },
   errorText: {
-    color: '#d32f2f',
-    fontSize: 14,
-    fontWeight: '500',
+    ...textStyles.bodySmall,
+    color: colors.error.dark,
+    flex: 1,
   },
   inputError: {
-    borderColor: '#d32f2f',
-    borderWidth: 1,
+    borderColor: colors.error.main,
   },
 });
 
 export default CriarConta;
-
-
