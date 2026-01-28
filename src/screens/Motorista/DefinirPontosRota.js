@@ -93,11 +93,14 @@ const RotaMapaSimples = ({ pontos }) => {
         <Text style={mapStyles.subtitle}>{positions.length} pontos</Text>
       </View>
       
-      <View style={mapStyles.mapWrapper}>
-        <View style={[
-          mapStyles.mapArea, 
-          { transform: [{ scale: zoomLevel }] }
-        ]}>
+      <View style={[mapStyles.mapWrapper, { overflow: 'hidden' }]}>
+        <div style={{ 
+          transform: `scale(${zoomLevel})`,
+          transformOrigin: 'center center',
+          width: '100%',
+          height: 220,
+        }}>
+        <View style={mapStyles.mapArea}>
           {/* Terrain-like background */}
           <View style={mapStyles.terrainBase} />
           <View style={mapStyles.terrainOverlay} />
@@ -205,6 +208,7 @@ const RotaMapaSimples = ({ pontos }) => {
             <Text style={mapStyles.attributionText}>Rota Escolar</Text>
           </View>
         </View>
+        </div>
       </View>
 
       {/* Route info */}
