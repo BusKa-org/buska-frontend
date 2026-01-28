@@ -19,6 +19,11 @@ import { useToast } from '../../components/Toast';
 const RotaMapaSimples = ({ pontos }) => {
   const MAP_HEIGHT = 280;
   const PADDING = 40;
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [selectedPoint, setSelectedPoint] = useState(null);
+  
+  const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.3, 2.5));
+  const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.3, 0.5));
 
   // Calculate bounds and positions
   const { positions, hasValidPoints, bounds } = useMemo(() => {
@@ -67,8 +72,6 @@ const RotaMapaSimples = ({ pontos }) => {
     };
   }, [pontos]);
 
-  const [selectedPoint, setSelectedPoint] = useState(null);
-
   if (!hasValidPoints) {
     return (
       <View style={mapStyles.container}>
@@ -91,7 +94,10 @@ const RotaMapaSimples = ({ pontos }) => {
       </View>
       
       <View style={mapStyles.mapWrapper}>
-        <View style={mapStyles.mapArea}>
+        <View style={[
+          mapStyles.mapArea, 
+          { transform: [{ scale: zoomLevel }] }
+        ]}>
           {/* Terrain-like background */}
           <View style={mapStyles.terrainBase} />
           <View style={mapStyles.terrainOverlay} />
@@ -175,15 +181,23 @@ const RotaMapaSimples = ({ pontos }) => {
             </TouchableOpacity>
           ))}
 
-          {/* Map controls (decorative) */}
+          {/* Map controls (functional) */}
           <View style={mapStyles.mapControls}>
-            <View style={mapStyles.controlButton}>
-              <Text style={mapStyles.controlText}>+</Text>
-            </View>
+            <TouchableOpacity 
+              style={[mapStyles.controlButton, zoomLevel >= 2.5 && mapStyles.controlDisabled]}
+              onPress={handleZoomIn}
+              disabled={zoomLevel >= 2.5}
+            >
+              <Text style={[mapStyles.controlText, zoomLevel >= 2.5 && mapStyles.controlTextDisabled]}>+</Text>
+            </TouchableOpacity>
             <View style={mapStyles.controlDivider} />
-            <View style={mapStyles.controlButton}>
-              <Text style={mapStyles.controlText}>−</Text>
-            </View>
+            <TouchableOpacity 
+              style={[mapStyles.controlButton, zoomLevel <= 0.5 && mapStyles.controlDisabled]}
+              onPress={handleZoomOut}
+              disabled={zoomLevel <= 0.5}
+            >
+              <Text style={[mapStyles.controlText, zoomLevel <= 0.5 && mapStyles.controlTextDisabled]}>−</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Google logo placeholder */}
@@ -372,6 +386,12 @@ const mapStyles = StyleSheet.create({
     fontSize: 18,
     color: '#5F6368',
     fontWeight: '300',
+  },
+  controlDisabled: {
+    opacity: 0.4,
+  },
+  controlTextDisabled: {
+    color: '#BDBDBD',
   },
   controlDivider: {
     height: 1,
