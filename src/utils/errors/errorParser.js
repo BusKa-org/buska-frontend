@@ -140,12 +140,14 @@ function extractErrorDetails(responseData) {
   // Extract explicit field
   field = responseData.field || responseData.loc?.[0] || responseData.location;
   
-  // Handle Flask-RESTX validation errors: { "errors": { "field": "message" } }
-  if (responseData.errors && typeof responseData.errors === 'object') {
-    details = responseData.errors;
+  // Handle BusKá backend format: { "error": "Erro de validação", "details": { "field": "message" } }
+  // Also handles Flask-RESTX: { "errors": { "field": "message" } }
+  const errorsObj = responseData.details || responseData.errors;
+  if (errorsObj && typeof errorsObj === 'object') {
+    details = errorsObj;
     
     // Convert errors object to fieldErrors map
-    for (const [fieldName, errorMsg] of Object.entries(responseData.errors)) {
+    for (const [fieldName, errorMsg] of Object.entries(errorsObj)) {
       if (typeof errorMsg === 'string') {
         fieldErrors[fieldName] = errorMsg;
       } else if (Array.isArray(errorMsg) && errorMsg.length > 0) {
@@ -155,13 +157,15 @@ function extractErrorDetails(responseData) {
       }
     }
     
-    // If there's only one field error and no main message, use it
+    // If there's only one field error, use it as the main message
     const fieldKeys = Object.keys(fieldErrors);
-    if (fieldKeys.length === 1 && !message) {
+    if (fieldKeys.length === 1) {
       field = fieldKeys[0];
+      // Override generic "Erro de validação" with specific field message
       message = fieldErrors[field];
-    } else if (fieldKeys.length > 0 && !message) {
-      message = 'Verifique os campos destacados.';
+    } else if (fieldKeys.length > 1) {
+      // Multiple field errors - show count
+      message = `Corrija os ${fieldKeys.length} campos destacados.`;
     }
   }
   

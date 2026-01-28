@@ -339,19 +339,23 @@ const CriarConta = ({navigation}) => {
               {/* Telefone */}
               <Text style={styles.label}>Telefone</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, errors.telefone && styles.inputError]}
                 placeholder="(00) 00000-0000"
                 placeholderTextColor={colors.text.hint}
                 value={telefone}
-                onChangeText={setTelefone}
+                onChangeText={(text) => {
+                  setTelefone(text);
+                  clearFieldError('telefone');
+                }}
                 keyboardType="phone-pad"
               />
+              {renderFieldError('telefone')}
 
               {/* Institution selection */}
               {instituicoes.length > 0 && (
                 <>
-                  <Text style={styles.label}>Instituição de Ensino</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.instituicoesScroll}>
+                  <Text style={styles.label}>Instituição de Ensino *</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.instituicoesScroll, errors.instituicaoId && styles.instituicoesScrollError]}>
                     <View style={styles.instituicoesContainer}>
                       {instituicoes.map((inst) => (
                         <TouchableOpacity
@@ -359,8 +363,12 @@ const CriarConta = ({navigation}) => {
                           style={[
                             styles.instituicaoButton,
                             instituicaoId === inst.id && styles.instituicaoButtonActive,
+                            errors.instituicaoId && styles.instituicaoButtonError,
                           ]}
-                          onPress={() => setInstituicaoId(inst.id)}>
+                          onPress={() => {
+                            setInstituicaoId(inst.id);
+                            clearFieldError('instituicaoId');
+                          }}>
                           <Text style={[
                             styles.instituicaoText,
                             instituicaoId === inst.id && styles.instituicaoTextActive,
@@ -371,6 +379,7 @@ const CriarConta = ({navigation}) => {
                       ))}
                     </View>
                   </ScrollView>
+                  {renderFieldError('instituicaoId')}
                 </>
               )}
 
@@ -527,6 +536,9 @@ const styles = StyleSheet.create({
   instituicoesScroll: {
     marginBottom: spacing.sm,
   },
+  instituicoesScrollError: {
+    marginBottom: 0,
+  },
   instituicoesContainer: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -542,6 +554,9 @@ const styles = StyleSheet.create({
   instituicaoButtonActive: {
     backgroundColor: colors.secondary.lighter,
     borderColor: colors.secondary.main,
+  },
+  instituicaoButtonError: {
+    borderColor: colors.error.main,
   },
   instituicaoText: {
     ...textStyles.bodySmall,
