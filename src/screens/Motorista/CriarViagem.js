@@ -7,7 +7,6 @@ import {
   SafeAreaView,
   ScrollView,
   TextInput,
-  Alert,
   ActivityIndicator,
   Platform,
 } from 'react-native';
@@ -62,7 +61,7 @@ const CriarViagem = ({navigation, route}) => {
         }
       } catch (error) {
         console.error('Error loading routes:', error);
-        Alert.alert('Erro', 'Não foi possível carregar as rotas.');
+        toast.error('Não foi possível carregar as rotas.');
       } finally {
         setLoadingRotas(false);
       }
@@ -97,30 +96,30 @@ const CriarViagem = ({navigation, route}) => {
 
   const handleCriarViagem = async () => {
     if (!rotaSelecionada) {
-      Alert.alert('Erro', 'Selecione uma rota');
+      toast.error('Selecione uma rota');
       return;
     }
 
     if (!data.trim()) {
-      Alert.alert('Erro', 'Informe a data da viagem');
+      toast.error('Informe a data da viagem');
       return;
     }
 
     // Validar formato da data (YYYY-MM-DD)
     const dataRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dataRegex.test(data)) {
-      Alert.alert('Erro', 'Formato de data inválido. Use YYYY-MM-DD (ex: 2024-12-25)');
+      toast.error('Formato de data inválido. Use YYYY-MM-DD (ex: 2024-12-25)');
       return;
     }
 
     if (!horarioSelecionado && horarios.length > 0) {
-      Alert.alert('Erro', 'Selecione um horário');
+      toast.error('Selecione um horário');
       return;
     }
 
     try {
       setLoading(true);
-      
+
       const viagemData = {
         rota_id: rotaSelecionada,
         data: data.trim(),
@@ -129,20 +128,11 @@ const CriarViagem = ({navigation, route}) => {
       
       await motoristaService.criarViagem(viagemData);
 
-      Alert.alert('Sucesso', 'Viagem criada com sucesso!', [
-        {
-          text: 'OK',
-          onPress: () => {
-            navigation.navigate('ListaViagens');
-          },
-        },
-      ]);
+      toast.success('Viagem criada com sucesso!');
+      navigation.navigate('ListaViagens');
     } catch (error) {
       console.error('Error creating trip:', error);
-      Alert.alert(
-        'Erro',
-        error?.message || 'Não foi possível criar a viagem. Tente novamente.',
-      );
+      toast.error(error?.message || 'Não foi possível criar a viagem. Tente novamente.');
     } finally {
       setLoading(false);
     }
