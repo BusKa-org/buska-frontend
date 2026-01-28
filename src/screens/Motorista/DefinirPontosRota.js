@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useMemo} from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,238 @@ import {motoristaService} from '../../services/motoristaService';
 import { colors, spacing, borderRadius, shadows, textStyles, fontWeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
 import { useToast } from '../../components/Toast';
+
+// Simple Route Map Component
+const RotaMapaSimples = ({ pontos }) => {
+  const MAP_WIDTH = 300;
+  const MAP_HEIGHT = 200;
+  const PADDING = 30;
+
+  // Calculate bounds and positions
+  const { positions, hasValidPoints } = useMemo(() => {
+    const validPontos = pontos.filter(p => 
+      p.latitude != null && p.longitude != null &&
+      !isNaN(Number(p.latitude)) && !isNaN(Number(p.longitude))
+    );
+
+    if (validPontos.length === 0) {
+      return { positions: [], hasValidPoints: false };
+    }
+
+    const lats = validPontos.map(p => Number(p.latitude));
+    const lngs = validPontos.map(p => Number(p.longitude));
+    
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    
+    // Add padding to bounds
+    const latRange = maxLat - minLat || 0.01;
+    const lngRange = maxLng - minLng || 0.01;
+    
+    // Calculate positions for each point
+    const positions = validPontos.map((ponto, index) => {
+      const lat = Number(ponto.latitude);
+      const lng = Number(ponto.longitude);
+      
+      // Normalize to 0-1 range, then scale to map dimensions
+      const x = PADDING + ((lng - minLng) / lngRange) * (MAP_WIDTH - 2 * PADDING);
+      // Invert Y because latitude increases northward but screen Y increases downward
+      const y = PADDING + ((maxLat - lat) / latRange) * (MAP_HEIGHT - 2 * PADDING);
+      
+      return { ...ponto, x, y, index: index + 1 };
+    });
+
+    return { positions, hasValidPoints: true };
+  }, [pontos]);
+
+  if (!hasValidPoints) {
+    return (
+      <View style={mapStyles.container}>
+        <View style={mapStyles.emptyMap}>
+          <Icon name={IconNames.map} size="lg" color={colors.neutral[300]} />
+          <Text style={mapStyles.emptyText}>Adicione pontos para ver o mapa</Text>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={mapStyles.container}>
+      <Text style={mapStyles.title}>Visualização da Rota</Text>
+      <View style={mapStyles.mapArea}>
+        {/* Grid background */}
+        <View style={mapStyles.grid}>
+          {[...Array(5)].map((_, i) => (
+            <View key={`h${i}`} style={[mapStyles.gridLineH, { top: `${i * 25}%` }]} />
+          ))}
+          {[...Array(5)].map((_, i) => (
+            <View key={`v${i}`} style={[mapStyles.gridLineV, { left: `${i * 25}%` }]} />
+          ))}
+        </View>
+
+        {/* Route lines */}
+        {positions.length > 1 && positions.map((pos, i) => {
+          if (i === 0) return null;
+          const prev = positions[i - 1];
+          const dx = pos.x - prev.x;
+          const dy = pos.y - prev.y;
+          const length = Math.sqrt(dx * dx + dy * dy);
+          const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+          
+          return (
+            <View
+              key={`line-${i}`}
+              style={[
+                mapStyles.routeLine,
+                {
+                  left: prev.x,
+                  top: prev.y,
+                  width: length,
+                  transform: [{ rotate: `${angle}deg` }],
+                  transformOrigin: 'left center',
+                },
+              ]}
+            />
+          );
+        })}
+
+        {/* Point markers */}
+        {positions.map((pos) => (
+          <View
+            key={pos.id}
+            style={[
+              mapStyles.marker,
+              pos.index === 1 && mapStyles.markerFirst,
+              pos.index === positions.length && mapStyles.markerLast,
+              { left: pos.x - 12, top: pos.y - 12 },
+            ]}>
+            <Text style={mapStyles.markerText}>{pos.index}</Text>
+          </View>
+        ))}
+
+        {/* Legend */}
+        <View style={mapStyles.legend}>
+          <View style={mapStyles.legendItem}>
+            <View style={[mapStyles.legendDot, mapStyles.markerFirst]} />
+            <Text style={mapStyles.legendText}>Início</Text>
+          </View>
+          <View style={mapStyles.legendItem}>
+            <View style={[mapStyles.legendDot, mapStyles.markerLast]} />
+            <Text style={mapStyles.legendText}>Fim</Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+const mapStyles = StyleSheet.create({
+  container: {
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.base,
+    ...shadows.sm,
+  },
+  title: {
+    ...textStyles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
+  },
+  mapArea: {
+    width: '100%',
+    height: 200,
+    backgroundColor: colors.success.lighter || '#e8f5e9',
+    borderRadius: borderRadius.md,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  grid: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+  gridLineH: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: colors.success.light,
+    opacity: 0.5,
+  },
+  gridLineV: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: colors.success.light,
+    opacity: 0.5,
+  },
+  routeLine: {
+    position: 'absolute',
+    height: 3,
+    backgroundColor: colors.secondary.main,
+    borderRadius: 2,
+  },
+  marker: {
+    position: 'absolute',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.secondary.main,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadows.sm,
+  },
+  markerFirst: {
+    backgroundColor: colors.success.main,
+  },
+  markerLast: {
+    backgroundColor: colors.error.main,
+  },
+  markerText: {
+    ...textStyles.caption,
+    color: colors.text.inverse,
+    fontWeight: fontWeight.bold,
+  },
+  legend: {
+    position: 'absolute',
+    bottom: spacing.sm,
+    right: spacing.sm,
+    flexDirection: 'row',
+    gap: spacing.md,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  legendText: {
+    ...textStyles.caption,
+    color: colors.text.secondary,
+  },
+  emptyMap: {
+    height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  emptyText: {
+    ...textStyles.caption,
+    color: colors.text.hint,
+  },
+});
 
 const DefinirPontosRota = ({navigation, route}) => {
   const params = route?.params || {};
@@ -223,6 +455,9 @@ const DefinirPontosRota = ({navigation, route}) => {
 
       <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
+          
+          {/* Route Map Visualization */}
+          <RotaMapaSimples pontos={pontosRota} />
           
           {/* Current Route Points */}
           <View style={styles.card}>
