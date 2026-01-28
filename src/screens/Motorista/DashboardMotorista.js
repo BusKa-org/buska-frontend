@@ -306,6 +306,25 @@ const DashboardMotorista = ({navigation}) => {
             </TouchableOpacity>
           </View>
 
+          {/* Gestor-only buttons */}
+          {user?.role?.toLowerCase() === 'gestor' && (
+            <View style={styles.botoesRow}>
+              <TouchableOpacity
+                style={styles.botaoRapido}
+                onPress={() => navigation.navigate('CriarRota')}>
+                <Icon name={IconNames.add} size="xl" color={colors.success.main} />
+                <Text style={styles.botaoRapidoText}>Criar Rota</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.botaoRapido}
+                onPress={() => navigation.navigate('CriarViagem')}>
+                <Icon name={IconNames.route} size="xl" color={colors.success.main} />
+                <Text style={styles.botaoRapidoText}>Criar Viagem</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           <View style={styles.botoesRow}>
             <TouchableOpacity
               style={styles.botaoRapido}

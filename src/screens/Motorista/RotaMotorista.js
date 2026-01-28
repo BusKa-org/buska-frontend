@@ -8,13 +8,17 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import {motoristaService} from '../../services/motoristaService';
+import {useAuth} from '../../contexts/AuthContext';
+import {useToast} from '../../components/Toast';
 import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
 
 const RotaMotorista = ({navigation, route}) => {
+  const { user } = useAuth();
+  const toast = useToast();
+  const isGestor = user?.role?.toLowerCase() === 'gestor';
   const [rotas, setRotas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -125,6 +129,36 @@ const RotaMotorista = ({navigation, route}) => {
                           Ver Viagens
                         </Text>
                       </TouchableOpacity>
+                      
+                      {isGestor && (
+                        <>
+                          <TouchableOpacity
+                            style={[styles.acaoButton, styles.acaoButtonSecondary]}
+                            onPress={() =>
+                              navigation.navigate('DefinirPontosRota', {
+                                rota: rota,
+                                isNovaRota: false,
+                              })
+                            }>
+                            <Icon name={IconNames.location} size="sm" color={colors.text.inverse} />
+                            <Text style={styles.acaoButtonText}>
+                              Pontos
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.acaoButton, { backgroundColor: colors.success.main }]}
+                            onPress={() =>
+                              navigation.navigate('CriarViagem', {
+                                rota: rota,
+                              })
+                            }>
+                            <Icon name={IconNames.add} size="sm" color={colors.text.inverse} />
+                            <Text style={styles.acaoButtonText}>
+                              Nova Viagem
+                            </Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
                     </View>
                   </View>
                 ))}
