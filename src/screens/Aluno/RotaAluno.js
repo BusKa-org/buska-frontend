@@ -173,7 +173,7 @@ const RotaAluno = ({navigation, route}) => {
                       status === 'Confirmado' && styles.confirmarButtonActive,
                       isUpdating && styles.confirmarButtonDisabled,
                     ]}
-                    onPress={() => handleConfirmarPresenca(viagem.id, status)}
+                    onPress={() => handleConfirmarPresenca(viagem, status)}
                     disabled={isUpdating}>
                     {isUpdating ? (
                       <ActivityIndicator color={colors.primary.contrast} />
