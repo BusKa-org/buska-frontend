@@ -14,8 +14,11 @@ import {useToast} from '../../components/Toast';
 import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
 
-const ListaViagens = ({navigation}) => {
+const ListaViagens = ({navigation, route}) => {
   const toast = useToast();
+  const params = route?.params || {};
+  const rotaFiltro = params.rota; // Optional: filter by specific route
+  
   const [viagens, setViagens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -25,8 +28,14 @@ const ListaViagens = ({navigation}) => {
       setLoading(true);
       const viagensData = await motoristaService.listarViagens();
       
+      // Filter by route if specified
+      let viagensFiltradas = viagensData || [];
+      if (rotaFiltro?.id) {
+        viagensFiltradas = viagensFiltradas.filter(v => v.rota_id === rotaFiltro.id);
+      }
+      
       // Ordenar por data (mais recentes primeiro)
-      const viagensOrdenadas = (viagensData || []).sort((a, b) => {
+      const viagensOrdenadas = viagensFiltradas.sort((a, b) => {
         const dataA = new Date(a.data);
         const dataB = new Date(b.data);
         return dataB - dataA;
@@ -44,7 +53,7 @@ const ListaViagens = ({navigation}) => {
 
   useEffect(() => {
     loadViagens();
-  }, []);
+  }, [rotaFiltro?.id]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -100,7 +109,9 @@ const ListaViagens = ({navigation}) => {
           <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.title}>Minhas Viagens</Text>
+          <Text style={styles.title}>
+            {rotaFiltro ? `Viagens - ${rotaFiltro.nome}` : 'Minhas Viagens'}
+          </Text>
         </View>
       </View>
 
@@ -119,10 +130,12 @@ const ListaViagens = ({navigation}) => {
               <View style={styles.emptyState}>
                 <Icon name={IconNames.route} size="xxl" color={colors.neutral[300]} />
                 <Text style={styles.emptyText}>
-                  Nenhuma viagem atribuída
+                  {rotaFiltro ? 'Nenhuma viagem nesta rota' : 'Nenhuma viagem atribuída'}
                 </Text>
                 <Text style={styles.emptySubtext}>
-                  O gestor precisa atribuir viagens para você
+                  {rotaFiltro 
+                    ? 'Crie uma viagem para esta rota' 
+                    : 'O gestor precisa atribuir viagens para você'}
                 </Text>
               </View>
             ) : (
