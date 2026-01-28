@@ -37,7 +37,11 @@ export const Storage = {
   async getItem(key) {
     try {
       const value = await webStorage.getItem(key);
-      return value ? JSON.parse(value) : null;
+      // Handle null, undefined, or "undefined" string
+      if (!value || value === 'undefined' || value === 'null') {
+        return null;
+      }
+      return JSON.parse(value);
     } catch (e) {
       console.error('Error reading from storage:', e);
       return null;
@@ -46,6 +50,11 @@ export const Storage = {
 
   async setItem(key, value) {
     try {
+      // Don't store undefined or null values
+      if (value === undefined || value === null) {
+        await webStorage.removeItem(key);
+        return;
+      }
       await webStorage.setItem(key, JSON.stringify(value));
     } catch (e) {
       console.error('Error saving to storage:', e);
