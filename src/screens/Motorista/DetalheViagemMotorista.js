@@ -36,37 +36,11 @@ const DetalheViagemMotorista = ({navigation, route}) => {
 
   const [situacaoViagem, setSituacaoViagem] = useState(viagem.status);
   const [pontosRota, setPontosRota] = useState([]);
-  const [alunosInfo, setAlunosInfo] = useState({
-    totalAlunos: 0,
-    alunosConfirmados: 0,
-  });
-  const [loadingAlunos, setLoadingAlunos] = useState(true);
-
-  useEffect(() => {
-    const loadAlunosInfo = async () => {
-      if (!viagem?.id) return;
-      
-      try {
-        setLoadingAlunos(true);
-        const data = await motoristaService.listarAlunosViagem(viagem.id);
-        setAlunosInfo({
-          totalAlunos: data.total_alunos || 0,
-          alunosConfirmados: data.alunos_confirmados || 0,
-        });
-      } catch (error) {
-        console.error('Error loading alunos info:', error);
-        // Não mostrar erro, apenas deixar como 0
-        setAlunosInfo({
-          totalAlunos: 0,
-          alunosConfirmados: 0,
-        });
-      } finally {
-        setLoadingAlunos(false);
-      }
-    };
-
-    loadAlunosInfo();
-  }, [viagem?.id]);
+  // Use data directly from viagem object (from /viagens/minhas response)
+  const alunosInfo = {
+    totalAlunos: viagem.total_alunos || 0,
+    alunosConfirmados: viagem.alunos_confirmados_count || 0,
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -157,36 +131,30 @@ const DetalheViagemMotorista = ({navigation, route}) => {
           {/* Informações de Alunos */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Alunos Confirmados</Text>
-            {loadingAlunos ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color={colors.secondary.main} />
-              </View>
-            ) : (
-              <View style={styles.alunosInfo}>
-                <Text style={styles.alunosText}>
-                  {alunosInfo.alunosConfirmados} de {alunosInfo.totalAlunos} alunos
-                  confirmados
+            <View style={styles.alunosInfo}>
+              <Text style={styles.alunosText}>
+                {alunosInfo.alunosConfirmados} de {alunosInfo.totalAlunos} alunos
+                confirmados
+              </Text>
+              {alunosInfo.totalAlunos > 0 ? (
+                <View style={styles.alunosBar}>
+                  <View
+                    style={[
+                      styles.alunosBarFill,
+                      {
+                        width: `${
+                          (alunosInfo.alunosConfirmados / alunosInfo.totalAlunos) * 100
+                        }%`,
+                      },
+                    ]}
+                  />
+                </View>
+              ) : (
+                <Text style={styles.emptyAlunosText}>
+                  Nenhum aluno inscrito nesta rota
                 </Text>
-                {alunosInfo.totalAlunos > 0 ? (
-                  <View style={styles.alunosBar}>
-                    <View
-                      style={[
-                        styles.alunosBarFill,
-                        {
-                          width: `${
-                            (alunosInfo.alunosConfirmados / alunosInfo.totalAlunos) * 100
-                          }%`,
-                        },
-                      ]}
-                    />
-                  </View>
-                ) : (
-                  <Text style={styles.emptyAlunosText}>
-                    Nenhum aluno inscrito nesta rota
-                  </Text>
-                )}
-              </View>
-            )}
+              )}
+            </View>
 
             <TouchableOpacity
               style={styles.verAlunosButton}

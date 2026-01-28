@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,18 @@ import Icon, { IconNames } from '../../components/Icon';
 
 const ListaAlunosConfirmados = ({navigation, route}) => {
   const viagem = route?.params?.viagem || {};
-  const [alunos, setAlunos] = useState([]);
+  
+  // Use alunos data from viagem object (from /viagens/minhas response)
+  // Filter to show only confirmed students
+  const alunos = (viagem.alunos || [])
+    .filter(a => a.confirmacao)
+    .map((a, index) => ({
+      id: a.aluno_id || index,
+      nome: a.nome || 'Aluno',
+      pontoEmbarque: a.ponto_embarque || 'Não informado',
+      pontoDestino: a.ponto_destino || 'Não informado',
+      confirmadoAntes: true, // Assume all were confirmed before trip started
+    }));
 
   return (
     <SafeAreaView style={styles.container}>
