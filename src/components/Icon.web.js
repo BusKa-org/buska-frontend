@@ -1,17 +1,11 @@
 /**
- * BusKá Icon Component
+ * BusKá Icon Component - Web Version
  * 
- * Cross-platform icon component using Material Icons
- * - Web: Uses Material Icons font loaded via Google Fonts
- * - Mobile: Uses react-native-vector-icons
- * 
- * Usage:
- *   import Icon from '../components/Icon';
- *   <Icon name="directions-bus" size="md" color={colors.primary.main} />
+ * Uses Material Icons font loaded via Google Fonts in index.html
+ * This file is automatically used by webpack for web builds
  */
 
 import React from 'react';
-import { Platform, Text, StyleSheet } from 'react-native';
 import { colors, iconSize as themeSizes } from '../theme';
 
 // Size presets mapping to theme
@@ -28,12 +22,11 @@ const sizeMap = {
 
 // Map icon names from kebab-case to snake_case for Material Icons font
 const normalizeIconName = (name) => {
-  // Material Icons font uses underscores, not hyphens
   return name.replace(/-/g, '_');
 };
 
 /**
- * Icon component with Material Icons
+ * Web Icon component using Material Icons font
  */
 const Icon = ({ 
   name, 
@@ -47,60 +40,33 @@ const Icon = ({
     ? (sizeMap[size] || themeSizes.base) 
     : size;
 
-  // For web, use the Material Icons font directly
-  if (Platform.OS === 'web') {
-    return (
-      <Text
-        style={[
-          styles.materialIcon,
-          {
-            fontSize: resolvedSize,
-            color: color,
-            width: resolvedSize,
-            height: resolvedSize,
-            lineHeight: resolvedSize,
-          },
-          style,
-        ]}
-        {...props}
-      >
-        {normalizeIconName(name)}
-      </Text>
-    );
-  }
+  const iconStyle = {
+    fontFamily: 'Material Icons',
+    fontWeight: 'normal',
+    fontStyle: 'normal',
+    fontSize: resolvedSize,
+    lineHeight: 1,
+    letterSpacing: 'normal',
+    textTransform: 'none',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    whiteSpace: 'nowrap',
+    wordWrap: 'normal',
+    direction: 'ltr',
+    WebkitFontFeatureSettings: 'liga',
+    WebkitFontSmoothing: 'antialiased',
+    MozOsxFontSmoothing: 'grayscale',
+    color: color,
+    width: resolvedSize,
+    height: resolvedSize,
+    ...style,
+  };
 
-  // For mobile, try to use react-native-vector-icons
-  let MaterialIcons;
-  try {
-    MaterialIcons = require('react-native-vector-icons/MaterialIcons').default;
-  } catch (e) {
-    MaterialIcons = null;
-  }
-
-  if (MaterialIcons) {
-    return (
-      <MaterialIcons
-        name={name}
-        size={resolvedSize}
-        color={color}
-        style={style}
-        {...props}
-      />
-    );
-  }
-
-  // Ultimate fallback
   return (
-    <Text 
-      style={[
-        styles.fallback, 
-        { fontSize: resolvedSize, color },
-        style,
-      ]}
-      {...props}
-    >
-      ●
-    </Text>
+    <span style={iconStyle} {...props}>
+      {normalizeIconName(name)}
+    </span>
   );
 };
 
@@ -168,21 +134,5 @@ export const IconNames = {
   flag: 'flag',
   circle: 'circle',
 };
-
-const styles = StyleSheet.create({
-  materialIcon: {
-    fontFamily: 'Material Icons',
-    fontWeight: 'normal',
-    fontStyle: 'normal',
-    textAlign: 'center',
-    // These are needed for the icon font to render correctly
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fallback: {
-    textAlign: 'center',
-  },
-});
 
 export default Icon;
