@@ -5,12 +5,24 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
+import { motoristaService } from '../../services/motoristaService';
+import { useToast } from '../../components/Toast';
 
 const InicioFimViagem = ({navigation, route}) => {
   const viagem = route?.params?.viagem;
+  const toast = useToast();
+  
+  // Check if trip is already in progress from backend status
+  const statusInicial = viagem?.status === 'EM_ANDAMENTO';
+  
+  const [viagemIniciada, setViagemIniciada] = useState(statusInicial);
+  const [loading, setLoading] = useState(false);
+  const [tempoDecorrido, setTempoDecorrido] = useState(0);
+  const [intervalId, setIntervalId] = useState(null);
 
   if (!viagem) {
     return (
@@ -19,7 +31,7 @@ const InicioFimViagem = ({navigation, route}) => {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}>
-            <Icon name={IconNames.back} size="md" color={viagemIniciada ? colors.text.hint : colors.secondary.main} />
+            <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
             <Text style={styles.backButtonText}>Voltar</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Iniciar Viagem</Text>
@@ -30,10 +42,6 @@ const InicioFimViagem = ({navigation, route}) => {
       </SafeAreaView>
     );
   }
-
-  const [viagemIniciada, setViagemIniciada] = useState(false);
-  const [tempoDecorrido, setTempoDecorrido] = useState(0); // em segundos
-  const [intervalId, setIntervalId] = useState(null);
 
   useEffect(() => {
     if (viagemIniciada) {
@@ -70,15 +78,32 @@ const InicioFimViagem = ({navigation, route}) => {
       .padStart(2, '0')}`;
   };
 
-  const handleIniciarViagem = () => {
-    setViagemIniciada(true);
-    setTempoDecorrido(0);
+  const handleIniciarViagem = async () => {
+    try {
+      setLoading(true);
+      await motoristaService.iniciarViagem(viagem.id);
+      setViagemIniciada(true);
+      setTempoDecorrido(0);
+      toast.success('Viagem iniciada!');
+    } catch (error) {
+      console.error('Error starting trip:', error);
+      toast.error(error?.message || 'Erro ao iniciar viagem');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleFinalizarViagem = () => {
-    setViagemIniciada(false);
-    // Aqui você salvaria os dados da viagem
-    navigation.goBack();
+  const handleFinalizarViagem = async () => {
+    try {
+      setLoading(true);
+      await motoristaService.finalizarViagem(viagem.id);
+      toast.success('Viagem finalizada!');
+      navigation.goBack();
+    } catch (error) {
+      console.error('Error finishing trip:', error);
+      toast.error(error?.message || 'Erro ao finalizar viagem');
+      setLoading(false);
+    }
   };
 
   return (
@@ -130,17 +155,31 @@ const InicioFimViagem = ({navigation, route}) => {
         {/* Botão Principal */}
         {!viagemIniciada ? (
           <TouchableOpacity
-            style={styles.iniciarButton}
-            onPress={handleIniciarViagem}>
-            <Icon name={IconNames.play} size="xl" color={colors.text.inverse} />
-            <Text style={styles.iniciarButtonText}>Iniciar Viagem</Text>
+            style={[styles.iniciarButton, loading && styles.buttonDisabled]}
+            onPress={handleIniciarViagem}
+            disabled={loading}>
+            {loading ? (
+              <ActivityIndicator size="large" color={colors.text.inverse} />
+            ) : (
+              <>
+                <Icon name={IconNames.play} size="xl" color={colors.text.inverse} />
+                <Text style={styles.iniciarButtonText}>Iniciar Viagem</Text>
+              </>
+            )}
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
-            style={styles.finalizarButton}
-            onPress={handleFinalizarViagem}>
-            <Icon name={IconNames.stop} size="xl" color={colors.text.inverse} />
-            <Text style={styles.finalizarButtonText}>Finalizar Viagem</Text>
+            style={[styles.finalizarButton, loading && styles.buttonDisabled]}
+            onPress={handleFinalizarViagem}
+            disabled={loading}>
+            {loading ? (
+              <ActivityIndicator size="large" color={colors.text.inverse} />
+            ) : (
+              <>
+                <Icon name={IconNames.stop} size="xl" color={colors.text.inverse} />
+                <Text style={styles.finalizarButtonText}>Finalizar Viagem</Text>
+              </>
+            )}
           </TouchableOpacity>
         )}
 
@@ -286,6 +325,9 @@ const styles = StyleSheet.create({
     color: colors.text.inverse,
     fontSize: fontSize.h3,
     fontWeight: fontWeight.bold,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   acoesContainer: {
     gap: spacing.md,

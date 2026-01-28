@@ -192,7 +192,7 @@ export const motoristaService = {
   async iniciarViagem(viagemId) {
     try {
       const response = await api.put(`/viagens/${viagemId}/acao`, {
-        acao: 'iniciar',
+        acao: 'INICIAR',
       });
       return response.data;
     } catch (error) {
@@ -207,7 +207,7 @@ export const motoristaService = {
   async finalizarViagem(viagemId) {
     try {
       const response = await api.put(`/viagens/${viagemId}/acao`, {
-        acao: 'finalizar',
+        acao: 'FINALIZAR',
       });
       return response.data;
     } catch (error) {
