@@ -8,13 +8,14 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import {motoristaService} from '../../services/motoristaService';
+import {useToast} from '../../components/Toast';
 import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
 
 const ListaViagens = ({navigation}) => {
+  const toast = useToast();
   const [viagens, setViagens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -33,10 +34,8 @@ const ListaViagens = ({navigation}) => {
       
       setViagens(viagensOrdenadas);
     } catch (error) {
-      Alert.alert(
-        'Erro',
-        error?.message || 'Não foi possível carregar as viagens. Tente novamente.',
-      );
+      console.error('Error loading trips:', error);
+      toast.error(error?.message || 'Não foi possível carregar as viagens.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -52,25 +51,26 @@ const ListaViagens = ({navigation}) => {
     loadViagens();
   };
 
-  const getStatusViagem = (viagem) => {
-    // horario_fim existe quando a viagem foi finalizada
-    if (viagem.horario_fim) {
-      return 'Finalizada';
-    }
-    // Por enquanto, todas as viagens sem horario_fim são "A iniciar"
-    // O status "Em andamento" seria determinado quando a viagem é iniciada
-    // mas isso requer verificar se horario_inicio foi atualizado pela API de iniciar
-    return 'A iniciar';
+  const getStatusLabel = (status) => {
+    const statusMap = {
+      'AGENDADA': 'A iniciar',
+      'EM_ANDAMENTO': 'Em andamento',
+      'FINALIZADA': 'Finalizada',
+      'CANCELADA': 'Cancelada',
+    };
+    return statusMap[status] || status || 'Desconhecido';
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'A iniciar':
+      case 'AGENDADA':
         return colors.warning.main;
-      case 'Em andamento':
+      case 'EM_ANDAMENTO':
         return colors.secondary.main;
-      case 'Finalizada':
+      case 'FINALIZADA':
         return colors.success.main;
+      case 'CANCELADA':
+        return colors.error.main;
       default:
         return colors.text.hint;
     }
@@ -101,11 +101,6 @@ const ListaViagens = ({navigation}) => {
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.title}>Minhas Viagens</Text>
-          <TouchableOpacity
-            style={styles.criarViagemButton}
-            onPress={() => navigation.navigate('CriarViagem')}>
-            <Text style={styles.criarViagemButtonText}>+ Nova Viagem</Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -122,22 +117,19 @@ const ListaViagens = ({navigation}) => {
           <View style={styles.content}>
             {viagens.length === 0 ? (
               <View style={styles.emptyState}>
+                <Icon name={IconNames.route} size="xxl" color={colors.neutral[300]} />
                 <Text style={styles.emptyText}>
-                  Nenhuma viagem cadastrada ainda
+                  Nenhuma viagem atribuída
                 </Text>
                 <Text style={styles.emptySubtext}>
-                  Crie sua primeira viagem para começar
+                  O gestor precisa atribuir viagens para você
                 </Text>
-                <TouchableOpacity
-                  style={styles.emptyButton}
-                  onPress={() => navigation.navigate('CriarViagem')}>
-                  <Text style={styles.emptyButtonText}>Criar Primeira Viagem</Text>
-                </TouchableOpacity>
               </View>
             ) : (
               <>
                 {viagens.map((viagem) => {
-                  const status = getStatusViagem(viagem);
+                  const statusLabel = getStatusLabel(viagem.status);
+                  const statusColor = getStatusColor(viagem.status);
                   return (
                     <TouchableOpacity
                       key={viagem.id}
@@ -149,32 +141,35 @@ const ListaViagens = ({navigation}) => {
                       }>
                       <View style={styles.viagemHeader}>
                         <View style={styles.viagemInfo}>
-                          <Text style={styles.viagemTipo}>{viagem.tipo || 'N/A'}</Text>
+                          <Text style={styles.viagemTipo}>
+                            {viagem.tipo || 'IDA'} - {viagem.rota_nome || 'Rota'}
+                          </Text>
                           <Text style={styles.viagemData}>
                             {viagem.data ? formatDate(viagem.data) : 'Data não disponível'}
                           </Text>
                           <Text style={styles.viagemHorario}>
                             {viagem.horario_inicio ? formatTime(viagem.horario_inicio) : '--:--'}
-                            {viagem.horario_fim
-                              ? ` - ${formatTime(viagem.horario_fim)}`
-                              : ''}
                           </Text>
                         </View>
                         <View
                           style={[
                             styles.statusBadge,
-                            {backgroundColor: getStatusColor(status) + '20'},
+                            {backgroundColor: statusColor + '20'},
                           ]}>
                           <Text
                             style={[
                               styles.statusText,
-                              {color: getStatusColor(status)},
+                              {color: statusColor},
                             ]}>
-                            {status}
+                            {statusLabel}
                           </Text>
                         </View>
                       </View>
-                      <Text style={styles.rotaId}>Rota ID: {viagem.rota_id || 'N/A'}</Text>
+                      {viagem.origem && viagem.destino && (
+                        <Text style={styles.rotaInfo}>
+                          {viagem.origem} → {viagem.destino}
+                        </Text>
+                      )}
                     </TouchableOpacity>
                   );
                 })}
@@ -218,17 +213,6 @@ const styles = StyleSheet.create({
     ...textStyles.h2,
     color: colors.text.primary,
     flex: 1,
-  },
-  criarViagemButton: {
-    backgroundColor: colors.success.main,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
-    ...shadows.xs,
-  },
-  criarViagemButtonText: {
-    ...textStyles.buttonSmall,
-    color: colors.text.inverse,
   },
   loadingContainer: {
     flex: 1,
@@ -283,9 +267,9 @@ const styles = StyleSheet.create({
     ...textStyles.caption,
     fontWeight: fontWeight.semiBold,
   },
-  rotaId: {
-    ...textStyles.caption,
-    color: colors.text.hint,
+  rotaInfo: {
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
     marginTop: spacing.sm,
   },
   emptyState: {
@@ -295,23 +279,14 @@ const styles = StyleSheet.create({
   emptyText: {
     ...textStyles.h4,
     color: colors.text.secondary,
+    marginTop: spacing.base,
     marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   emptySubtext: {
     ...textStyles.bodySmall,
     color: colors.text.hint,
-    marginBottom: spacing.xl,
-  },
-  emptyButton: {
-    backgroundColor: colors.secondary.main,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    ...shadows.xs,
-  },
-  emptyButtonText: {
-    ...textStyles.button,
-    color: colors.text.inverse,
+    textAlign: 'center',
   },
 });
 
