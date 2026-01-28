@@ -681,7 +681,16 @@ const DefinirPontosRota = ({navigation, route}) => {
       await motoristaService.adicionarPontosRota(rotaId, pontosRota);
       
       toast.success('Pontos salvos com sucesso!');
-      navigation.goBack();
+      
+      // For new routes, go to schedule configuration
+      if (isNovaRota) {
+        navigation.navigate('DefinirHorariosRota', {
+          rota: { id: rotaId, nome: rotaNome },
+          isNovaRota: true,
+        });
+      } else {
+        navigation.goBack();
+      }
     } catch (error) {
       console.error('Error saving points:', error);
       toast.error(error?.message || 'Erro ao salvar pontos.');

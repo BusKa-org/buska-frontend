@@ -9,14 +9,19 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import {motoristaService} from '../../services/motoristaService';
 import {useAuth} from '../../contexts/AuthContext';
+import {useToast} from '../../components/Toast';
 import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
 
+const isWeb = Platform.OS === 'web';
+
 const CriarViagem = ({navigation, route}) => {
   const {user} = useAuth();
+  const toast = useToast();
   const rotaParam = route?.params?.rota;
   
   const [rotas, setRotas] = useState([]);
@@ -27,6 +32,20 @@ const CriarViagem = ({navigation, route}) => {
   const [loading, setLoading] = useState(false);
   const [loadingRotas, setLoadingRotas] = useState(true);
   const [loadingHorarios, setLoadingHorarios] = useState(false);
+
+  // Helper to get date string in YYYY-MM-DD format
+  const formatDateToString = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getDateOffset = (daysOffset) => {
+    const date = new Date();
+    date.setDate(date.getDate() + daysOffset);
+    return formatDateToString(date);
+  };
 
   useEffect(() => {
     const loadRotas = async () => {
@@ -254,18 +273,72 @@ const CriarViagem = ({navigation, route}) => {
 
             {/* Data */}
             <View style={styles.section}>
-              <Text style={styles.label}>Data *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="YYYY-MM-DD (ex: 2024-12-25)"
-                placeholderTextColor="#999"
-                value={data}
-                onChangeText={setData}
-                editable={!loading}
-              />
-              <Text style={styles.hint}>
-                Data mínima: {getTodayDate()}
-              </Text>
+              <Text style={styles.label}>Data da Viagem *</Text>
+              
+              {/* Quick date selection buttons */}
+              <View style={styles.quickDatesContainer}>
+                <TouchableOpacity
+                  style={[styles.quickDateButton, data === getDateOffset(0) && styles.quickDateButtonSelected]}
+                  onPress={() => setData(getDateOffset(0))}
+                >
+                  <Text style={[styles.quickDateText, data === getDateOffset(0) && styles.quickDateTextSelected]}>Hoje</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.quickDateButton, data === getDateOffset(1) && styles.quickDateButtonSelected]}
+                  onPress={() => setData(getDateOffset(1))}
+                >
+                  <Text style={[styles.quickDateText, data === getDateOffset(1) && styles.quickDateTextSelected]}>Amanhã</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.quickDateButton, data === getDateOffset(2) && styles.quickDateButtonSelected]}
+                  onPress={() => setData(getDateOffset(2))}
+                >
+                  <Text style={[styles.quickDateText, data === getDateOffset(2) && styles.quickDateTextSelected]}>+2 dias</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.quickDateButton, data === getDateOffset(7) && styles.quickDateButtonSelected]}
+                  onPress={() => setData(getDateOffset(7))}
+                >
+                  <Text style={[styles.quickDateText, data === getDateOffset(7) && styles.quickDateTextSelected]}>+1 semana</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Date input - native for web, text for mobile */}
+              {isWeb ? (
+                <input
+                  type="date"
+                  value={data}
+                  min={getTodayDate()}
+                  onChange={(e) => setData(e.target.value)}
+                  disabled={loading}
+                  style={{
+                    width: '100%',
+                    padding: 16,
+                    fontSize: 16,
+                    borderRadius: 8,
+                    border: `1px solid ${colors.border.light}`,
+                    backgroundColor: colors.background.default,
+                    color: colors.text.primary,
+                    fontFamily: 'inherit',
+                  }}
+                />
+              ) : (
+                <TextInput
+                  style={styles.input}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor="#999"
+                  value={data}
+                  onChangeText={setData}
+                  editable={!loading}
+                  keyboardType="numbers-and-punctuation"
+                />
+              )}
+              
+              {data && (
+                <Text style={styles.selectedDateText}>
+                  Selecionado: {new Date(data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                </Text>
+              )}
             </View>
 
             {/* Botão Criar */}
@@ -339,6 +412,38 @@ const styles = StyleSheet.create({
     ...textStyles.inputHelper,
     color: colors.text.secondary,
     marginTop: spacing.xs,
+  },
+  quickDatesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  quickDateButton: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.full,
+    borderWidth: 2,
+    borderColor: colors.border.light,
+    backgroundColor: colors.background.paper,
+  },
+  quickDateButtonSelected: {
+    borderColor: colors.secondary.main,
+    backgroundColor: colors.secondary.main,
+  },
+  quickDateText: {
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
+    fontWeight: fontWeight.medium,
+  },
+  quickDateTextSelected: {
+    color: colors.text.inverse,
+  },
+  selectedDateText: {
+    ...textStyles.bodySmall,
+    color: colors.success.main,
+    marginTop: spacing.sm,
+    fontWeight: fontWeight.medium,
   },
   rotasScroll: {
     marginTop: spacing.sm,

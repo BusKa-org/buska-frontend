@@ -8,6 +8,7 @@ import ListaViagens from '../screens/Motorista/ListaViagens';
 import DetalheViagemMotorista from '../screens/Motorista/DetalheViagemMotorista';
 import ListaAlunosConfirmados from '../screens/Motorista/ListaAlunosConfirmados';
 import DefinirPontosRota from '../screens/Motorista/DefinirPontosRota';
+import DefinirHorariosRota from '../screens/Motorista/DefinirHorariosRota';
 import RotaOtimizada from '../screens/Motorista/RotaOtimizada';
 import InicioFimViagem from '../screens/Motorista/InicioFimViagem';
 import ChatGestor from '../screens/Motorista/ChatGestor';
@@ -54,6 +55,7 @@ const MotoristaNavigator = () => {
             component={ListaAlunosConfirmados}
           />
           <Screen name="DefinirPontosRota" component={DefinirPontosRota} />
+          <Screen name="DefinirHorariosRota" component={DefinirHorariosRota} />
           <Screen name="RotaOtimizada" component={RotaOtimizada} />
           <Screen name="InicioFimViagem" component={InicioFimViagem} />
           <Screen name="ChatGestor" component={ChatGestor} />
@@ -94,6 +96,7 @@ const MotoristaNavigator = () => {
         component={ListaAlunosConfirmados}
       />
       <Stack.Screen name="DefinirPontosRota" component={DefinirPontosRota} />
+      <Stack.Screen name="DefinirHorariosRota" component={DefinirHorariosRota} />
       <Stack.Screen name="RotaOtimizada" component={RotaOtimizada} />
       <Stack.Screen name="InicioFimViagem" component={InicioFimViagem} />
       <Stack.Screen name="ChatGestor" component={ChatGestor} />
