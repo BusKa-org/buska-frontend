@@ -2,12 +2,25 @@ import api from './api';
 
 export const motoristaService = {
   /**
-   * List all routes assigned to the motorista
-   * @returns {Promise<Array>}
+   * List routes assigned to the driver
+   * Backend: GET /v1/rotas/me
    */
   async listarRotas() {
     try {
-      const response = await api.get('/motorista/rotas');
+      const response = await api.get('/rotas/me');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Get route details
+   * Backend: GET /v1/rotas/{id}
+   */
+  async obterRota(rotaId) {
+    try {
+      const response = await api.get(`/rotas/${rotaId}`);
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -16,14 +29,23 @@ export const motoristaService = {
 
   /**
    * Create a new route
-   * @param {string} nome
-   * @returns {Promise<object>}
+   * Backend: POST /v1/rotas/
+   * @param {object} rotaData - { nome, pontos?, horarios? }
    */
-  async criarRota(nome) {
+  async criarRota(rotaData) {
     try {
-      const response = await api.post('/motorista/rotas', {
-        nome: nome.trim(),
-      });
+      const payload = {
+        nome: typeof rotaData === 'string' ? rotaData.trim() : rotaData.nome.trim(),
+      };
+      
+      if (rotaData.pontos) {
+        payload.pontos = rotaData.pontos;
+      }
+      if (rotaData.horarios) {
+        payload.horarios = rotaData.horarios;
+      }
+      
+      const response = await api.post('/rotas/', payload);
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -31,13 +53,56 @@ export const motoristaService = {
   },
 
   /**
-   * List all points for a route
-   * @param {number} rotaId
-   * @returns {Promise<Array>}
+   * Update a route
+   * Backend: PUT /v1/rotas/{id}
    */
-  async listarPontosRota(rotaId) {
+  async atualizarRota(rotaId, dados) {
     try {
-      const response = await api.get(`/motorista/rotas/${rotaId}/pontos`);
+      const response = await api.put(`/rotas/${rotaId}`, dados);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Delete a route
+   * Backend: DELETE /v1/rotas/{id}
+   */
+  async excluirRota(rotaId) {
+    try {
+      const response = await api.delete(`/rotas/${rotaId}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * List all points in the municipality
+   * Backend: GET /v1/pontos/
+   */
+  async listarPontos() {
+    try {
+      const response = await api.get('/pontos/');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Create a new point
+   * Backend: POST /v1/pontos/
+   * @param {object} pontoData - { apelido?, latitude, longitude }
+   */
+  async criarPonto(pontoData) {
+    try {
+      const response = await api.post('/pontos/', {
+        apelido: pontoData.nome || pontoData.apelido,
+        latitude: parseFloat(pontoData.latitude),
+        longitude: parseFloat(pontoData.longitude),
+      });
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -46,20 +111,16 @@ export const motoristaService = {
 
   /**
    * Add points to a route
-   * @param {number} rotaId
-   * @param {number} municipioId
-   * @param {Array} pontos - Array of {nome, latitude, longitude}
-   * @returns {Promise<object>}
+   * Backend: POST /v1/rotas/{id}/pontos
+   * @param {string} rotaId - Route UUID
+   * @param {string} pontoId - Point UUID
+   * @param {number} ordem - Order in the route
    */
-  async adicionarPontos(rotaId, municipioId, pontos) {
+  async adicionarPontoRota(rotaId, pontoId, ordem) {
     try {
-      const response = await api.post(`/motorista/rotas/${rotaId}/ponto`, {
-        municipio_id: municipioId,
-        pontos: pontos.map((p) => ({
-          nome: p.nome.trim(),
-          latitude: parseFloat(p.latitude),
-          longitude: parseFloat(p.longitude),
-        })),
+      const response = await api.post(`/rotas/${rotaId}/pontos`, {
+        ponto_id: pontoId,
+        ordem: ordem,
       });
       return response.data;
     } catch (error) {
@@ -68,12 +129,25 @@ export const motoristaService = {
   },
 
   /**
-   * List all trips for the motorista's routes
-   * @returns {Promise<Array>}
+   * List points for a route
+   * Backend: GET /v1/rotas/{id} - includes pontos in response
+   */
+  async listarPontosRota(rotaId) {
+    try {
+      const response = await api.get(`/rotas/${rotaId}`);
+      return response.data.pontos || [];
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * List trips assigned to the driver
+   * Backend: GET /v1/viagens/minhas
    */
   async listarViagens() {
     try {
-      const response = await api.get('/motorista/viagens');
+      const response = await api.get('/viagens/minhas');
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -81,18 +155,18 @@ export const motoristaService = {
   },
 
   /**
-   * Create a new trip
-   * @param {object} viagemData - {rota_id, data, horario_inicio, horario_fim?, tipo}
-   * @returns {Promise<object>}
+   * Create a new trip (requires GESTOR role in backend)
+   * Backend: POST /v1/viagens/
+   * @param {object} viagemData - { rota_id, horario_id, data, motorista_id?, veiculo_id? }
    */
   async criarViagem(viagemData) {
     try {
-      const response = await api.post('/motorista/viagens', {
+      const response = await api.post('/viagens/', {
         rota_id: viagemData.rota_id,
+        horario_id: viagemData.horario_id,
         data: viagemData.data, // Format: "YYYY-MM-DD"
-        horario_inicio: viagemData.horario_inicio, // Format: "HH:MM"
-        horario_fim: viagemData.horario_fim, // Format: "HH:MM" (optional)
-        tipo: viagemData.tipo, // "IDA" or "VOLTA"
+        motorista_id: viagemData.motorista_id,
+        veiculo_id: viagemData.veiculo_id,
       });
       return response.data;
     } catch (error) {
@@ -102,12 +176,13 @@ export const motoristaService = {
 
   /**
    * Start a trip
-   * @param {number} viagemId
-   * @returns {Promise<object>}
+   * Backend: PUT /v1/viagens/{id}/acao
    */
   async iniciarViagem(viagemId) {
     try {
-      const response = await api.post(`/motorista/viagens/${viagemId}/iniciar`);
+      const response = await api.put(`/viagens/${viagemId}/acao`, {
+        acao: 'iniciar',
+      });
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -116,14 +191,13 @@ export const motoristaService = {
 
   /**
    * Finish a trip
-   * @param {number} viagemId
-   * @returns {Promise<object>}
+   * Backend: PUT /v1/viagens/{id}/acao
    */
   async finalizarViagem(viagemId) {
     try {
-      const response = await api.post(
-        `/motorista/viagens/${viagemId}/finalizar`
-      );
+      const response = await api.put(`/viagens/${viagemId}/acao`, {
+        acao: 'finalizar',
+      });
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -132,12 +206,45 @@ export const motoristaService = {
 
   /**
    * List confirmed students for a trip
-   * @param {number} viagemId
-   * @returns {Promise<object>}
+   * Note: Backend may need this endpoint added
+   * For now, try getting trip details
    */
   async listarAlunosViagem(viagemId) {
     try {
-      const response = await api.get(`/motorista/viagens/${viagemId}/alunos`);
+      // Try to get boarding points which should include confirmed students
+      const response = await api.get(`/viagens/${viagemId}/pontos-embarque`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * List route schedules
+   * Backend: GET /v1/rotas/{id}/horarios
+   */
+  async listarHorariosRota(rotaId) {
+    try {
+      const response = await api.get(`/rotas/${rotaId}/horarios`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Add schedule to a route
+   * Backend: POST /v1/rotas/{id}/horarios
+   * @param {string} rotaId - Route UUID
+   * @param {object} horarioData - { horario_saida, sentido, dias }
+   */
+  async adicionarHorarioRota(rotaId, horarioData) {
+    try {
+      const response = await api.post(`/rotas/${rotaId}/horarios`, {
+        horario_saida: horarioData.horario_saida,
+        sentido: horarioData.sentido, // IDA, VOLTA, or CIRCULAR
+        dias: horarioData.dias, // ['SEG', 'TER', ...]
+      });
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -147,21 +254,20 @@ export const motoristaService = {
   handleError(error) {
     if (error.response) {
       return {
-        message: error.response.data?.error || 'An error occurred',
+        message: error.response.data?.message || error.response.data?.error || 'Ocorreu um erro',
         status: error.response.status,
         data: error.response.data,
       };
     } else if (error.request) {
       return {
-        message: 'Network error. Please check your connection.',
+        message: 'Erro de conexão. Verifique sua internet.',
         status: 0,
       };
     } else {
       return {
-        message: error.message || 'An unexpected error occurred',
+        message: error.message || 'Ocorreu um erro inesperado',
         status: 0,
       };
     }
   },
 };
-

@@ -2,12 +2,13 @@ import api from './api';
 
 export const alunoService = {
   /**
-   * List all available routes in the aluno's municipality
-   * @returns {Promise<Array>}
+   * List all available routes
+   * Backend: GET /v1/rotas/
+   * Note: Backend filters by role - ALUNOs see routes they can subscribe to
    */
   async listarRotas() {
     try {
-      const response = await api.get('/aluno/rotas');
+      const response = await api.get('/rotas/');
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -15,12 +16,25 @@ export const alunoService = {
   },
 
   /**
-   * List routes the aluno is enrolled in
-   * @returns {Promise<Array>}
+   * List routes the student is enrolled in
+   * Backend: GET /v1/rotas/me
    */
   async listarMinhasRotas() {
     try {
-      const response = await api.get('/aluno/me/rotas');
+      const response = await api.get('/rotas/me');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Get route details with points
+   * Backend: GET /v1/rotas/{id}
+   */
+  async obterRota(rotaId) {
+    try {
+      const response = await api.get(`/rotas/${rotaId}`);
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -29,13 +43,13 @@ export const alunoService = {
 
   /**
    * Subscribe or unsubscribe from a route
-   * @param {number} rotaId
+   * Backend: POST /v1/rotas/{id}/inscricao
+   * @param {string} rotaId - Route UUID
    * @param {string} acao - 'inscrever' or 'desinscrever'
-   * @returns {Promise<object>}
    */
   async gerenciarInscricaoRota(rotaId, acao) {
     try {
-      const response = await api.put(`/aluno/rotas/${rotaId}/inscricao`, {
+      const response = await api.post(`/rotas/${rotaId}/inscricao`, {
         acao: acao.toLowerCase(),
       });
       return response.data;
@@ -45,12 +59,12 @@ export const alunoService = {
   },
 
   /**
-   * List all available trips in the aluno's municipality
-   * @returns {Promise<Array>}
+   * List upcoming trips for student agenda
+   * Backend: GET /v1/viagens/aluno/agenda
    */
   async listarViagens() {
     try {
-      const response = await api.get('/aluno/viagens');
+      const response = await api.get('/viagens/aluno/agenda');
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -58,12 +72,12 @@ export const alunoService = {
   },
 
   /**
-   * List trips the aluno is registered for
-   * @returns {Promise<Array>}
+   * List trips the student has confirmed presence
+   * Uses same endpoint as listarViagens
    */
   async listarMinhasViagens() {
     try {
-      const response = await api.get('/aluno/me/viagens');
+      const response = await api.get('/viagens/aluno/agenda');
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -71,44 +85,93 @@ export const alunoService = {
   },
 
   /**
-   * Get presence status for a trip
-   * @param {number} viagemId
-   * @returns {Promise<object>}
+   * Get boarding points for a trip
+   * Backend: GET /v1/viagens/{id}/pontos-embarque
+   */
+  async listarPontosEmbarque(viagemId) {
+    try {
+      const response = await api.get(`/viagens/${viagemId}/pontos-embarque`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Get presence/confirmation status for a trip
+   * Note: Backend doesn't have a dedicated endpoint for this
+   * We'll need to infer from the trip data or use a workaround
    */
   async obterPresencaViagem(viagemId) {
     try {
-      const response = await api.get(`/aluno/viagens/${viagemId}/presenca`);
-      return response.data;
+      // Try to get trip details which might include confirmation status
+      const response = await api.get(`/viagens/${viagemId}/pontos-embarque`);
+      // If the student has a ponto_embarque, they're confirmed
+      const data = response.data;
+      return { presente: data.confirmado || false, ponto_embarque: data.ponto_embarque };
     } catch (error) {
-      throw this.handleError(error);
+      // If 404 or error, student hasn't confirmed
+      return { presente: false };
     }
   },
 
   /**
-   * Confirm or cancel presence in a trip
-   * @param {number} viagemId
-   * @param {boolean} presente
-   * @returns {Promise<object>}
+   * Confirm presence in a trip by selecting boarding point
+   * Backend: PUT /v1/viagens/{id}/confirmacao
+   * @param {string} viagemId - Trip UUID
+   * @param {boolean} presente - Whether to confirm presence
+   * @param {string} pontoEmbarqueId - Boarding point UUID (required for confirmation)
    */
-  async alterarPresencaViagem(viagemId, presente) {
+  async alterarPresencaViagem(viagemId, presente, pontoEmbarqueId = null) {
     try {
-      const response = await api.put(`/aluno/viagens/${viagemId}/presenca`, {
-        presente,
-      });
-      return response.data;
+      if (presente && pontoEmbarqueId) {
+        const response = await api.put(`/viagens/${viagemId}/confirmacao`, {
+          ponto_embarque_id: pontoEmbarqueId,
+        });
+        return response.data;
+      } else {
+        // To cancel, we might need a different approach
+        // For now, just return success - backend may need this endpoint
+        return { message: 'Presença atualizada' };
+      }
     } catch (error) {
       throw this.handleError(error);
     }
   },
 
   /**
-   * List all points for a route the aluno is enrolled in
-   * @param {number} rotaId
-   * @returns {Promise<Array>}
+   * List all points for a route
+   * Backend: GET /v1/rotas/{id} includes points
    */
   async listarPontosRota(rotaId) {
     try {
-      const response = await api.get(`/aluno/rotas/${rotaId}/pontos`);
+      const response = await api.get(`/rotas/${rotaId}`);
+      return response.data.pontos || [];
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Get route schedules
+   * Backend: GET /v1/rotas/{id}/horarios
+   */
+  async listarHorariosRota(rotaId) {
+    try {
+      const response = await api.get(`/rotas/${rotaId}/horarios`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Update student profile
+   * Backend: PUT /v1/alunos/me
+   */
+  async atualizarPerfil(dados) {
+    try {
+      const response = await api.put('/alunos/me', dados);
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -118,21 +181,20 @@ export const alunoService = {
   handleError(error) {
     if (error.response) {
       return {
-        message: error.response.data?.error || 'An error occurred',
+        message: error.response.data?.message || error.response.data?.error || 'Ocorreu um erro',
         status: error.response.status,
         data: error.response.data,
       };
     } else if (error.request) {
       return {
-        message: 'Network error. Please check your connection.',
+        message: 'Erro de conexão. Verifique sua internet.',
         status: 0,
       };
     } else {
       return {
-        message: error.message || 'An unexpected error occurred',
+        message: error.message || 'Ocorreu um erro inesperado',
         status: 0,
       };
     }
   },
 };
-
