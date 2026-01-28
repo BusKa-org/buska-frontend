@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
@@ -13,18 +13,51 @@ import { motoristaService } from '../../services/motoristaService';
 import { useToast } from '../../components/Toast';
 
 const InicioFimViagem = ({navigation, route}) => {
-  const viagem = route?.params?.viagem;
+  const viagemParam = route?.params?.viagem;
   const toast = useToast();
   
-  // Check if trip is already in progress from backend status
-  const statusInicial = viagem?.status === 'EM_ANDAMENTO';
-  
-  const [viagemIniciada, setViagemIniciada] = useState(statusInicial);
+  const [viagem, setViagem] = useState(viagemParam);
+  const [viagemIniciada, setViagemIniciada] = useState(viagemParam?.status === 'EM_ANDAMENTO');
   const [loading, setLoading] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState(true);
   const [tempoDecorrido, setTempoDecorrido] = useState(0);
   const [intervalId, setIntervalId] = useState(null);
 
-  if (!viagem) {
+  // Load fresh trip data on mount and focus
+  const loadTripStatus = useCallback(async () => {
+    if (!viagemParam?.id) return;
+    
+    try {
+      setLoadingStatus(true);
+      const viagens = await motoristaService.listarViagens();
+      const viagemAtual = viagens.find(v => v.id === viagemParam.id);
+      
+      if (viagemAtual) {
+        setViagem(viagemAtual);
+        const emAndamento = viagemAtual.status === 'EM_ANDAMENTO';
+        setViagemIniciada(emAndamento);
+      }
+    } catch (error) {
+      console.error('Error loading trip status:', error);
+    } finally {
+      setLoadingStatus(false);
+    }
+  }, [viagemParam?.id]);
+
+  // Load on mount
+  useEffect(() => {
+    loadTripStatus();
+  }, [loadTripStatus]);
+
+  // Reload on focus (when returning from other screens)
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadTripStatus();
+    });
+    return unsubscribe;
+  }, [navigation, loadTripStatus]);
+
+  if (!viagemParam) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -38,6 +71,25 @@ const InicioFimViagem = ({navigation, route}) => {
         </View>
         <View style={styles.content}>
           <Text style={styles.emptyText}>Dados da viagem não disponíveis</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loadingStatus) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
+            <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
+            <Text style={styles.backButtonText}>Voltar</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>Carregando...</Text>
+        </View>
+        <View style={[styles.content, { justifyContent: 'center', alignItems: 'center' }]}>
+          <ActivityIndicator size="large" color={colors.secondary.main} />
         </View>
       </SafeAreaView>
     );
