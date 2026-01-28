@@ -57,7 +57,8 @@ const CriarConta = ({navigation}) => {
   const loadInstituicoes = async () => {
     try {
       setLoadingInstituicoes(true);
-      const response = await api.get('/instituicoes/');
+      // Use public endpoint (no auth required)
+      const response = await api.get('/instituicoes/public');
       setInstituicoes(response.data || []);
     } catch (error) {
       errorLogger.debug('Could not load institutions', { error: error.message });
