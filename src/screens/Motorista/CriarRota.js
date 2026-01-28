@@ -7,30 +7,29 @@ import {
   SafeAreaView,
   ScrollView,
   TextInput,
-  Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import {motoristaService} from '../../services/motoristaService';
 import {useAuth} from '../../contexts/AuthContext';
+import {useToast} from '../../components/Toast';
 import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight, lineHeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
 
 const CriarRota = ({navigation}) => {
   const {user} = useAuth();
+  const toast = useToast();
   const [nomeRota, setNomeRota] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleCriarRota = async () => {
     if (!nomeRota.trim()) {
-      Alert.alert('Erro', 'Por favor, informe o nome da rota');
+      toast.error('Por favor, informe o nome da rota');
       return;
     }
 
     if (!user?.prefeitura_id) {
-      Alert.alert(
-        'Erro',
-        'Você não possui um município cadastrado. Entre em contato com o gestor.',
-      );
+      toast.error('Você não possui um município cadastrado. Entre em contato com o gestor.');
       return;
     }
 
@@ -40,7 +39,7 @@ const CriarRota = ({navigation}) => {
       const rotaId = response?.id;
       
       if (!rotaId) {
-        Alert.alert('Erro', 'Rota criada mas ID não disponível. Tente novamente.');
+        toast.error('Rota criada mas ID não disponível. Tente novamente.');
         return;
       }
       
@@ -50,23 +49,16 @@ const CriarRota = ({navigation}) => {
         nome: nomeRota.trim(),
       };
       
-      Alert.alert('Sucesso', 'Rota criada com sucesso!', [
-        {
-          text: 'OK',
-          onPress: () => {
-            navigation.navigate('DefinirPontosRota', {
-              rota: rotaData,
-              isNovaRota: true,
-            });
-          },
-        },
-      ]);
+      toast.success('Rota criada com sucesso!');
+      
+      // Navigate directly after success
+      navigation.navigate('DefinirPontosRota', {
+        rota: rotaData,
+        isNovaRota: true,
+      });
     } catch (error) {
       console.error('Error creating route:', error);
-      Alert.alert(
-        'Erro',
-        error?.message || 'Não foi possível criar a rota. Tente novamente.',
-      );
+      toast.error(error?.message || 'Não foi possível criar a rota. Tente novamente.');
     } finally {
       setLoading(false);
     }
