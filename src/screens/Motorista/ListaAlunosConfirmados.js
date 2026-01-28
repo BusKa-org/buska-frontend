@@ -71,7 +71,7 @@ const ListaAlunosConfirmados = ({navigation, route}) => {
                   )}
                 </View>
                 <View style={styles.confirmadoIcon}>
-                  <Icon name={IconNames.checkCircle} size="md" color={colors.success.main} />
+                  <Icon name={IconNames.checkCircle} size="md" color={colors.text.inverse} />
                 </View>
               </View>
             </View>
