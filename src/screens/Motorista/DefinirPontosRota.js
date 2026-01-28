@@ -497,15 +497,16 @@ const DefinirPontosRota = ({navigation, route}) => {
   }, [rotaId, isNovaRota]);
 
   const handleAdicionarPontoExistente = (ponto) => {
-    // Check if already added
-    if (pontosRota.some(p => p.id === ponto.id)) {
+    // Check if already added (compare as strings to handle UUID inconsistencies)
+    const pontoIdStr = String(ponto.id);
+    if (pontosRota.some(p => String(p.id) === pontoIdStr)) {
       toast.warning('Este ponto já está na rota.');
       return;
     }
     
-    setPontosRota([...pontosRota, {
+    setPontosRota(prev => [...prev, {
       ...ponto,
-      ordem: pontosRota.length + 1,
+      ordem: prev.length + 1,
     }]);
     toast.success(`${ponto.nome || ponto.apelido} adicionado!`);
   };
@@ -564,21 +565,30 @@ const DefinirPontosRota = ({navigation, route}) => {
   };
 
   const handleRemoverPonto = (pontoId) => {
-    Alert.alert(
-      'Remover Ponto',
-      'Tem certeza que deseja remover este ponto da rota?',
-      [
-        {text: 'Cancelar', style: 'cancel'},
-        {
-          text: 'Remover',
-          style: 'destructive',
-          onPress: () => {
-            setPontosRota(pontosRota.filter(p => p.id !== pontoId));
-            toast.info('Ponto removido.');
+    // Use window.confirm for web compatibility (Alert.alert doesn't work well on web)
+    if (typeof window !== 'undefined' && window.confirm) {
+      if (window.confirm('Remover este ponto da rota?')) {
+        setPontosRota(prev => prev.filter(p => p.id !== pontoId));
+        toast.info('Ponto removido.');
+      }
+    } else {
+      // Fallback for native
+      Alert.alert(
+        'Remover Ponto',
+        'Tem certeza que deseja remover este ponto da rota?',
+        [
+          {text: 'Cancelar', style: 'cancel'},
+          {
+            text: 'Remover',
+            style: 'destructive',
+            onPress: () => {
+              setPontosRota(prev => prev.filter(p => p.id !== pontoId));
+              toast.info('Ponto removido.');
+            },
           },
-        },
-      ],
-    );
+        ],
+      );
+    }
   };
 
   const handleMoverPonto = (index, direction) => {
@@ -679,7 +689,7 @@ const DefinirPontosRota = ({navigation, route}) => {
               </View>
             ) : (
               pontosRota.map((ponto, index) => (
-                <View key={ponto.id} style={styles.pontoItem}>
+                <View key={`${ponto.id}-${index}`} style={styles.pontoItem}>
                   {/* Drag handle */}
                   <View style={styles.dragHandle}>
                     <Icon name={IconNames.moreVert} size="sm" color={colors.neutral[400]} />
@@ -741,12 +751,13 @@ const DefinirPontosRota = ({navigation, route}) => {
               
               <View style={styles.pontosGrid}>
                 {pontosDisponiveis.slice(0, 15).map(ponto => {
-                  const isAdded = pontosRota.some(pr => pr.id === ponto.id);
+                  const pontoIdStr = String(ponto.id);
+                  const isAdded = pontosRota.some(pr => String(pr.id) === pontoIdStr);
                   return (
                     <TouchableOpacity
                       key={ponto.id}
                       style={[styles.pontoChip, isAdded && styles.pontoChipAdded]}
-                      onPress={() => !isAdded && handleAdicionarPontoExistente(ponto)}
+                      onPress={() => handleAdicionarPontoExistente(ponto)}
                       disabled={isAdded}>
                       <Icon 
                         name={isAdded ? IconNames.checkCircle : IconNames.add} 
