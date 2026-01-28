@@ -188,60 +188,78 @@ const DashboardMotorista = ({navigation}) => {
       <ScrollView style={styles.scrollView}>
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.greetingContainer}>
-            <Text style={styles.greeting}>
-              Olá, {user?.nome || 'Motorista'}!
-            </Text>
-            <Icon name={IconNames.person} size="md" color={colors.primary.main} />
+          <View style={styles.headerContent}>
+            <View style={styles.headerText}>
+              <Text style={styles.greeting}>
+                Olá, {user?.nome || 'Motorista'}!
+              </Text>
+              <Text style={styles.subtitle}>
+                {getUserInfo()}
+              </Text>
+            </View>
+            <View style={styles.avatarContainer}>
+              <Icon name={IconNames.person} size="xl" color={colors.secondary.contrast} />
+            </View>
           </View>
-          <Text style={styles.subtitle}>
-            {getUserInfo()}
-          </Text>
         </View>
 
         {/* Próxima Viagem */}
         <View style={styles.proximaViagemCard}>
-          <Text style={styles.cardTitle}>Próxima Viagem</Text>
+          <View style={styles.cardHeader}>
+            <Icon name={IconNames.schedule} size="md" color={colors.secondary.light} />
+            <Text style={styles.cardTitle}>Próxima Viagem</Text>
+          </View>
           {loadingViagem ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={colors.secondary.main} />
+              <ActivityIndicator size="small" color={colors.secondary.contrast} />
             </View>
           ) : proximaViagem ? (
             <>
-              {proximaViagem.data && (
-                <Text style={styles.viagemData}>
-                  {formatDate(proximaViagem.data)}
-                </Text>
-              )}
               <View style={styles.viagemInfo}>
                 <View style={styles.viagemHeader}>
-                  <View>
-                    <Text style={styles.viagemTipo}>{proximaViagem.tipo}</Text>
-                    <Text style={styles.viagemHorario}>{proximaViagem.horario}</Text>
-                  </View>
-                  <View style={styles.statusBadge}>
+                  <Text style={styles.viagemHorario}>{proximaViagem.horario}</Text>
+                  <View style={[
+                    styles.statusBadge,
+                    proximaViagem.status === 'Em andamento' 
+                      ? styles.statusEmAndamento 
+                      : styles.statusAIniciar
+                  ]}>
+                    <Icon 
+                      name={proximaViagem.status === 'Em andamento' ? IconNames.route : IconNames.schedule} 
+                      size="xs" 
+                      color={colors.text.inverse} 
+                    />
                     <Text style={styles.statusText}>{proximaViagem.status}</Text>
                   </View>
                 </View>
+                
+                {proximaViagem.data && (
+                  <Text style={styles.viagemData}>
+                    {formatDate(proximaViagem.data)} • {proximaViagem.tipo}
+                  </Text>
+                )}
 
                 <View style={styles.rotaInfo}>
                   <View style={styles.pontoRota}>
-                    <Icon name={IconNames.location} size="md" color={colors.secondary.main} />
-                    <Text style={styles.pontoNome}>{proximaViagem.origem || 'N/A'}</Text>
+                    <Icon name={IconNames.location} size="sm" color={colors.success.main} />
+                    <Text style={styles.pontoNome}>{proximaViagem.origem || 'Origem'}</Text>
                   </View>
                   <View style={styles.linhaRota} />
                   <View style={styles.pontoRota}>
-                    <Icon name={IconNames.location} size="md" color={colors.accent.main} />
-                    <Text style={styles.pontoNome}>{proximaViagem.destino || 'N/A'}</Text>
+                    <Icon name={IconNames.location} size="sm" color={colors.error.main} />
+                    <Text style={styles.pontoNome}>{proximaViagem.destino || 'Destino'}</Text>
                   </View>
                 </View>
               </View>
 
               {/* Informações de Alunos */}
               <View style={styles.alunosInfo}>
-                <Text style={styles.alunosText}>
-                  {alunosInfo.alunosConfirmados} de {alunosInfo.totalAlunos} alunos confirmados
-                </Text>
+                <View style={styles.alunosHeader}>
+                  <Icon name={IconNames.group} size="sm" color={colors.secondary.light} />
+                  <Text style={styles.alunosText}>
+                    {alunosInfo.alunosConfirmados} de {alunosInfo.totalAlunos} alunos confirmados
+                  </Text>
+                </View>
                 {alunosInfo.totalAlunos > 0 ? (
                   <View style={styles.alunosBar}>
                     <View
@@ -277,13 +295,16 @@ const DashboardMotorista = ({navigation}) => {
                   onPress={() =>
                     navigation.navigate('InicioFimViagem', {viagem: proximaViagem})
                   }>
+                  <Icon name={IconNames.route} size="md" color={colors.text.inverse} />
                   <Text style={styles.iniciarButtonText}>Iniciar Viagem</Text>
                 </TouchableOpacity>
               </View>
             </>
           ) : (
             <View style={styles.emptyState}>
+              <Icon name={IconNames.route} size="xxl" color={colors.secondary.light} />
               <Text style={styles.emptyText}>Nenhuma viagem agendada</Text>
+              <Text style={styles.emptySubtext}>Aguarde o gestor atribuir viagens para você</Text>
             </View>
           )}
         </View>
@@ -294,14 +315,18 @@ const DashboardMotorista = ({navigation}) => {
             <TouchableOpacity
               style={styles.botaoRapido}
               onPress={() => navigation.navigate('RotaMotorista')}>
-              <Icon name={IconNames.bus} size="xl" color={colors.secondary.main} />
+              <View style={styles.botaoIconContainer}>
+                <Icon name={IconNames.bus} size="lg" color={colors.secondary.main} />
+              </View>
               <Text style={styles.botaoRapidoText}>Minhas Rotas</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.botaoRapido}
               onPress={() => navigation.navigate('ListaViagens')}>
-              <Icon name={IconNames.route} size="xl" color={colors.secondary.main} />
+              <View style={styles.botaoIconContainer}>
+                <Icon name={IconNames.route} size="lg" color={colors.secondary.main} />
+              </View>
               <Text style={styles.botaoRapidoText}>Minhas Viagens</Text>
             </TouchableOpacity>
           </View>
@@ -312,14 +337,18 @@ const DashboardMotorista = ({navigation}) => {
               <TouchableOpacity
                 style={styles.botaoRapido}
                 onPress={() => navigation.navigate('CriarRota')}>
-                <Icon name={IconNames.add} size="xl" color={colors.success.main} />
+                <View style={[styles.botaoIconContainer, { backgroundColor: colors.success.lighter }]}>
+                  <Icon name={IconNames.add} size="lg" color={colors.success.main} />
+                </View>
                 <Text style={styles.botaoRapidoText}>Criar Rota</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.botaoRapido}
                 onPress={() => navigation.navigate('CriarViagem')}>
-                <Icon name={IconNames.route} size="xl" color={colors.success.main} />
+                <View style={[styles.botaoIconContainer, { backgroundColor: colors.success.lighter }]}>
+                  <Icon name={IconNames.route} size="lg" color={colors.success.main} />
+                </View>
                 <Text style={styles.botaoRapidoText}>Criar Viagem</Text>
               </TouchableOpacity>
             </View>
@@ -329,14 +358,18 @@ const DashboardMotorista = ({navigation}) => {
             <TouchableOpacity
               style={styles.botaoRapido}
               onPress={() => navigation.navigate('ChatGestor')}>
-              <Icon name={IconNames.chat} size="xl" color={colors.secondary.main} />
-              <Text style={styles.botaoRapidoText}>Chat Gestor</Text>
+              <View style={styles.botaoIconContainer}>
+                <Icon name={IconNames.chat} size="lg" color={colors.secondary.main} />
+              </View>
+              <Text style={styles.botaoRapidoText}>Chat</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.botaoRapido}
               onPress={() => navigation.navigate('ConfigNotificacoesMotorista')}>
-              <Icon name={IconNames.settings} size="xl" color={colors.secondary.main} />
+              <View style={styles.botaoIconContainer}>
+                <Icon name={IconNames.settings} size="lg" color={colors.secondary.main} />
+              </View>
               <Text style={styles.botaoRapidoText}>Configurações</Text>
             </TouchableOpacity>
           </View>
@@ -354,159 +387,185 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  
+  // Header - Styled like DashboardAluno
   header: {
-    padding: spacing.xl,
-    backgroundColor: colors.background.paper,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
-    ...shadows.sm,
+    backgroundColor: colors.secondary.main,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxl,
+    borderBottomLeftRadius: borderRadius.xxl,
+    borderBottomRightRadius: borderRadius.xxl,
   },
-  greetingContainer: {
+  headerContent: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: spacing.sm,
+  },
+  headerText: {
+    flex: 1,
   },
   greeting: {
     ...textStyles.h2,
-    color: colors.text.primary,
+    color: colors.secondary.contrast,
     marginBottom: spacing.xs,
   },
   subtitle: {
-    ...textStyles.body,
-    color: colors.text.secondary,
+    ...textStyles.bodySmall,
+    color: colors.secondary.light,
   },
+  avatarContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  // Próxima Viagem Card - Overlaps header
   proximaViagemCard: {
     margin: spacing.base,
+    marginTop: -spacing.xl,
     padding: spacing.lg,
-    backgroundColor: colors.background.paper,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.border.light,
-    ...shadows.sm,
+    backgroundColor: colors.secondary.lighter,
+    borderRadius: borderRadius.xl,
+    ...shadows.lg,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   cardTitle: {
-    ...textStyles.h4,
-    color: colors.text.primary,
-    marginBottom: spacing.sm,
-  },
-  viagemData: {
-    ...textStyles.bodySmall,
-    color: colors.text.secondary,
-    marginBottom: spacing.md,
-    fontWeight: fontWeight.medium,
-    textTransform: 'capitalize',
+    ...textStyles.caption,
+    color: colors.secondary.light,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   loadingContainer: {
     padding: spacing.lg,
     alignItems: 'center',
   },
   viagemInfo: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.base,
   },
   viagemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.base,
-  },
-  viagemTipo: {
-    ...textStyles.body,
-    color: colors.secondary.main,
-    fontWeight: fontWeight.semiBold,
-    marginBottom: spacing.xs,
+    alignItems: 'center',
+    marginBottom: spacing.sm,
   },
   viagemHorario: {
-    ...textStyles.h1,
-    color: colors.text.primary,
+    ...textStyles.display2,
+    color: colors.secondary.contrast,
+  },
+  viagemData: {
+    ...textStyles.bodySmall,
+    color: colors.secondary.lighter,
+    marginBottom: spacing.md,
   },
   statusBadge: {
-    backgroundColor: colors.warning.light,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
   },
+  statusAIniciar: {
+    backgroundColor: colors.warning.main,
+  },
+  statusEmAndamento: {
+    backgroundColor: colors.success.main,
+  },
   statusText: {
-    color: colors.warning.main,
     ...textStyles.caption,
+    color: colors.text.inverse,
     fontWeight: fontWeight.semiBold,
   },
   rotaInfo: {
-    marginBottom: spacing.base,
-  },
-  rotaIdText: {
-    ...textStyles.bodySmall,
-    color: colors.text.secondary,
+    marginTop: spacing.md,
   },
   pontoRota: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.sm,
     gap: spacing.sm,
   },
   pontoNome: {
     ...textStyles.body,
-    color: colors.text.primary,
+    color: colors.secondary.contrast,
     fontWeight: fontWeight.medium,
   },
   linhaRota: {
     width: 2,
-    height: spacing.lg,
-    backgroundColor: colors.border.light,
-    marginLeft: spacing.md,
-    marginBottom: spacing.sm,
-    marginTop: spacing.xs,
+    height: spacing.base,
+    backgroundColor: colors.secondary.light,
+    marginLeft: spacing.sm,
+    opacity: 0.5,
   },
+  
+  // Alunos Info
   alunosInfo: {
     marginTop: spacing.md,
     marginBottom: spacing.lg,
+    padding: spacing.md,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.md,
+  },
+  alunosHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   alunosText: {
     ...textStyles.bodySmall,
     color: colors.text.secondary,
-    marginBottom: spacing.sm,
   },
   alunosBar: {
     height: spacing.sm,
     backgroundColor: colors.border.light,
     borderRadius: borderRadius.xs,
     overflow: 'hidden',
-    marginBottom: spacing.sm,
   },
   alunosBarFill: {
     height: '100%',
     backgroundColor: colors.success.main,
     borderRadius: borderRadius.xs,
   },
-  loadingAlunosContainer: {
-    padding: spacing.md,
-    alignItems: 'center',
-  },
   emptyAlunosText: {
-    ...textStyles.bodySmall,
+    ...textStyles.caption,
     color: colors.text.hint,
     fontStyle: 'italic',
-    marginTop: spacing.sm,
   },
+  
+  // Action Buttons
   acoesContainer: {
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   verDetalhesButton: {
-    backgroundColor: colors.secondary.main,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.background.paper,
     borderRadius: borderRadius.md,
     padding: spacing.md,
-    alignItems: 'center',
-    ...shadows.xs,
   },
   verDetalhesButtonText: {
     ...textStyles.button,
-    color: colors.text.inverse,
+    color: colors.secondary.main,
   },
   iniciarButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
     backgroundColor: colors.success.main,
     borderRadius: borderRadius.md,
     padding: spacing.base,
-    alignItems: 'center',
-    marginTop: spacing.xs,
     ...shadows.sm,
   },
   iniciarButtonText: {
@@ -515,8 +574,27 @@ const styles = StyleSheet.create({
     fontSize: fontSize.h4,
     fontWeight: fontWeight.bold,
   },
+  
+  // Empty State
+  emptyState: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  emptyText: {
+    ...textStyles.h4,
+    color: colors.secondary.contrast,
+    marginTop: spacing.md,
+  },
+  emptySubtext: {
+    ...textStyles.bodySmall,
+    color: colors.secondary.light,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+  },
+  // Botões Rápidos
   botoesRapidos: {
     paddingHorizontal: spacing.base,
+    marginTop: spacing.lg,
     marginBottom: spacing.xl,
   },
   botoesRow: {
@@ -528,20 +606,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background.paper,
     borderRadius: borderRadius.lg,
-    padding: spacing.lg,
+    padding: spacing.base,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border.light,
-    minHeight: 100,
+    ...shadows.sm,
+  },
+  botaoIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.secondary.lighter,
     justifyContent: 'center',
-    ...shadows.xs,
+    alignItems: 'center',
+    marginBottom: spacing.sm,
   },
   botaoRapidoText: {
     ...textStyles.caption,
     color: colors.text.primary,
     fontWeight: fontWeight.medium,
     textAlign: 'center',
-    marginTop: spacing.sm,
   },
   acessoRapido: {
     padding: spacing.base,
