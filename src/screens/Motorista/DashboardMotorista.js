@@ -6,12 +6,11 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import {motoristaService} from '../../services/motoristaService';
 import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
-import Icon, { IconNames } from '../../components/Icon';
+import { Icon, IconNames, LoadingSpinner } from '../../components';
 
 const DashboardMotorista = ({navigation}) => {
   const { user } = useAuth();

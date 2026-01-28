@@ -2,6 +2,7 @@ import React from 'react';
 import {Platform} from 'react-native';
 import MainNavigator from './src/navigation/MainNavigator';
 import { AuthProvider } from './src/contexts/AuthContext';
+import { ToastProvider } from './src/components';
 
 // Detecta se está na web
 const isWeb = Platform.OS === 'web' || typeof window !== 'undefined';
@@ -14,7 +15,7 @@ if (!isWeb) {
     const ReactNavigation = require('@react-navigation/native');
     NavigationContainer = ReactNavigation.NavigationContainer;
   } catch (e) {
-    console.log('React Navigation não disponível');
+    // React Navigation not available
   }
 }
 
@@ -23,7 +24,9 @@ function App() {
   if (isWeb || !NavigationContainer) {
     return (
       <AuthProvider>
-        <MainNavigator />
+        <ToastProvider>
+          <MainNavigator />
+        </ToastProvider>
       </AuthProvider>
     );
   }
@@ -31,9 +34,11 @@ function App() {
   // Para mobile, usa NavigationContainer
   return (
     <AuthProvider>
-      <NavigationContainer>
-        <MainNavigator />
-      </NavigationContainer>
+      <ToastProvider>
+        <NavigationContainer>
+          <MainNavigator />
+        </NavigationContainer>
+      </ToastProvider>
     </AuthProvider>
   );
 }

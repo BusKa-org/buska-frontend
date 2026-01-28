@@ -70,8 +70,13 @@ const Login = ({navigation}) => {
             </View>
 
             {/* Formulário */}
-            <View style={styles.form}>
-              <Text style={styles.label}>E-mail</Text>
+            <View style={styles.form} accessible={false}>
+              <Text 
+                style={styles.label}
+                nativeID="email-label"
+              >
+                E-mail
+              </Text>
               <TextInput
                 style={[styles.input, error && styles.inputError]}
                 placeholder="seu@email.com"
@@ -79,15 +84,26 @@ const Login = ({navigation}) => {
                 value={email}
                 onChangeText={(text) => {
                   setEmail(text);
-                  // Clear error when user starts typing
                   if (error) setError('');
                 }}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                autoComplete="email"
+                textContentType="emailAddress"
+                accessible={true}
+                accessibilityLabel="E-mail"
+                accessibilityHint="Digite seu endereço de e-mail"
+                accessibilityLabelledBy="email-label"
+                testID="email-input"
               />
 
-              <Text style={styles.label}>Senha</Text>
+              <Text 
+                style={styles.label}
+                nativeID="password-label"
+              >
+                Senha
+              </Text>
               <TextInput
                 style={[styles.input, error && styles.inputError]}
                 placeholder="Digite sua senha"
@@ -95,23 +111,39 @@ const Login = ({navigation}) => {
                 value={senha}
                 onChangeText={(text) => {
                   setSenha(text);
-                  // Clear error when user starts typing
                   if (error) setError('');
                 }}
                 secureTextEntry
                 autoCapitalize="none"
+                autoComplete="password"
+                textContentType="password"
+                accessible={true}
+                accessibilityLabel="Senha"
+                accessibilityHint="Digite sua senha"
+                accessibilityLabelledBy="password-label"
+                testID="password-input"
               />
 
               {/* Error message display */}
               {error ? (
-                <View style={styles.errorContainer}>
+                <View 
+                  style={styles.errorContainer}
+                  accessible={true}
+                  accessibilityRole="alert"
+                  accessibilityLiveRegion="assertive"
+                >
                   <Text style={styles.errorText}>{error}</Text>
                 </View>
               ) : null}
 
               <TouchableOpacity
                 style={styles.forgotPassword}
-                onPress={() => navigation.navigate('RecuperarSenha')}>
+                onPress={() => navigation.navigate('RecuperarSenha')}
+                accessible={true}
+                accessibilityRole="link"
+                accessibilityLabel="Esqueceu sua senha?"
+                accessibilityHint="Toque para recuperar sua senha"
+              >
                 <Text style={styles.forgotPasswordText}>
                   Esqueceu sua senha?
                 </Text>
@@ -120,7 +152,13 @@ const Login = ({navigation}) => {
               <TouchableOpacity 
                 style={[styles.loginButton, loading && styles.loginButtonDisabled]} 
                 onPress={handleLogin}
-                disabled={loading}>
+                disabled={loading}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={loading ? "Entrando" : "Entrar"}
+                accessibilityState={{ disabled: loading, busy: loading }}
+                testID="login-button"
+              >
                 {loading ? (
                   <ActivityIndicator color={colors.primary.contrast} />
                 ) : (
@@ -131,7 +169,12 @@ const Login = ({navigation}) => {
               <View style={styles.signupContainer}>
                 <Text style={styles.signupText}>Não tem uma conta? </Text>
                 <TouchableOpacity
-                  onPress={() => navigation.navigate('CriarConta')}>
+                  onPress={() => navigation.navigate('CriarConta')}
+                  accessible={true}
+                  accessibilityRole="link"
+                  accessibilityLabel="Cadastre-se"
+                  accessibilityHint="Toque para criar uma nova conta"
+                >
                   <Text style={styles.signupLink}>Cadastre-se</Text>
                 </TouchableOpacity>
               </View>
@@ -210,6 +253,8 @@ const styles = StyleSheet.create({
     padding: spacing.base,
     alignItems: 'center',
     marginTop: spacing.sm,
+    minHeight: 48, // Minimum touch target for accessibility
+    justifyContent: 'center',
     ...shadows.sm,
   },
   loginButtonText: {

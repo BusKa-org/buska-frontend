@@ -6,13 +6,12 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { alunoService } from '../../services';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
-import Icon, { IconNames } from '../../components/Icon';
+import { Icon, IconNames, LoadingSpinner, EmptyState } from '../../components';
 
 const DashboardAluno = ({navigation}) => {
   const [rotasCadastradas, setRotasCadastradas] = useState([]);
@@ -79,8 +78,8 @@ const DashboardAluno = ({navigation}) => {
           try {
             const presencaData = await alunoService.obterPresencaViagem(nextTrip.id);
             presencaStatus = presencaData.presente ? 'Confirmado' : 'Não confirmado';
-          } catch (error) {
-            console.error('Error loading presenca status:', error);
+          } catch (e) {
+            // Silent fail - use default status
           }
           
           setProximaViagem({
@@ -100,7 +99,7 @@ const DashboardAluno = ({navigation}) => {
         setProximaViagem(null);
       }
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      // Silent fail - show empty state
       setProximaViagem(null);
     } finally {
       setLoading(false);
@@ -120,10 +119,12 @@ const DashboardAluno = ({navigation}) => {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.secondary.main} />
-          <Text style={styles.loadingText}>Carregando...</Text>
-        </View>
+        <LoadingSpinner 
+          fullScreen 
+          message="Carregando suas informações..." 
+          color={colors.secondary.main}
+          accessibilityLabel="Carregando painel do aluno"
+        />
       </SafeAreaView>
     );
   }
