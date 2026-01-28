@@ -92,7 +92,7 @@ const CriarRota = ({navigation}) => {
               <TextInput
                 style={styles.input}
                 placeholder="Ex: Rota Centro - Zona Norte"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.text.hint}
                 value={nomeRota}
                 onChangeText={setNomeRota}
                 editable={!loading}

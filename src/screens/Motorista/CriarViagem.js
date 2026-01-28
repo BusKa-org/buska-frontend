@@ -316,7 +316,7 @@ const CriarViagem = ({navigation, route}) => {
                 <TextInput
                   style={styles.input}
                   placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.text.hint}
                   value={data}
                   onChangeText={setData}
                   editable={!loading}

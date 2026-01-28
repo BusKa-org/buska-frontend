@@ -105,7 +105,7 @@ const ChatGestor = ({navigation}) => {
           <TextInput
             style={styles.input}
             placeholder="Digite sua mensagem..."
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.text.hint}
             value={novaMensagem}
             onChangeText={setNovaMensagem}
             multiline
