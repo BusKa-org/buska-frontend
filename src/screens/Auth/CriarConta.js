@@ -16,12 +16,25 @@ import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
 import api from '../../services/api';
-import { 
-  ErrorCode, 
-  ErrorCategory,
-  getFieldValidationMessage,
-  errorLogger,
-} from '../../utils/errors';
+
+// Inline validation messages to avoid complex imports
+const validationMessages = {
+  nome: { required: 'Nome é obrigatório.', minLength: 'Nome deve ter pelo menos 3 caracteres.' },
+  email: { required: 'E-mail é obrigatório.', invalid: 'E-mail inválido.' },
+  cpf: { required: 'CPF é obrigatório.', invalid: 'CPF inválido.' },
+  matricula: { required: 'Matrícula é obrigatória.' },
+  password: { required: 'Senha é obrigatória.', minLength: 'Senha deve ter pelo menos 6 caracteres.', mismatch: 'As senhas não coincidem.' },
+};
+
+// Error codes
+const ErrorCode = {
+  EMAIL_ALREADY_EXISTS: 'EMAIL_ALREADY_EXISTS',
+  CPF_ALREADY_EXISTS: 'CPF_ALREADY_EXISTS',
+  INVALID_EMAIL: 'INVALID_EMAIL',
+  INVALID_CPF: 'INVALID_CPF',
+  NETWORK_ERROR: 'NETWORK_ERROR',
+  SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
+};
 
 const CriarConta = ({navigation}) => {
   const [nome, setNome] = useState('');
@@ -53,7 +66,7 @@ const CriarConta = ({navigation}) => {
       const response = await api.get('/instituicoes/');
       setInstituicoes(response.data || []);
     } catch (error) {
-      errorLogger.debug('Could not load institutions', { error: error.message });
+      console.log('Could not load institutions:', error?.message);
       setInstituicoes([]);
     } finally {
       setLoadingInstituicoes(false);
@@ -86,41 +99,41 @@ const CriarConta = ({navigation}) => {
     
     // Nome
     if (!nome.trim()) {
-      newErrors.nome = getFieldValidationMessage('nome', 'required');
+      newErrors.nome = validationMessages.nome.required;
     } else if (nome.trim().length < 3) {
-      newErrors.nome = getFieldValidationMessage('nome', 'minLength');
+      newErrors.nome = validationMessages.nome.minLength;
     }
     
     // Email
     if (!email.trim()) {
-      newErrors.email = getFieldValidationMessage('email', 'required');
+      newErrors.email = validationMessages.email.required;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      newErrors.email = getFieldValidationMessage('email', 'invalid');
+      newErrors.email = validationMessages.email.invalid;
     }
     
     // CPF
     const cpfDigits = cpf.replace(/\D/g, '');
     if (!cpfDigits) {
-      newErrors.cpf = getFieldValidationMessage('cpf', 'required');
+      newErrors.cpf = validationMessages.cpf.required;
     } else if (cpfDigits.length !== 11) {
-      newErrors.cpf = getFieldValidationMessage('cpf', 'invalid');
+      newErrors.cpf = validationMessages.cpf.invalid;
     }
     
     // Matrícula
     if (!matricula.trim()) {
-      newErrors.matricula = getFieldValidationMessage('matricula', 'required');
+      newErrors.matricula = validationMessages.matricula.required;
     }
     
     // Senha
     if (!senha) {
-      newErrors.senha = getFieldValidationMessage('password', 'required');
+      newErrors.senha = validationMessages.password.required;
     } else if (senha.length < 6) {
-      newErrors.senha = getFieldValidationMessage('password', 'minLength');
+      newErrors.senha = validationMessages.password.minLength;
     }
     
     // Confirmar senha
     if (senha !== confirmarSenha) {
-      newErrors.confirmarSenha = getFieldValidationMessage('password', 'mismatch');
+      newErrors.confirmarSenha = validationMessages.password.mismatch;
     }
     
     setErrors(newErrors);
@@ -160,7 +173,7 @@ const CriarConta = ({navigation}) => {
         handleRegistrationError(result);
       }
     } catch (error) {
-      errorLogger.error(error, { context: 'CriarConta.handleCriarConta' });
+      console.error('Registration error:', error);
       setGeneralError(error.message || 'Ocorreu um erro inesperado. Tente novamente.');
     } finally {
       setLoading(false);

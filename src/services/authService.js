@@ -1,10 +1,16 @@
 import api from './api';
 import { Storage, STORAGE_KEYS } from '../utils/storage';
-import { 
-  ValidationError, 
-  ErrorCode,
-  errorLogger,
-} from '../utils/errors';
+
+// Simple validation error class (inline to avoid circular deps)
+class SimpleValidationError extends Error {
+  constructor(message, field = null) {
+    super(message);
+    this.name = 'ValidationError';
+    this.field = field;
+    this.code = 'VALIDATION_ERROR';
+    this.category = 'VALIDATION';
+  }
+}
 
 export const authService = {
   /**
@@ -15,10 +21,10 @@ export const authService = {
   async login(email, password) {
     // Client-side validation
     if (!email?.trim()) {
-      throw new ValidationError('E-mail é obrigatório', 'email');
+      throw new SimpleValidationError('E-mail é obrigatório', 'email');
     }
     if (!password) {
-      throw new ValidationError('Senha é obrigatória', 'password');
+      throw new SimpleValidationError('Senha é obrigatória', 'password');
     }
 
     const response = await api.post('/auth/login', {
@@ -38,8 +44,6 @@ export const authService = {
     // Store user info
     await Storage.setItem(STORAGE_KEYS.USER, user);
 
-    errorLogger.info('User logged in successfully', { userId: user.id, role: user.role });
-
     return { access_token, user };
   },
 
@@ -50,19 +54,19 @@ export const authService = {
   async register(userData) {
     // Client-side validation
     if (!userData.nome?.trim()) {
-      throw new ValidationError('Nome é obrigatório', 'nome');
+      throw new SimpleValidationError('Nome é obrigatório', 'nome');
     }
     if (!userData.email?.trim()) {
-      throw new ValidationError('E-mail é obrigatório', 'email');
+      throw new SimpleValidationError('E-mail é obrigatório', 'email');
     }
     if (!userData.password || userData.password.length < 6) {
-      throw new ValidationError('Senha deve ter pelo menos 6 caracteres', 'password');
+      throw new SimpleValidationError('Senha deve ter pelo menos 6 caracteres', 'password');
     }
     if (!userData.cpf || userData.cpf.replace(/\D/g, '').length !== 11) {
-      throw new ValidationError('CPF inválido. Informe os 11 dígitos', 'cpf');
+      throw new SimpleValidationError('CPF inválido. Informe os 11 dígitos', 'cpf');
     }
     if (!userData.matricula?.trim()) {
-      throw new ValidationError('Matrícula é obrigatória', 'matricula');
+      throw new SimpleValidationError('Matrícula é obrigatória', 'matricula');
     }
 
     const response = await api.post('/alunos/signup', {
@@ -76,8 +80,6 @@ export const authService = {
       endereco_casa: userData.endereco_casa,
     });
 
-    errorLogger.info('User registered successfully', { email: userData.email });
-
     return response.data;
   },
 
@@ -85,10 +87,10 @@ export const authService = {
    * Logout user
    */
   async logout() {
-    errorLogger.info('User logging out...');
+    console.log('authService: Logging out...');
     await Storage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
     await Storage.removeItem(STORAGE_KEYS.USER);
-    errorLogger.info('User logged out successfully');
+    console.log('authService: Logged out');
   },
 
   /**
@@ -136,10 +138,10 @@ export const authService = {
    */
   async changePassword(currentPassword, newPassword) {
     if (!currentPassword) {
-      throw new ValidationError('Senha atual é obrigatória', 'current_password');
+      throw new SimpleValidationError('Senha atual é obrigatória', 'current_password');
     }
     if (!newPassword || newPassword.length < 6) {
-      throw new ValidationError('Nova senha deve ter pelo menos 6 caracteres', 'new_password');
+      throw new SimpleValidationError('Nova senha deve ter pelo menos 6 caracteres', 'new_password');
     }
 
     const response = await api.post('/users/change-password', {
@@ -147,7 +149,6 @@ export const authService = {
       new_password: newPassword,
     });
     
-    errorLogger.info('Password changed successfully');
     return response.data;
   },
 };

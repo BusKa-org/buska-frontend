@@ -14,8 +14,19 @@ export const LogLevel = {
   FATAL: 'FATAL',
 };
 
-// Environment check
-const isDevelopment = __DEV__ || process.env.NODE_ENV !== 'production';
+// Environment check - handle both React Native and web
+const isDevelopment = (() => {
+  try {
+    // React Native global
+    if (typeof __DEV__ !== 'undefined') {
+      return __DEV__;
+    }
+    // Web/Node environment
+    return process.env.NODE_ENV !== 'production';
+  } catch {
+    return true; // Default to development mode if check fails
+  }
+})();
 
 /**
  * Format error for logging

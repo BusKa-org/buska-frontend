@@ -1,12 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, useMemo } from 'react';
 import { authService } from '../services/authService';
 import { userService } from '../services/userService';
-import { 
-  parseApiError, 
-  requiresReauth, 
-  errorLogger,
-  ErrorCategory,
-} from '../utils/errors';
 
 const AuthContext = createContext(null);
 
@@ -29,13 +23,11 @@ export const AuthProvider = ({ children }) => {
           await authService.updateStoredUser(fullUserData);
           setUser(fullUserData);
           setIsAuthenticated(true);
-          errorLogger.info('Auth restored from token', { userId: fullUserData.id });
         } catch (error) {
-          const parsedError = parseApiError(error);
-          errorLogger.warn('Failed to restore auth', { error: parsedError.message });
+          console.warn('Failed to restore auth:', error?.message);
           
-          // If auth error, clear tokens
-          if (requiresReauth(parsedError)) {
+          // If auth error (401), clear tokens
+          if (error?.statusCode === 401 || error?.code === 'UNAUTHORIZED') {
             await authService.logout();
           } else {
             // Try using stored user as fallback
@@ -48,7 +40,7 @@ export const AuthProvider = ({ children }) => {
         }
       }
     } catch (error) {
-      errorLogger.error(error, { context: 'checkAuthStatus' });
+      console.error('Error checking auth status:', error);
     } finally {
       setLoading(false);
     }
@@ -72,14 +64,14 @@ export const AuthProvider = ({ children }) => {
         return { success: true, user: loggedInUser };
       }
     } catch (error) {
-      const parsedError = parseApiError(error);
-      errorLogger.userError('login', parsedError, { email });
+      console.error('Login error:', error);
       
       return {
         success: false,
-        error: parsedError.message,
-        errorCode: parsedError.code,
-        errorCategory: parsedError.category,
+        error: error?.message || 'Erro ao fazer login. Tente novamente.',
+        errorCode: error?.code,
+        errorCategory: error?.category,
+        field: error?.field,
       };
     }
   };
@@ -87,35 +79,30 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       const response = await authService.register(userData);
-      errorLogger.info('Registration successful', { email: userData.email });
       return { success: true, data: response };
     } catch (error) {
-      const parsedError = parseApiError(error);
-      errorLogger.userError('register', parsedError, { email: userData.email });
+      console.error('Registration error:', error);
       
       return {
         success: false,
-        error: parsedError.message,
-        errorCode: parsedError.code,
-        errorCategory: parsedError.category,
-        field: parsedError.field,
+        error: error?.message || 'Erro ao criar conta. Tente novamente.',
+        errorCode: error?.code,
+        errorCategory: error?.category,
+        field: error?.field,
       };
     }
   };
 
   const logout = async () => {
     try {
-      errorLogger.info('Logout initiated', { userId: user?.id });
       await authService.logout();
       setUser(null);
       setIsAuthenticated(false);
       
       // Small delay to ensure state is updated
       await new Promise(resolve => setTimeout(resolve, 100));
-      
-      errorLogger.info('Logout completed');
     } catch (error) {
-      errorLogger.error(error, { context: 'logout' });
+      console.error('Logout error:', error);
       // Force clear state even on error
       setUser(null);
       setIsAuthenticated(false);
