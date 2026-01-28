@@ -13,20 +13,18 @@ import Icon, { IconNames } from '../../components/Icon';
 const ListaAlunosConfirmados = ({navigation, route}) => {
   const viagem = route?.params?.viagem || {};
   
-  console.log('[ListaAlunosConfirmados] viagem:', viagem);
-  console.log('[ListaAlunosConfirmados] viagem.alunos:', viagem.alunos);
-  
   // Use alunos data from viagem object (from /viagens/minhas response)
   // Filter to show only confirmed students
-  const alunos = (viagem.alunos || [])
+  const alunosConfirmados = (viagem.alunos || [])
     .filter(a => a.confirmacao)
     .map((a, index) => ({
       id: a.aluno_id || index,
       nome: a.nome || 'Aluno',
       pontoEmbarque: a.ponto_embarque || 'Não informado',
       pontoDestino: a.ponto_destino || 'Não informado',
-      confirmadoAntes: true, // Assume all were confirmed before trip started
     }));
+  
+  const totalAlunos = viagem.total_alunos || viagem.alunos?.length || 0;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -47,55 +45,39 @@ const ListaAlunosConfirmados = ({navigation, route}) => {
         <View style={styles.content}>
           <View style={styles.resumo}>
             <Text style={styles.resumoText}>
-              {alunos.length} alunos confirmados
-            </Text>
-            <Text style={styles.resumoSubtext}>
-              {alunos.filter((a) => !a.confirmadoAntes).length} confirmações
-              após início
+              {alunosConfirmados.length} de {totalAlunos} alunos confirmados
             </Text>
           </View>
 
-          {alunos.map((aluno) => (
-            <View
-              key={aluno.id}
-              style={[
-                styles.alunoCard,
-                !aluno.confirmadoAntes && styles.alunoCardNovo,
-              ]}>
+          {alunosConfirmados.map((aluno) => (
+            <View key={aluno.id} style={styles.alunoCard}>
               <View style={styles.alunoHeader}>
                 <View style={styles.alunoAvatar}>
-                  {aluno.foto ? (
-                    <Text style={styles.alunoFoto}>📷</Text>
-                  ) : (
-                    <Text style={styles.alunoInicial}>
-                      {aluno.nome.charAt(0)}
-                    </Text>
-                  )}
+                  <Text style={styles.alunoInicial}>
+                    {aluno.nome?.charAt(0) || '?'}
+                  </Text>
                 </View>
                 <View style={styles.alunoInfo}>
-                  <View style={styles.alunoNomeContainer}>
-                    <Text style={styles.alunoNome}>{aluno.nome}</Text>
-                    {!aluno.confirmadoAntes && (
-                      <View style={styles.novoBadge}>
-                        <Text style={styles.novoBadgeText}>NOVO</Text>
-                      </View>
-                    )}
-                  </View>
+                  <Text style={styles.alunoNome}>{aluno.nome}</Text>
                   <View style={styles.pontoContainer}>
                     <Icon name={IconNames.location} size="sm" color={colors.text.secondary} />
-                    <Text style={styles.pontoEmbarque}>
-                      {aluno.pontoEmbarque}
-                    </Text>
+                    <Text style={styles.pontoEmbarque}>{aluno.pontoEmbarque}</Text>
                   </View>
+                  {aluno.pontoDestino && aluno.pontoDestino !== 'Não informado' && (
+                    <View style={styles.pontoContainer}>
+                      <Icon name={IconNames.flag} size="sm" color={colors.text.hint} />
+                      <Text style={styles.pontoDestino}>{aluno.pontoDestino}</Text>
+                    </View>
+                  )}
                 </View>
                 <View style={styles.confirmadoIcon}>
-                  <Icon name={IconNames.checkCircle} size="md" color={colors.text.inverse} />
+                  <Icon name={IconNames.checkCircle} size="md" color={colors.success.main} />
                 </View>
               </View>
             </View>
           ))}
 
-          {alunos.length === 0 && (
+          {alunosConfirmados.length === 0 && (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateText}>
                 Nenhum aluno confirmado ainda
@@ -231,6 +213,10 @@ const styles = StyleSheet.create({
   pontoEmbarque: {
     ...textStyles.bodySmall,
     color: colors.text.secondary,
+  },
+  pontoDestino: {
+    ...textStyles.caption,
+    color: colors.text.hint,
   },
   confirmadoIcon: {
     width: 32,
