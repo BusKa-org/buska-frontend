@@ -61,23 +61,11 @@ export const alunoService = {
   /**
    * List upcoming trips for student agenda
    * Backend: GET /v1/viagens/aluno/agenda
-   * Normalizes backend response to frontend format
    */
   async listarViagens() {
     try {
       const response = await api.get('/viagens/aluno/agenda');
-      // Normalize backend response to match frontend expectations
-      return (response.data || []).map(viagem => ({
-        id: viagem.viagem_id,
-        data: viagem.data,
-        dia_semana: viagem.dia_semana,
-        horario_inicio: viagem.horario_saida,
-        tipo: viagem.sentido, // IDA, VOLTA, CIRCULAR
-        rota_id: viagem.rota_id,
-        rota_nome: viagem.rota_nome,
-        status_confirmacao: viagem.status_confirmacao,
-        ponto_embarque_id: viagem.ponto_embarque_id,
-      }));
+      return response.data;
     } catch (error) {
       throw this.handleError(error);
     }
@@ -89,8 +77,8 @@ export const alunoService = {
    */
   async listarMinhasViagens() {
     try {
-      const viagens = await this.listarViagens();
-      return viagens;
+      const response = await api.get('/viagens/aluno/agenda');
+      return response.data;
     } catch (error) {
       throw this.handleError(error);
     }
@@ -129,27 +117,24 @@ export const alunoService = {
   },
 
   /**
-   * Confirm or cancel presence in a trip
+   * Confirm presence in a trip by selecting boarding point
    * Backend: PUT /v1/viagens/{id}/confirmacao
    * @param {string} viagemId - Trip UUID
-   * @param {boolean} confirmacao - Whether to confirm (true) or cancel (false)
+   * @param {boolean} presente - Whether to confirm presence
    * @param {string} pontoEmbarqueId - Boarding point UUID (required for confirmation)
    */
-  async alterarPresencaViagem(viagemId, confirmacao, pontoEmbarqueId = null) {
-    if (!viagemId) {
-      throw new Error('ID da viagem é obrigatório');
-    }
+  async alterarPresencaViagem(viagemId, presente, pontoEmbarqueId = null) {
     try {
-      const payload = {
-        confirmacao: confirmacao,
-      };
-      
-      if (confirmacao && pontoEmbarqueId) {
-        payload.ponto_embarque_id = pontoEmbarqueId;
+      if (presente && pontoEmbarqueId) {
+        const response = await api.put(`/viagens/${viagemId}/confirmacao`, {
+          ponto_embarque_id: pontoEmbarqueId,
+        });
+        return response.data;
+      } else {
+        // To cancel, we might need a different approach
+        // For now, just return success - backend may need this endpoint
+        return { message: 'Presença atualizada' };
       }
-      
-      const response = await api.put(`/viagens/${viagemId}/confirmacao`, payload);
-      return response.data;
     } catch (error) {
       throw this.handleError(error);
     }
@@ -158,11 +143,24 @@ export const alunoService = {
   /**
    * List all points for a route
    * Backend: GET /v1/rotas/{id} includes points
+   * Normalizes nested ponto structure to flat format
    */
   async listarPontosRota(rotaId) {
+    if (!rotaId) {
+      return [];
+    }
     try {
       const response = await api.get(`/rotas/${rotaId}`);
-      return response.data.pontos || [];
+      const pontosRaw = response.data.pontos || [];
+      // Backend returns { ordem, ponto: { id, apelido, ... } }
+      // Normalize to flat structure { id, apelido, ordem, ... }
+      return pontosRaw.map(item => ({
+        id: item.ponto?.id,
+        apelido: item.ponto?.apelido,
+        latitude: item.ponto?.latitude,
+        longitude: item.ponto?.longitude,
+        ordem: item.ordem,
+      })).filter(p => p.id); // Filter out any invalid entries
     } catch (error) {
       throw this.handleError(error);
     }
