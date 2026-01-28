@@ -78,19 +78,21 @@ const RotaAluno = ({navigation, route}) => {
       
       // Get boarding point ID
       let pontoEmbarqueId = viagem.ponto_embarque_id;
-      if (novoStatus && !pontoEmbarqueId) {
+      
+      if (novoStatus && !pontoEmbarqueId && viagem.rota_id) {
         try {
           const pontos = await alunoService.listarPontosRota(viagem.rota_id);
           if (pontos && pontos.length > 0) {
             pontoEmbarqueId = pontos[0].id;
           }
         } catch (e) {
-          // Silently fail, will show error from backend if no point
+          toast.error(`Erro ao buscar pontos da rota: ${e.message || 'erro desconhecido'}`);
+          return;
         }
       }
       
       if (novoStatus && !pontoEmbarqueId) {
-        toast.error('Não foi possível encontrar um ponto de embarque para esta rota.');
+        toast.error(`Nenhum ponto de embarque disponível. Rota ID: ${viagem.rota_id || 'não definido'}`);
         return;
       }
       

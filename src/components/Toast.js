@@ -117,7 +117,7 @@ export const ToastProvider = ({ children }) => {
           accessibilityLabel={toast.message}
         >
           <Icon name={config.icon} size="sm" color={config.iconColor} />
-          <Text style={[styles.toastMessage, { color: config.iconColor }]} numberOfLines={2}>
+          <Text style={[styles.toastMessage, { color: config.iconColor }]}>
             {toast.message}
           </Text>
           <TouchableOpacity 
@@ -161,6 +161,7 @@ const styles = StyleSheet.create({
   toastMessage: {
     ...textStyles.body,
     flex: 1,
+    flexWrap: 'wrap',
   },
 });
 
