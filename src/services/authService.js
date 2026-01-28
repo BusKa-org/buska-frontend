@@ -22,25 +22,34 @@ export const authService = {
       password,
     });
 
-    const { access_token } = response.data;
+    const { token, user: loginUser } = response.data;
 
     // Store token
-    await Storage.setItem(STORAGE_KEYS.ACCESS_TOKEN, access_token);
+    await Storage.setItem(STORAGE_KEYS.ACCESS_TOKEN, token);
 
-    // Fetch user profile after login (pass token directly to avoid timing issues)
-    const userResponse = await api.get('/users/me', {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-      },
-    });
-    const user = userResponse.data;
+    // The login response already includes user data, use it directly
+    // or fetch full profile if needed
+    let user = loginUser;
+    
+    try {
+      // Try to get complete user profile
+      const userResponse = await api.get('/users/me', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      user = userResponse.data;
+    } catch (e) {
+      // Use login user data as fallback
+      errorLogger.debug('Using login user data as fallback', { error: e.message });
+    }
 
     // Store user info
     await Storage.setItem(STORAGE_KEYS.USER, user);
 
     errorLogger.info('User logged in successfully', { userId: user.id, role: user.role });
 
-    return { access_token, user };
+    return { token, user };
   },
 
   /**
