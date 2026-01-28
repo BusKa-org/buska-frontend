@@ -27,8 +27,12 @@ export const authService = {
     // Store token
     await Storage.setItem(STORAGE_KEYS.ACCESS_TOKEN, access_token);
 
-    // Fetch user profile after login
-    const userResponse = await api.get('/users/me');
+    // Fetch user profile after login (pass token directly to avoid timing issues)
+    const userResponse = await api.get('/users/me', {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    });
     const user = userResponse.data;
 
     // Store user info
