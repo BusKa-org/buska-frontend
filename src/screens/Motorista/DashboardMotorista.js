@@ -39,7 +39,7 @@ const DashboardMotorista = ({navigation}) => {
     totalAlunos: 0,
     alunosConfirmados: 0,
   });
-  const [loadingAlunos, setLoadingAlunos] = useState(false);
+  // loadingAlunos removed - data comes from viagem object directly
 
   useEffect(() => {
     const loadProximaViagem = async () => {
@@ -114,8 +114,10 @@ const DashboardMotorista = ({navigation}) => {
               horario: horarioFormatado,
               rota_id: proxima.rota_id,
               status: proxima.horario_fim ? 'Finalizada' : 'A iniciar',
-              origem: origem,
-              destino: destino,
+              origem: proxima.origem || origem,
+              destino: proxima.destino || destino,
+              total_alunos: proxima.total_alunos || 0,
+              alunos_confirmados_count: proxima.alunos_confirmados_count || 0,
             });
           } else {
             setProximaViagem(null);
@@ -133,52 +135,22 @@ const DashboardMotorista = ({navigation}) => {
     loadProximaViagem();
   }, []);
 
-  // Buscar informações de alunos quando a próxima viagem for definida
+  // Atualizar informações de alunos a partir da próxima viagem
   useEffect(() => {
-    const loadAlunosInfo = async () => {
-      if (!proximaViagem?.id) {
-        setAlunosInfo({
-          totalAlunos: 0,
-          alunosConfirmados: 0,
-        });
-        return;
-      }
-      
-      try {
-        setLoadingAlunos(true);
-        const alunosData = await motoristaService.listarAlunosViagem(proximaViagem.id);
-        
-        if (alunosData && typeof alunosData === 'object') {
-          const totalAlunos = alunosData.total_alunos !== undefined ? alunosData.total_alunos : 0;
-          const alunosConfirmados = alunosData.alunos_confirmados !== undefined ? alunosData.alunos_confirmados : 0;
-          
-          setAlunosInfo({
-            totalAlunos: totalAlunos,
-            alunosConfirmados: alunosConfirmados,
-          });
-        } else {
-          setAlunosInfo({
-            totalAlunos: 0,
-            alunosConfirmados: 0,
-          });
-        }
-      } catch (error) {
-        if (error.response) {
-          console.error('Response status:', error.response.status);
-          console.error('Response data:', error.response.data);
-        }
-        // Em caso de erro, manter valores anteriores ou definir como 0
-        setAlunosInfo({
-          totalAlunos: 0,
-          alunosConfirmados: 0,
-        });
-      } finally {
-        setLoadingAlunos(false);
-      }
-    };
-
-    loadAlunosInfo();
-  }, [proximaViagem?.id]);
+    if (!proximaViagem) {
+      setAlunosInfo({
+        totalAlunos: 0,
+        alunosConfirmados: 0,
+      });
+      return;
+    }
+    
+    // Use data directly from the viagem object (from /viagens/minhas endpoint)
+    setAlunosInfo({
+      totalAlunos: proximaViagem.total_alunos || 0,
+      alunosConfirmados: proximaViagem.alunos_confirmados_count || 0,
+    });
+  }, [proximaViagem]);
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -259,36 +231,24 @@ const DashboardMotorista = ({navigation}) => {
 
               {/* Informações de Alunos */}
               <View style={styles.alunosInfo}>
-                {loadingAlunos ? (
-                  <View style={styles.loadingAlunosContainer}>
-                    <ActivityIndicator size="small" color={colors.secondary.main} />
+                <Text style={styles.alunosText}>
+                  {alunosInfo.alunosConfirmados} de {alunosInfo.totalAlunos} alunos confirmados
+                </Text>
+                {alunosInfo.totalAlunos > 0 ? (
+                  <View style={styles.alunosBar}>
+                    <View
+                      style={[
+                        styles.alunosBarFill,
+                        {
+                          width: `${(alunosInfo.alunosConfirmados / alunosInfo.totalAlunos) * 100}%`,
+                        },
+                      ]}
+                    />
                   </View>
                 ) : (
-                  <>
-                    <Text style={styles.alunosText}>
-                      {alunosInfo.alunosConfirmados} de {alunosInfo.totalAlunos} alunos confirmados
-                    </Text>
-                    {alunosInfo.totalAlunos > 0 ? (
-                      <View style={styles.alunosBar}>
-                        <View
-                          style={[
-                            styles.alunosBarFill,
-                            {
-                              width: `${
-                                alunosInfo.totalAlunos > 0
-                                  ? (alunosInfo.alunosConfirmados / alunosInfo.totalAlunos) * 100
-                                  : 0
-                              }%`,
-                            },
-                          ]}
-                        />
-                      </View>
-                    ) : alunosInfo.totalAlunos === 0 && alunosInfo.alunosConfirmados === 0 ? (
-                      <Text style={styles.emptyAlunosText}>
-                        Nenhum aluno inscrito nesta rota
-                      </Text>
-                    ) : null}
-                  </>
+                  <Text style={styles.emptyAlunosText}>
+                    Nenhum aluno inscrito nesta rota
+                  </Text>
                 )}
               </View>
 
