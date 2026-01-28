@@ -110,17 +110,18 @@ export const motoristaService = {
   },
 
   /**
-   * Add points to a route
+   * Add points to a route (batch)
    * Backend: POST /v1/rotas/{id}/pontos
    * @param {string} rotaId - Route UUID
-   * @param {string} pontoId - Point UUID
-   * @param {number} ordem - Order in the route
+   * @param {Array} pontos - Array of {ponto_id, ordem}
    */
-  async adicionarPontoRota(rotaId, pontoId, ordem) {
+  async adicionarPontosRota(rotaId, pontos) {
     try {
       const response = await api.post(`/rotas/${rotaId}/pontos`, {
-        ponto_id: pontoId,
-        ordem: ordem,
+        pontos: pontos.map((p, index) => ({
+          ponto_id: String(p.id || p.ponto_id),
+          ordem: p.ordem || index + 1,
+        })),
       });
       return response.data;
     } catch (error) {

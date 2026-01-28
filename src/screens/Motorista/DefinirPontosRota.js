@@ -652,27 +652,13 @@ const DefinirPontosRota = ({navigation, route}) => {
     try {
       setSalvando(true);
       
-      let successCount = 0;
+      // Send all points in a single batch request
+      await motoristaService.adicionarPontosRota(rotaId, pontosRota);
       
-      for (let i = 0; i < pontosRota.length; i++) {
-        const ponto = pontosRota[i];
-        try {
-          await motoristaService.adicionarPontoRota(rotaId, ponto.id, i + 1);
-          successCount++;
-        } catch (error) {
-          console.error(`Error adding point ${ponto.nome}:`, error);
-        }
-      }
-
-      if (successCount === pontosRota.length) {
-        toast.success('Pontos salvos com sucesso!');
-        navigation.goBack();
-      } else if (successCount > 0) {
-        toast.warning(`${successCount} de ${pontosRota.length} pontos salvos.`);
-      } else {
-        toast.error('Não foi possível salvar os pontos.');
-      }
+      toast.success('Pontos salvos com sucesso!');
+      navigation.goBack();
     } catch (error) {
+      console.error('Error saving points:', error);
       toast.error(error?.message || 'Erro ao salvar pontos.');
     } finally {
       setSalvando(false);
