@@ -384,7 +384,7 @@ const DefinirPontosRota = ({navigation, route}) => {
                     <View style={styles.pontoItemInfo}>
                       <Text style={styles.pontoItemNome}>{ponto.nome}</Text>
                       <Text style={styles.pontoItemCoords}>
-                        {ponto.latitude.toFixed(6)}, {ponto.longitude.toFixed(6)}
+                        {ponto.latitude?.toFixed?.(6) ?? 'N/A'}, {ponto.longitude?.toFixed?.(6) ?? 'N/A'}
                       </Text>
                     </View>
                   </View>

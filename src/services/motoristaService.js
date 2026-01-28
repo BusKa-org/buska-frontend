@@ -131,11 +131,21 @@ export const motoristaService = {
   /**
    * List points for a route
    * Backend: GET /v1/rotas/{id} - includes pontos in response
+   * Normalizes nested structure to flat format
    */
   async listarPontosRota(rotaId) {
     try {
       const response = await api.get(`/rotas/${rotaId}`);
-      return response.data.pontos || [];
+      const pontosRaw = response.data.pontos || [];
+      
+      // Normalize nested structure: {ponto: {...}, ordem} -> flat format
+      return pontosRaw.map(item => ({
+        id: item.ponto?.ponto_id || item.ponto?.id || item.ponto_id || item.id,
+        nome: item.ponto?.apelido || item.apelido || item.nome || 'Ponto',
+        latitude: item.ponto?.latitude ?? item.latitude,
+        longitude: item.ponto?.longitude ?? item.longitude,
+        ordem: item.ordem,
+      })).filter(p => p.latitude !== undefined && p.longitude !== undefined);
     } catch (error) {
       throw this.handleError(error);
     }
