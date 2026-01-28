@@ -116,26 +116,13 @@ const RotaMotorista = ({navigation, route}) => {
                       <TouchableOpacity
                         style={styles.acaoButton}
                         onPress={() =>
-                          navigation.navigate('DefinirPontosRota', {
-                            rota: rota,
-                            isNovaRota: false,
-                          })
-                        }>
-                        <Icon name={IconNames.location} size="sm" color={colors.text.inverse} />
-                        <Text style={styles.acaoButtonText}>
-                          Gerenciar Pontos
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.acaoButton, styles.acaoButtonSecondary]}
-                        onPress={() =>
-                          navigation.navigate('CriarViagem', {
+                          navigation.navigate('ListaViagens', {
                             rota: rota,
                           })
                         }>
                         <Icon name={IconNames.route} size="sm" color={colors.text.inverse} />
                         <Text style={styles.acaoButtonText}>
-                          Criar Viagem
+                          Ver Viagens
                         </Text>
                       </TouchableOpacity>
                     </View>

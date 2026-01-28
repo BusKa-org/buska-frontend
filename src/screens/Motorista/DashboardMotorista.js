@@ -300,29 +300,20 @@ const DashboardMotorista = ({navigation}) => {
 
             <TouchableOpacity
               style={styles.botaoRapido}
-              onPress={() => navigation.navigate('CriarRota')}>
-              <Icon name={IconNames.add} size="xl" color={colors.secondary.main} />
-              <Text style={styles.botaoRapidoText}>Criar Rota</Text>
+              onPress={() => navigation.navigate('ListaViagens')}>
+              <Icon name={IconNames.route} size="xl" color={colors.secondary.main} />
+              <Text style={styles.botaoRapidoText}>Minhas Viagens</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.botoesRow}>
-            <TouchableOpacity
-              style={styles.botaoRapido}
-              onPress={() => navigation.navigate('CriarViagem')}>
-              <Icon name={IconNames.route} size="xl" color={colors.secondary.main} />
-              <Text style={styles.botaoRapidoText}>Criar Viagem</Text>
-            </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.botaoRapido}
               onPress={() => navigation.navigate('ChatGestor')}>
               <Icon name={IconNames.chat} size="xl" color={colors.secondary.main} />
               <Text style={styles.botaoRapidoText}>Chat Gestor</Text>
             </TouchableOpacity>
-          </View>
 
-          <View style={styles.botoesRow}>
             <TouchableOpacity
               style={styles.botaoRapido}
               onPress={() => navigation.navigate('ConfigNotificacoesMotorista')}>
