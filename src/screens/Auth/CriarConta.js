@@ -32,6 +32,14 @@ const CriarConta = ({navigation}) => {
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [instituicaoId, setInstituicaoId] = useState('');
   const [instituicoes, setInstituicoes] = useState([]);
+  
+  // Address fields
+  const [cep, setCep] = useState('');
+  const [logradouro, setLogradouro] = useState('');
+  const [numero, setNumero] = useState('');
+  const [bairro, setBairro] = useState('');
+  const [cidade, setCidade] = useState('');
+  
   const [loading, setLoading] = useState(false);
   const [loadingInstituicoes, setLoadingInstituicoes] = useState(true);
   
@@ -122,6 +130,23 @@ const CriarConta = ({navigation}) => {
       newErrors.confirmarSenha = getFieldValidationMessage('password', 'mismatch');
     }
     
+    // Endereço
+    if (!cep.trim()) {
+      newErrors.cep = 'CEP é obrigatório.';
+    }
+    if (!logradouro.trim()) {
+      newErrors.logradouro = 'Logradouro é obrigatório.';
+    }
+    if (!numero.trim()) {
+      newErrors.numero = 'Número é obrigatório.';
+    }
+    if (!bairro.trim()) {
+      newErrors.bairro = 'Bairro é obrigatório.';
+    }
+    if (!cidade.trim()) {
+      newErrors.cidade = 'Cidade é obrigatória.';
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -143,6 +168,16 @@ const CriarConta = ({navigation}) => {
         matricula,
         telefone: telefone || undefined,
         instituicao_id: instituicaoId || undefined,
+        endereco_casa: {
+          logradouro: logradouro.trim(),
+          numero: numero.trim(),
+          bairro: bairro.trim(),
+          cidade: cidade.trim(),
+          cep: cep.replace(/\D/g, ''),
+          // Default coordinates (can be updated later via geocoding)
+          latitude: -23.5505,
+          longitude: -46.6333,
+        },
       });
 
       if (result.success) {
@@ -182,26 +217,38 @@ const CriarConta = ({navigation}) => {
         'instituicao_id': 'instituicaoId',
       };
       
-      // Valid form fields that exist in the UI
-      const validFormFields = ['nome', 'email', 'cpf', 'matricula', 'telefone', 'senha', 'confirmarSenha', 'instituicaoId'];
+      // Valid form fields that exist in the UI (including address fields)
+      const validFormFields = ['nome', 'email', 'cpf', 'matricula', 'telefone', 'senha', 'confirmarSenha', 'instituicaoId', 'cep', 'logradouro', 'numero', 'bairro', 'cidade'];
       
       const mappedErrors = {};
       const unmappedFields = [];
       
+      // Helper to extract error message
+      const extractMessage = (errorMsg) => {
+        if (typeof errorMsg === 'string') return errorMsg;
+        if (Array.isArray(errorMsg) && errorMsg.length > 0) {
+          return typeof errorMsg[0] === 'string' ? errorMsg[0] : 'Campo inválido';
+        }
+        return 'Campo inválido';
+      };
+      
       for (const [fieldName, errorMsg] of Object.entries(fieldErrors)) {
+        // Handle nested endereco_casa errors
+        if (fieldName === 'endereco_casa' && typeof errorMsg === 'object' && !Array.isArray(errorMsg)) {
+          // Flatten nested address errors
+          for (const [nestedField, nestedError] of Object.entries(errorMsg)) {
+            if (validFormFields.includes(nestedField)) {
+              mappedErrors[nestedField] = extractMessage(nestedError);
+            }
+          }
+          continue;
+        }
+        
         const mappedField = fieldMapping[fieldName] || fieldName;
         
         // Only set error if field exists in the form
         if (validFormFields.includes(mappedField)) {
-          // Handle string or array error messages
-          if (typeof errorMsg === 'string') {
-            mappedErrors[mappedField] = errorMsg;
-          } else if (Array.isArray(errorMsg) && errorMsg.length > 0) {
-            mappedErrors[mappedField] = errorMsg[0];
-          } else if (typeof errorMsg === 'object') {
-            // Nested error object (e.g., endereco_casa.rua)
-            mappedErrors[mappedField] = 'Campo inválido';
-          }
+          mappedErrors[mappedField] = extractMessage(errorMsg);
         } else {
           // Track unmapped fields for general error
           unmappedFields.push(fieldName);
@@ -389,6 +436,85 @@ const CriarConta = ({navigation}) => {
               />
               {renderFieldError('telefone')}
 
+              {/* Address Section */}
+              <Text style={styles.sectionTitle}>Endereço Residencial</Text>
+              
+              {/* CEP */}
+              <Text style={styles.label}>CEP *</Text>
+              <TextInput
+                style={[styles.input, errors.cep && styles.inputError]}
+                placeholder="00000-000"
+                placeholderTextColor={colors.text.hint}
+                value={cep}
+                onChangeText={(text) => {
+                  setCep(text);
+                  clearFieldError('cep');
+                }}
+                keyboardType="numeric"
+                maxLength={9}
+              />
+              {renderFieldError('cep')}
+
+              {/* Logradouro */}
+              <Text style={styles.label}>Logradouro *</Text>
+              <TextInput
+                style={[styles.input, errors.logradouro && styles.inputError]}
+                placeholder="Rua, Avenida, etc."
+                placeholderTextColor={colors.text.hint}
+                value={logradouro}
+                onChangeText={(text) => {
+                  setLogradouro(text);
+                  clearFieldError('logradouro');
+                }}
+              />
+              {renderFieldError('logradouro')}
+
+              {/* Número e Bairro (row) */}
+              <View style={styles.row}>
+                <View style={styles.halfField}>
+                  <Text style={styles.label}>Número *</Text>
+                  <TextInput
+                    style={[styles.input, errors.numero && styles.inputError]}
+                    placeholder="123"
+                    placeholderTextColor={colors.text.hint}
+                    value={numero}
+                    onChangeText={(text) => {
+                      setNumero(text);
+                      clearFieldError('numero');
+                    }}
+                  />
+                  {renderFieldError('numero')}
+                </View>
+                <View style={styles.halfField}>
+                  <Text style={styles.label}>Bairro *</Text>
+                  <TextInput
+                    style={[styles.input, errors.bairro && styles.inputError]}
+                    placeholder="Centro"
+                    placeholderTextColor={colors.text.hint}
+                    value={bairro}
+                    onChangeText={(text) => {
+                      setBairro(text);
+                      clearFieldError('bairro');
+                    }}
+                  />
+                  {renderFieldError('bairro')}
+                </View>
+              </View>
+
+              {/* Cidade */}
+              <Text style={styles.label}>Cidade *</Text>
+              <TextInput
+                style={[styles.input, errors.cidade && styles.inputError]}
+                placeholder="São Paulo"
+                placeholderTextColor={colors.text.hint}
+                value={cidade}
+                onChangeText={(text) => {
+                  setCidade(text);
+                  clearFieldError('cidade');
+                }}
+              />
+              {renderFieldError('cidade')}
+
               {/* Institution selection */}
               {instituicoes.length > 0 && (
                 <>
@@ -547,6 +673,22 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginBottom: spacing.sm,
     marginTop: spacing.md,
+  },
+  sectionTitle: {
+    ...textStyles.h4,
+    color: colors.secondary.main,
+    marginTop: spacing.xl,
+    marginBottom: spacing.xs,
+    paddingBottom: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  halfField: {
+    flex: 1,
   },
   input: {
     backgroundColor: colors.background.paper,
