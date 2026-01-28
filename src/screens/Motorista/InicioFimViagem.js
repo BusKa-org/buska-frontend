@@ -40,6 +40,14 @@ const InicioFimViagem = ({navigation, route}) => {
           setViagem(viagemAtual);
           const emAndamento = viagemAtual.status === 'EM_ANDAMENTO';
           setViagemIniciada(emAndamento);
+          
+          // Calculate elapsed time if trip is in progress
+          if (emAndamento && viagemAtual.inicio_real) {
+            const inicioDate = new Date(viagemAtual.inicio_real);
+            const agora = new Date();
+            const elapsedSeconds = Math.floor((agora - inicioDate) / 1000);
+            setTempoDecorrido(Math.max(0, elapsedSeconds));
+          }
         }
       } catch (error) {
         console.error('Error loading trip status:', error);
