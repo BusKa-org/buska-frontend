@@ -15,21 +15,20 @@ import { colors, spacing, borderRadius, shadows, textStyles, fontWeight } from '
 import Icon, { IconNames } from '../../components/Icon';
 import { useToast } from '../../components/Toast';
 
-// Simple Route Map Component
+// Google Maps-style Route Map Component
 const RotaMapaSimples = ({ pontos }) => {
-  const MAP_WIDTH = 300;
-  const MAP_HEIGHT = 200;
-  const PADDING = 30;
+  const MAP_HEIGHT = 280;
+  const PADDING = 40;
 
   // Calculate bounds and positions
-  const { positions, hasValidPoints } = useMemo(() => {
+  const { positions, hasValidPoints, bounds } = useMemo(() => {
     const validPontos = pontos.filter(p => 
       p.latitude != null && p.longitude != null &&
       !isNaN(Number(p.latitude)) && !isNaN(Number(p.longitude))
     );
 
     if (validPontos.length === 0) {
-      return { positions: [], hasValidPoints: false };
+      return { positions: [], hasValidPoints: false, bounds: null };
     }
 
     const lats = validPontos.map(p => Number(p.latitude));
@@ -40,32 +39,45 @@ const RotaMapaSimples = ({ pontos }) => {
     const minLng = Math.min(...lngs);
     const maxLng = Math.max(...lngs);
     
-    // Add padding to bounds
     const latRange = maxLat - minLat || 0.01;
     const lngRange = maxLng - minLng || 0.01;
     
-    // Calculate positions for each point
+    // Use percentage-based positioning for responsiveness
     const positions = validPontos.map((ponto, index) => {
       const lat = Number(ponto.latitude);
       const lng = Number(ponto.longitude);
       
-      // Normalize to 0-1 range, then scale to map dimensions
-      const x = PADDING + ((lng - minLng) / lngRange) * (MAP_WIDTH - 2 * PADDING);
-      // Invert Y because latitude increases northward but screen Y increases downward
-      const y = PADDING + ((maxLat - lat) / latRange) * (MAP_HEIGHT - 2 * PADDING);
+      const xPercent = 10 + ((lng - minLng) / lngRange) * 80;
+      const yPercent = 10 + ((maxLat - lat) / latRange) * 80;
       
-      return { ...ponto, x, y, index: index + 1 };
+      return { 
+        ...ponto, 
+        xPercent, 
+        yPercent, 
+        index: index + 1,
+        isFirst: index === 0,
+        isLast: index === validPontos.length - 1,
+      };
     });
 
-    return { positions, hasValidPoints: true };
+    return { 
+      positions, 
+      hasValidPoints: true,
+      bounds: { minLat, maxLat, minLng, maxLng }
+    };
   }, [pontos]);
+
+  const [selectedPoint, setSelectedPoint] = useState(null);
 
   if (!hasValidPoints) {
     return (
       <View style={mapStyles.container}>
         <View style={mapStyles.emptyMap}>
-          <Icon name={IconNames.map} size="lg" color={colors.neutral[300]} />
-          <Text style={mapStyles.emptyText}>Adicione pontos para ver o mapa</Text>
+          <View style={mapStyles.emptyMapIcon}>
+            <Icon name={IconNames.map} size="huge" color="#9CA3AF" />
+          </View>
+          <Text style={mapStyles.emptyTitle}>Mapa da Rota</Text>
+          <Text style={mapStyles.emptyText}>Adicione pontos para visualizar a rota</Text>
         </View>
       </View>
     );
@@ -73,68 +85,132 @@ const RotaMapaSimples = ({ pontos }) => {
 
   return (
     <View style={mapStyles.container}>
-      <Text style={mapStyles.title}>Visualização da Rota</Text>
-      <View style={mapStyles.mapArea}>
-        {/* Grid background */}
-        <View style={mapStyles.grid}>
-          {[...Array(5)].map((_, i) => (
-            <View key={`h${i}`} style={[mapStyles.gridLineH, { top: `${i * 25}%` }]} />
-          ))}
-          {[...Array(5)].map((_, i) => (
-            <View key={`v${i}`} style={[mapStyles.gridLineV, { left: `${i * 25}%` }]} />
-          ))}
-        </View>
-
-        {/* Route lines */}
-        {positions.length > 1 && positions.map((pos, i) => {
-          if (i === 0) return null;
-          const prev = positions[i - 1];
-          const dx = pos.x - prev.x;
-          const dy = pos.y - prev.y;
-          const length = Math.sqrt(dx * dx + dy * dy);
-          const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+      <View style={mapStyles.header}>
+        <Text style={mapStyles.title}>Mapa da Rota</Text>
+        <Text style={mapStyles.subtitle}>{positions.length} pontos</Text>
+      </View>
+      
+      <View style={mapStyles.mapWrapper}>
+        <View style={mapStyles.mapArea}>
+          {/* Terrain-like background */}
+          <View style={mapStyles.terrainBase} />
+          <View style={mapStyles.terrainOverlay} />
           
-          return (
-            <View
-              key={`line-${i}`}
+          {/* Subtle roads pattern */}
+          <View style={mapStyles.roadsPattern}>
+            <View style={[mapStyles.road, { top: '30%', width: '100%' }]} />
+            <View style={[mapStyles.road, { top: '60%', width: '100%' }]} />
+            <View style={[mapStyles.roadVertical, { left: '25%', height: '100%' }]} />
+            <View style={[mapStyles.roadVertical, { left: '75%', height: '100%' }]} />
+          </View>
+
+          {/* Route path with glow effect */}
+          {positions.length > 1 && (
+            <svg 
+              style={{ position: 'absolute', width: '100%', height: '100%', zIndex: 5 }}
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+            >
+              {/* Glow/shadow line */}
+              <polyline
+                points={positions.map(p => `${p.xPercent},${p.yPercent}`).join(' ')}
+                fill="none"
+                stroke="rgba(66, 133, 244, 0.3)"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              {/* Main route line */}
+              <polyline
+                points={positions.map(p => `${p.xPercent},${p.yPercent}`).join(' ')}
+                fill="none"
+                stroke="#4285F4"
+                strokeWidth="0.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
+
+          {/* Google Maps style pin markers */}
+          {positions.map((pos) => (
+            <TouchableOpacity
+              key={pos.id}
               style={[
-                mapStyles.routeLine,
-                {
-                  left: prev.x,
-                  top: prev.y,
-                  width: length,
-                  transform: [{ rotate: `${angle}deg` }],
-                  transformOrigin: 'left center',
-                },
+                mapStyles.pinContainer,
+                { left: `${pos.xPercent}%`, top: `${pos.yPercent}%` },
               ]}
-            />
-          );
-        })}
+              onPress={() => setSelectedPoint(selectedPoint === pos.id ? null : pos.id)}
+              activeOpacity={0.8}
+            >
+              {/* Pin shadow */}
+              <View style={mapStyles.pinShadow} />
+              
+              {/* Pin body */}
+              <View style={[
+                mapStyles.pin,
+                pos.isFirst && mapStyles.pinStart,
+                pos.isLast && mapStyles.pinEnd,
+                !pos.isFirst && !pos.isLast && mapStyles.pinMiddle,
+              ]}>
+                <Text style={mapStyles.pinText}>{pos.index}</Text>
+              </View>
+              
+              {/* Pin pointer */}
+              <View style={[
+                mapStyles.pinPointer,
+                pos.isFirst && mapStyles.pinPointerStart,
+                pos.isLast && mapStyles.pinPointerEnd,
+                !pos.isFirst && !pos.isLast && mapStyles.pinPointerMiddle,
+              ]} />
+              
+              {/* Tooltip on selection */}
+              {selectedPoint === pos.id && (
+                <View style={mapStyles.tooltip}>
+                  <Text style={mapStyles.tooltipText} numberOfLines={1}>
+                    {pos.nome || pos.apelido}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          ))}
 
-        {/* Point markers */}
-        {positions.map((pos) => (
-          <View
-            key={pos.id}
-            style={[
-              mapStyles.marker,
-              pos.index === 1 && mapStyles.markerFirst,
-              pos.index === positions.length && mapStyles.markerLast,
-              { left: pos.x - 12, top: pos.y - 12 },
-            ]}>
-            <Text style={mapStyles.markerText}>{pos.index}</Text>
+          {/* Map controls (decorative) */}
+          <View style={mapStyles.mapControls}>
+            <View style={mapStyles.controlButton}>
+              <Text style={mapStyles.controlText}>+</Text>
+            </View>
+            <View style={mapStyles.controlDivider} />
+            <View style={mapStyles.controlButton}>
+              <Text style={mapStyles.controlText}>−</Text>
+            </View>
           </View>
-        ))}
 
-        {/* Legend */}
-        <View style={mapStyles.legend}>
-          <View style={mapStyles.legendItem}>
-            <View style={[mapStyles.legendDot, mapStyles.markerFirst]} />
-            <Text style={mapStyles.legendText}>Início</Text>
+          {/* Google logo placeholder */}
+          <View style={mapStyles.attribution}>
+            <Text style={mapStyles.attributionText}>Rota Escolar</Text>
           </View>
-          <View style={mapStyles.legendItem}>
-            <View style={[mapStyles.legendDot, mapStyles.markerLast]} />
-            <Text style={mapStyles.legendText}>Fim</Text>
-          </View>
+        </View>
+      </View>
+
+      {/* Route info */}
+      <View style={mapStyles.routeInfo}>
+        <View style={mapStyles.routeInfoItem}>
+          <View style={[mapStyles.infoDot, { backgroundColor: '#34A853' }]} />
+          <Text style={mapStyles.infoLabel}>
+            {positions[0]?.nome || positions[0]?.apelido || 'Início'}
+          </Text>
+        </View>
+        <View style={mapStyles.routeInfoDivider}>
+          <View style={mapStyles.routeInfoLine} />
+          <Text style={mapStyles.routeInfoPoints}>{positions.length - 2 > 0 ? `+${positions.length - 2}` : ''}</Text>
+          <View style={mapStyles.routeInfoLine} />
+        </View>
+        <View style={mapStyles.routeInfoItem}>
+          <View style={[mapStyles.infoDot, { backgroundColor: '#EA4335' }]} />
+          <Text style={mapStyles.infoLabel}>
+            {positions[positions.length - 1]?.nome || positions[positions.length - 1]?.apelido || 'Fim'}
+          </Text>
         </View>
       </View>
     </View>
@@ -145,105 +221,233 @@ const mapStyles = StyleSheet.create({
   container: {
     backgroundColor: colors.background.paper,
     borderRadius: borderRadius.lg,
-    padding: spacing.base,
     marginBottom: spacing.base,
-    ...shadows.sm,
+    ...shadows.md,
+    overflow: 'hidden',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.base,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
   },
   title: {
     ...textStyles.h4,
     color: colors.text.primary,
-    marginBottom: spacing.md,
+  },
+  subtitle: {
+    ...textStyles.caption,
+    color: colors.text.secondary,
+  },
+  mapWrapper: {
+    padding: spacing.sm,
   },
   mapArea: {
     width: '100%',
-    height: 200,
-    backgroundColor: colors.success.lighter || '#e8f5e9',
+    height: 220,
     borderRadius: borderRadius.md,
     position: 'relative',
     overflow: 'hidden',
   },
-  grid: {
+  terrainBase: {
     position: 'absolute',
     width: '100%',
     height: '100%',
+    backgroundColor: '#E8F0E8',
   },
-  gridLineH: {
+  terrainOverlay: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: colors.success.light,
-    opacity: 0.5,
+    width: '100%',
+    height: '100%',
+    background: 'linear-gradient(135deg, #F0F4E8 0%, #E8F0E8 50%, #E0E8E0 100%)',
   },
-  gridLineV: {
+  roadsPattern: {
     position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: 1,
-    backgroundColor: colors.success.light,
-    opacity: 0.5,
+    width: '100%',
+    height: '100%',
+    zIndex: 1,
   },
-  routeLine: {
+  road: {
     position: 'absolute',
-    height: 3,
-    backgroundColor: colors.secondary.main,
-    borderRadius: 2,
+    height: 2,
+    backgroundColor: '#FFFFFF',
+    opacity: 0.8,
   },
-  marker: {
+  roadVertical: {
     position: 'absolute',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.secondary.main,
+    width: 2,
+    backgroundColor: '#FFFFFF',
+    opacity: 0.6,
+  },
+  pinContainer: {
+    position: 'absolute',
+    alignItems: 'center',
+    zIndex: 10,
+    marginLeft: -14,
+    marginTop: -38,
+  },
+  pinShadow: {
+    position: 'absolute',
+    bottom: -4,
+    width: 10,
+    height: 5,
+    borderRadius: 5,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  pin: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    ...shadows.sm,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    ...shadows.md,
   },
-  markerFirst: {
-    backgroundColor: colors.success.main,
+  pinStart: {
+    backgroundColor: '#34A853', // Google green
   },
-  markerLast: {
-    backgroundColor: colors.error.main,
+  pinEnd: {
+    backgroundColor: '#EA4335', // Google red
   },
-  markerText: {
-    ...textStyles.caption,
-    color: colors.text.inverse,
-    fontWeight: fontWeight.bold,
+  pinMiddle: {
+    backgroundColor: '#4285F4', // Google blue
   },
-  legend: {
+  pinText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  pinPointer: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    marginTop: -2,
+  },
+  pinPointerStart: {
+    borderTopColor: '#34A853',
+  },
+  pinPointerEnd: {
+    borderTopColor: '#EA4335',
+  },
+  pinPointerMiddle: {
+    borderTopColor: '#4285F4',
+  },
+  tooltip: {
     position: 'absolute',
-    bottom: spacing.sm,
-    right: spacing.sm,
-    flexDirection: 'row',
-    gap: spacing.md,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    top: -30,
+    backgroundColor: '#3C4043',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
+    maxWidth: 120,
+    ...shadows.sm,
   },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
+  tooltipText: {
+    fontSize: 11,
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  mapControls: {
+    position: 'absolute',
+    right: spacing.sm,
+    bottom: spacing.xl,
+    backgroundColor: '#FFFFFF',
+    borderRadius: borderRadius.xs,
+    ...shadows.sm,
   },
-  legendText: {
-    ...textStyles.caption,
-    color: colors.text.secondary,
-  },
-  emptyMap: {
-    height: 120,
+  controlButton: {
+    width: 28,
+    height: 28,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  controlText: {
+    fontSize: 18,
+    color: '#5F6368',
+    fontWeight: '300',
+  },
+  controlDivider: {
+    height: 1,
+    backgroundColor: '#E8EAED',
+  },
+  attribution: {
+    position: 'absolute',
+    bottom: spacing.xs,
+    left: spacing.sm,
+  },
+  attributionText: {
+    fontSize: 10,
+    color: '#70757A',
+  },
+  routeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.base,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.light,
+  },
+  routeInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.sm,
+    flex: 1,
+  },
+  infoDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    ...shadows.xs,
+  },
+  infoLabel: {
+    ...textStyles.bodySmall,
+    color: colors.text.primary,
+    flex: 1,
+  },
+  routeInfoDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+  },
+  routeInfoLine: {
+    width: 20,
+    height: 2,
+    backgroundColor: '#DADCE0',
+  },
+  routeInfoPoints: {
+    ...textStyles.caption,
+    color: colors.text.hint,
+    paddingHorizontal: spacing.xs,
+  },
+  emptyMap: {
+    padding: spacing.xxxl,
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  emptyMapIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    ...textStyles.h4,
+    color: colors.text.secondary,
   },
   emptyText: {
     ...textStyles.caption,
     color: colors.text.hint,
+    textAlign: 'center',
   },
 });
 
