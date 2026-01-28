@@ -44,31 +44,18 @@ const DashboardMotorista = ({navigation}) => {
   useEffect(() => {
     const loadProximaViagem = async () => {
       try {
-        console.log('Loading proxima viagem...');
         const viagens = await motoristaService.listarViagens();
-        console.log('Viagens recebidas:', viagens);
         
         if (viagens && viagens.length > 0) {
-          // Ordenar por data e horário, encontrar a próxima viagem
           const now = new Date();
-          const todayStr = now.toISOString().split('T')[0]; // "2025-12-10"
-          now.setHours(0, 0, 0, 0); // Resetar para início do dia para comparação
-          
-          console.log('Now date:', now);
-          console.log('Today string:', todayStr);
+          now.setHours(0, 0, 0, 0);
           
           const viagensFuturas = viagens
             .filter((v) => {
-              // Extrair apenas a parte da data (YYYY-MM-DD)
               const viagemDateStr = v.data.split('T')[0];
-              
-              // Criar data da viagem às 00:00:00 no timezone local
               const [year, month, day] = viagemDateStr.split('-').map(Number);
               const viagemDate = new Date(year, month - 1, day);
               
-              console.log(`Viagem ${v.id}: data=${v.data}, viagemDateStr=${viagemDateStr}, viagemDate=${viagemDate}`);
-              
-              // Se a viagem tem horario_fim, considerar apenas se ainda não passou
               if (v.horario_fim) {
                 const horarioFimStr = v.horario_fim.includes('T') 
                   ? v.horario_fim.substring(11, 16) 
@@ -77,36 +64,23 @@ const DashboardMotorista = ({navigation}) => {
                 const fimViagem = new Date(year, month - 1, day, horasFim, minutosFim);
                 
                 if (fimViagem < new Date()) {
-                  console.log('Viagem já finalizada:', v.id, fimViagem);
-                  return false; // Viagem já finalizada
+                  return false;
                 }
               }
               
-              // Comparar datas: viagemDate >= now (inclui hoje e futuras)
-              const isTodayOrFuture = viagemDate >= now;
-              
-              console.log(`Viagem ${v.id}: viagemDate=${viagemDate}, now=${now}, isTodayOrFuture=${isTodayOrFuture}`);
-              
-              return isTodayOrFuture;
+              return viagemDate >= now;
             })
             .sort((a, b) => {
-              // Parse completo com data e horário
               const horarioA = a.horario_inicio || '00:00';
               const horarioB = b.horario_inicio || '00:00';
-              
               const dateA = new Date(`${a.data}T${horarioA}`);
               const dateB = new Date(`${b.data}T${horarioB}`);
-              
               return dateA - dateB;
             });
-
-          console.log('Viagens futuras encontradas:', viagensFuturas.length);
-          console.log('Viagens futuras:', viagensFuturas);
 
           if (viagensFuturas.length > 0) {
             const proxima = viagensFuturas[0];
             
-            // Buscar pontos da rota para obter origem e destino
             let origem = 'N/A';
             let destino = 'N/A';
             
@@ -120,25 +94,18 @@ const DashboardMotorista = ({navigation}) => {
                   destino = origem;
                 }
               }
-            } catch (error) {
-              console.error('Error loading route points:', error);
+            } catch (e) {
+              // Silent fail - use default values
             }
             
-            console.log('Proxima viagem selecionada:', proxima);
-            
-            // Normalizar formato do horário
             let horarioFormatado = '--:--';
             if (proxima.horario_inicio) {
               if (proxima.horario_inicio.includes('T')) {
-                // Formato ISO: "2024-12-10T08:37:00" -> "08:37"
                 horarioFormatado = proxima.horario_inicio.substring(11, 16);
               } else if (proxima.horario_inicio.includes(':')) {
-                // Formato HH:MM ou HH:MM:SS -> pegar apenas HH:MM
                 horarioFormatado = proxima.horario_inicio.substring(0, 5);
               }
             }
-            
-            console.log('Horario formatado:', horarioFormatado);
             
             setProximaViagem({
               id: proxima.id,
@@ -151,16 +118,12 @@ const DashboardMotorista = ({navigation}) => {
               destino: destino,
             });
           } else {
-            console.log('Nenhuma viagem futura encontrada');
             setProximaViagem(null);
           }
         } else {
-          console.log('Nenhuma viagem retornada da API');
           setProximaViagem(null);
         }
       } catch (error) {
-        console.error('Error loading next trip:', error);
-        console.error('Error details:', error.message, error.response?.data);
         setProximaViagem(null);
       } finally {
         setLoadingViagem(false);
@@ -183,31 +146,23 @@ const DashboardMotorista = ({navigation}) => {
       
       try {
         setLoadingAlunos(true);
-        console.log('Loading alunos info for viagem:', proximaViagem.id);
         const alunosData = await motoristaService.listarAlunosViagem(proximaViagem.id);
-        console.log('Alunos data received:', alunosData);
         
-        // Verificar se a resposta tem a estrutura esperada
         if (alunosData && typeof alunosData === 'object') {
           const totalAlunos = alunosData.total_alunos !== undefined ? alunosData.total_alunos : 0;
           const alunosConfirmados = alunosData.alunos_confirmados !== undefined ? alunosData.alunos_confirmados : 0;
-          
-          console.log(`Setting alunos info: ${alunosConfirmados} de ${totalAlunos}`);
           
           setAlunosInfo({
             totalAlunos: totalAlunos,
             alunosConfirmados: alunosConfirmados,
           });
         } else {
-          console.warn('Unexpected alunos data format:', alunosData);
           setAlunosInfo({
             totalAlunos: 0,
             alunosConfirmados: 0,
           });
         }
       } catch (error) {
-        console.error('Error loading alunos info:', error);
-        console.error('Error details:', error.message);
         if (error.response) {
           console.error('Response status:', error.response.status);
           console.error('Response data:', error.response.data);

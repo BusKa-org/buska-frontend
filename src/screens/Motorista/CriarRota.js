@@ -37,13 +37,7 @@ const CriarRota = ({navigation}) => {
     try {
       setLoading(true);
       const response = await motoristaService.criarRota({ nome: nomeRota.trim() });
-      
-      console.log('Response completo da criação de rota:', JSON.stringify(response, null, 2));
-      
-      // Backend returns { message, id } - we need to build the rota object
       const rotaId = response?.id;
-      
-      console.log('Rota ID:', rotaId);
       
       if (!rotaId) {
         Alert.alert('Erro', 'Rota criada mas ID não disponível. Tente novamente.');
@@ -60,7 +54,6 @@ const CriarRota = ({navigation}) => {
         {
           text: 'OK',
           onPress: () => {
-            console.log('Navegando para DefinirPontosRota com rota:', rotaData);
             navigation.navigate('DefinirPontosRota', {
               rota: rotaData,
               isNovaRota: true,

@@ -210,12 +210,8 @@ const CriarConta = ({navigation}) => {
   const handleRegistrationError = (result) => {
     const { error, errorCode, field, fieldErrors } = result;
     
-    // Debug: log the full error result
-    console.log('Registration error result:', JSON.stringify(result, null, 2));
-    
     // Handle multiple field errors from backend
     if (fieldErrors && Object.keys(fieldErrors).length > 0) {
-      console.log('fieldErrors received:', fieldErrors);
       
       // Map backend field names to form field names
       const fieldMapping = {
@@ -260,9 +256,6 @@ const CriarConta = ({navigation}) => {
           unmappedFields.push(fieldName);
         }
       }
-      
-      console.log('mappedErrors:', mappedErrors);
-      console.log('unmappedFields:', unmappedFields);
       
       // Set field errors
       if (Object.keys(mappedErrors).length > 0) {

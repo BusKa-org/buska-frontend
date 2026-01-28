@@ -23,15 +23,12 @@ if (!isWeb) {
     const ReactNavigation = require('@react-navigation/native-stack');
     createNativeStackNavigator = ReactNavigation.createNativeStackNavigator;
   } catch (e) {
-    console.log('React Navigation não disponível, usando navegação simples');
+    // React Navigation not available, using simple navigation
   }
 }
 
 const MainNavigator = () => {
   const { isAuthenticated, user, loading } = useAuth();
-
-  // Log para debug
-  console.log('MainNavigator render:', { isAuthenticated, loading, userId: user?.id });
 
   // Show loading screen while checking auth status
   if (loading) {
@@ -43,9 +40,7 @@ const MainNavigator = () => {
   }
 
   // If not authenticated, show auth screens
-  // AuthNavigator already has its own NavigationProvider, so return it directly
   if (!isAuthenticated) {
-    console.log('MainNavigator: Redirecionando para AuthNavigator');
     return <AuthNavigator />;
   }
 

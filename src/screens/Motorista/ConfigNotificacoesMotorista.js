@@ -22,73 +22,35 @@ const ConfigNotificacoesMotorista = ({navigation}) => {
   const [notificacaoRotas, setNotificacaoRotas] = useState(true);
 
   const handleLogout = async () => {
-    console.log('handleLogout chamado');
-    
-    // Usar window.confirm na web, Alert.alert no mobile
     const isWeb = Platform.OS === 'web';
     
-    let shouldLogout = false;
-    
     if (isWeb) {
-      // Na web, usar window.confirm que funciona melhor
-      shouldLogout = window.confirm('Tem certeza que deseja sair?');
-      console.log('Confirmação web:', shouldLogout);
+      const shouldLogout = window.confirm('Tem certeza que deseja sair?');
+      if (shouldLogout) {
+        await performLogout();
+      }
     } else {
-      // No mobile, usar Alert
-      return new Promise((resolve) => {
-        Alert.alert(
-          'Sair',
-          'Tem certeza que deseja sair?',
-          [
-            {
-              text: 'Cancelar',
-              style: 'cancel',
-              onPress: () => {
-                console.log('Logout cancelado');
-                resolve(false);
-              },
-            },
-            {
-              text: 'Sair',
-              style: 'destructive',
-              onPress: async () => {
-                shouldLogout = true;
-                resolve(true);
-              },
-            },
-          ],
-          { 
-            cancelable: true,
-            onDismiss: () => {
-              console.log('Alert fechado sem ação');
-              resolve(false);
-            }
-          }
-        );
-      }).then(async (confirmed) => {
-        if (confirmed) {
-          await performLogout();
-        }
-      });
-    }
-    
-    if (shouldLogout) {
-      await performLogout();
+      Alert.alert(
+        'Sair',
+        'Tem certeza que deseja sair?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Sair', style: 'destructive', onPress: performLogout },
+        ],
+        { cancelable: true }
+      );
     }
   };
 
   const performLogout = async () => {
-    console.log('Iniciando logout...');
     try {
       await logout();
-      console.log('Logout concluído');
     } catch (error) {
-      console.error('Erro no logout:', error);
-      // Mesmo em caso de erro, tentar limpar o estado novamente
+      // Try again on error
       try {
         await logout();
       } catch (e) {
-        console.error('Erro ao tentar logout novamente:', e);
+        // Silent fail - user will be redirected anyway
       }
     }
   };
@@ -196,10 +158,7 @@ const ConfigNotificacoesMotorista = ({navigation}) => {
             <Text style={styles.accountSectionTitle}>Conta</Text>
             <TouchableOpacity
               style={styles.logoutButton}
-              onPress={() => {
-                console.log('Botão Sair pressionado!');
-                handleLogout();
-              }}
+              onPress={handleLogout}
               activeOpacity={0.7}
               testID="logout-button">
               <View style={styles.logoutButtonContent}>

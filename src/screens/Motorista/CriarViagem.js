@@ -108,9 +108,7 @@ const CriarViagem = ({navigation, route}) => {
         horario_id: horarioSelecionado || undefined,
       };
       
-      console.log('Creating viagem with data:', viagemData);
-      const response = await motoristaService.criarViagem(viagemData);
-      console.log('Viagem created successfully:', response);
+      await motoristaService.criarViagem(viagemData);
 
       Alert.alert('Sucesso', 'Viagem criada com sucesso!', [
         {

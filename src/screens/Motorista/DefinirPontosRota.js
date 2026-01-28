@@ -22,10 +22,6 @@ const DefinirPontosRota = ({navigation, route}) => {
   // Se vier de viagem, tentar extrair rota_id e criar objeto rota mínimo
   const rota = rotaParam || (viagem?.rota_id ? {id: viagem.rota_id} : null);
   
-  console.log('DefinirPontosRota - params:', params);
-  console.log('DefinirPontosRota - rota:', rota);
-  console.log('DefinirPontosRota - viagem:', viagem);
-  
   const {user} = useAuth();
   
   const [pontosPreDefinidos, setPontosPreDefinidos] = useState([]);
@@ -85,7 +81,6 @@ const DefinirPontosRota = ({navigation, route}) => {
         }));
         
         setPontosRota(pontosFormatados);
-        console.log('Pontos carregados:', pontosFormatados);
       } catch (error) {
         console.error('Error loading points:', error);
         // Não mostrar erro se não houver pontos ainda
@@ -162,11 +157,6 @@ const DefinirPontosRota = ({navigation, route}) => {
   };
 
   const handleSalvarPontos = async () => {
-    console.log('handleSalvarPontos chamado');
-    console.log('route.params:', route?.params);
-    console.log('rota:', rota);
-    console.log('pontosRota:', pontosRota);
-    
     // Determine which route ID to use
     let rotaId = rota?.id;
     if (!rotaId) {
@@ -206,18 +196,15 @@ const DefinirPontosRota = ({navigation, route}) => {
           let pontoId = ponto.backendId;
           
           if (!pontoId) {
-            console.log(`Creating point ${i + 1}:`, ponto.nome);
             const createdPonto = await motoristaService.criarPonto({
               apelido: ponto.nome,
               latitude: ponto.latitude,
               longitude: ponto.longitude,
             });
             pontoId = createdPonto.id;
-            console.log(`Point created with ID:`, pontoId);
           }
           
           // Step 2: Add point to route with order
-          console.log(`Adding point ${pontoId} to route ${rotaId} at order ${i + 1}`);
           await motoristaService.adicionarPontoRota(rotaId, pontoId, i + 1);
           addedCount++;
           
@@ -437,15 +424,7 @@ const DefinirPontosRota = ({navigation, route}) => {
               (limiteExcedido || salvando || pontosRota.length === 0) &&
                 styles.salvarButtonDisabled,
             ]}
-            onPress={() => {
-              console.log('Botão clicado!');
-              console.log('limiteExcedido:', limiteExcedido);
-              console.log('salvando:', salvando);
-              console.log('pontosRota.length:', pontosRota.length);
-              console.log('rota:', rota);
-              console.log('user:', user);
-              handleSalvarPontos();
-            }}
+            onPress={handleSalvarPontos}
             disabled={limiteExcedido || salvando || pontosRota.length === 0}>
             {salvando ? (
               <ActivityIndicator color={colors.text.inverse} />

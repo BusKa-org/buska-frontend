@@ -18,7 +18,7 @@ const RecuperarSenha = ({navigation}) => {
   const [enviado, setEnviado] = useState(false);
 
   const handleRecuperarSenha = () => {
-    console.log('Recuperar senha:', {email});
+    // TODO: Implement actual password recovery API call
     setEnviado(true);
   };
 

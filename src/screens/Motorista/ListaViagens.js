@@ -23,7 +23,6 @@ const ListaViagens = ({navigation}) => {
     try {
       setLoading(true);
       const viagensData = await motoristaService.listarViagens();
-      console.log('Viagens recebidas:', viagensData);
       
       // Ordenar por data (mais recentes primeiro)
       const viagensOrdenadas = (viagensData || []).sort((a, b) => {
@@ -32,11 +31,8 @@ const ListaViagens = ({navigation}) => {
         return dataB - dataA;
       });
       
-      console.log('Viagens ordenadas:', viagensOrdenadas);
       setViagens(viagensOrdenadas);
     } catch (error) {
-      console.error('Error loading trips:', error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
       Alert.alert(
         'Erro',
         error?.message || 'Não foi possível carregar as viagens. Tente novamente.',
@@ -141,7 +137,6 @@ const ListaViagens = ({navigation}) => {
             ) : (
               <>
                 {viagens.map((viagem) => {
-                  console.log('Renderizando viagem:', viagem);
                   const status = getStatusViagem(viagem);
                   return (
                     <TouchableOpacity
