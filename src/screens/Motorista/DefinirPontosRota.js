@@ -680,6 +680,11 @@ const DefinirPontosRota = ({navigation, route}) => {
             ) : (
               pontosRota.map((ponto, index) => (
                 <View key={ponto.id} style={styles.pontoItem}>
+                  {/* Drag handle */}
+                  <View style={styles.dragHandle}>
+                    <Icon name={IconNames.moreVert} size="sm" color={colors.neutral[400]} />
+                  </View>
+                  
                   <View style={styles.pontoOrdem}>
                     <Text style={styles.pontoOrdemText}>{index + 1}</Text>
                   </View>
@@ -693,33 +698,36 @@ const DefinirPontosRota = ({navigation, route}) => {
                     )}
                   </View>
                   
-                  <View style={styles.pontoActions}>
+                  {/* Move buttons */}
+                  <View style={styles.pontoMoveActions}>
                     <TouchableOpacity 
-                      style={styles.moveButton}
+                      style={[styles.moveButton, index === 0 && styles.moveButtonDisabled]}
                       onPress={() => handleMoverPonto(index, -1)}
                       disabled={index === 0}>
                       <Icon 
                         name={IconNames.expandLess} 
                         size="md" 
-                        color={index === 0 ? colors.neutral[300] : colors.text.secondary} 
+                        color={index === 0 ? colors.neutral[300] : colors.secondary.main} 
                       />
                     </TouchableOpacity>
                     <TouchableOpacity 
-                      style={styles.moveButton}
+                      style={[styles.moveButton, index === pontosRota.length - 1 && styles.moveButtonDisabled]}
                       onPress={() => handleMoverPonto(index, 1)}
                       disabled={index === pontosRota.length - 1}>
                       <Icon 
                         name={IconNames.expandMore} 
                         size="md" 
-                        color={index === pontosRota.length - 1 ? colors.neutral[300] : colors.text.secondary} 
+                        color={index === pontosRota.length - 1 ? colors.neutral[300] : colors.secondary.main} 
                       />
                     </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.removeButton}
-                      onPress={() => handleRemoverPonto(ponto.id)}>
-                      <Icon name={IconNames.close} size="sm" color={colors.error.main} />
-                    </TouchableOpacity>
                   </View>
+                  
+                  {/* Remove button */}
+                  <TouchableOpacity 
+                    style={styles.removeButtonStyled}
+                    onPress={() => handleRemoverPonto(ponto.id)}>
+                    <Icon name={IconNames.delete} size="sm" color={colors.error.main} />
+                  </TouchableOpacity>
                 </View>
               ))
             )}
@@ -732,20 +740,25 @@ const DefinirPontosRota = ({navigation, route}) => {
               <Text style={styles.cardSubtitle}>Toque para adicionar à rota</Text>
               
               <View style={styles.pontosGrid}>
-                {pontosDisponiveis
-                  .filter(p => !pontosRota.some(pr => pr.id === p.id))
-                  .slice(0, 10)
-                  .map(ponto => (
+                {pontosDisponiveis.slice(0, 15).map(ponto => {
+                  const isAdded = pontosRota.some(pr => pr.id === ponto.id);
+                  return (
                     <TouchableOpacity
                       key={ponto.id}
-                      style={styles.pontoChip}
-                      onPress={() => handleAdicionarPontoExistente(ponto)}>
-                      <Icon name={IconNames.add} size="xs" color={colors.secondary.main} />
-                      <Text style={styles.pontoChipText} numberOfLines={1}>
+                      style={[styles.pontoChip, isAdded && styles.pontoChipAdded]}
+                      onPress={() => !isAdded && handleAdicionarPontoExistente(ponto)}
+                      disabled={isAdded}>
+                      <Icon 
+                        name={isAdded ? IconNames.checkCircle : IconNames.add} 
+                        size="xs" 
+                        color={isAdded ? colors.success.main : colors.secondary.main} 
+                      />
+                      <Text style={[styles.pontoChipText, isAdded && styles.pontoChipTextAdded]} numberOfLines={1}>
                         {ponto.apelido || ponto.nome}
                       </Text>
                     </TouchableOpacity>
-                  ))}
+                  );
+                })}
               </View>
             </View>
           )}
@@ -934,8 +947,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    marginHorizontal: -spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
+    backgroundColor: colors.background.paper,
+  },
+  dragHandle: {
+    padding: spacing.xs,
+    marginRight: spacing.xs,
+    opacity: 0.5,
   },
   pontoOrdem: {
     width: 28,
@@ -969,11 +990,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
   },
+  pontoMoveActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+  },
   moveButton: {
-    padding: spacing.sm,
+    padding: spacing.xs,
+    borderRadius: borderRadius.sm,
+  },
+  moveButtonDisabled: {
+    opacity: 0.3,
   },
   removeButton: {
     padding: spacing.sm,
+  },
+  removeButtonStyled: {
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.error.light,
   },
   pontosGrid: {
     flexDirection: 'row',
@@ -990,10 +1025,18 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
     maxWidth: '48%',
   },
+  pontoChipAdded: {
+    backgroundColor: colors.success.light,
+    opacity: 0.7,
+  },
   pontoChipText: {
     ...textStyles.caption,
     color: colors.secondary.dark,
     fontWeight: fontWeight.medium,
+  },
+  pontoChipTextAdded: {
+    color: colors.success.dark,
+    textDecorationLine: 'line-through',
   },
   formContainer: {
     marginTop: spacing.md,
