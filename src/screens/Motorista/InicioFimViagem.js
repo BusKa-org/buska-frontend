@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -23,39 +23,35 @@ const InicioFimViagem = ({navigation, route}) => {
   const [tempoDecorrido, setTempoDecorrido] = useState(0);
   const [intervalId, setIntervalId] = useState(null);
 
-  // Load fresh trip data on mount and focus
-  const loadTripStatus = useCallback(async () => {
-    if (!viagemParam?.id) return;
-    
-    try {
-      setLoadingStatus(true);
-      const viagens = await motoristaService.listarViagens();
-      const viagemAtual = viagens.find(v => v.id === viagemParam.id);
-      
-      if (viagemAtual) {
-        setViagem(viagemAtual);
-        const emAndamento = viagemAtual.status === 'EM_ANDAMENTO';
-        setViagemIniciada(emAndamento);
+  // Load fresh trip data on mount
+  useEffect(() => {
+    const loadTripStatus = async () => {
+      if (!viagemParam?.id) {
+        setLoadingStatus(false);
+        return;
       }
-    } catch (error) {
-      console.error('Error loading trip status:', error);
-    } finally {
-      setLoadingStatus(false);
-    }
-  }, [viagemParam?.id]);
+      
+      try {
+        setLoadingStatus(true);
+        const viagens = await motoristaService.listarViagens();
+        const viagemAtual = viagens.find(v => v.id === viagemParam.id);
+        
+        if (viagemAtual) {
+          setViagem(viagemAtual);
+          const emAndamento = viagemAtual.status === 'EM_ANDAMENTO';
+          setViagemIniciada(emAndamento);
+        }
+      } catch (error) {
+        console.error('Error loading trip status:', error);
+        // Fallback to param status
+        setViagemIniciada(viagemParam?.status === 'EM_ANDAMENTO');
+      } finally {
+        setLoadingStatus(false);
+      }
+    };
 
-  // Load on mount
-  useEffect(() => {
     loadTripStatus();
-  }, [loadTripStatus]);
-
-  // Reload on focus (when returning from other screens)
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      loadTripStatus();
-    });
-    return unsubscribe;
-  }, [navigation, loadTripStatus]);
+  }, [viagemParam?.id]);
 
   if (!viagemParam) {
     return (
