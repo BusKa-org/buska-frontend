@@ -29,23 +29,13 @@ const RotaAluno = ({navigation, route}) => {
       const viagensRota = todasViagens.filter((v) => v.rota_id === rota.id);
       setViagens(viagensRota || []);
       
-      const statusPromises = viagensRota.map(async (viagem) => {
-        try {
-          const presencaData = await alunoService.obterPresencaViagem(viagem.id);
-          return { viagemId: viagem.id, presente: presencaData.presente || false };
-        } catch (error) {
-          return { viagemId: viagem.id, presente: false };
-        }
-      });
-      
-      const statusResults = await Promise.all(statusPromises);
+      // Use status_confirmacao from the agenda response directly
       const statusMap = {};
-      statusResults.forEach(({ viagemId, presente }) => {
-        statusMap[viagemId] = presente;
+      viagensRota.forEach((viagem) => {
+        statusMap[viagem.id] = viagem.status_confirmacao || false;
       });
       setPresencasStatus(statusMap);
     } catch (error) {
-      console.error('Error loading trips:', error);
       Alert.alert('Erro', 'Não foi possível carregar as viagens.');
     } finally {
       setLoading(false);
@@ -80,12 +70,22 @@ const RotaAluno = ({navigation, route}) => {
     }
   };
 
-  const handleConfirmarPresenca = async (viagemId, currentStatus) => {
+  const handleConfirmarPresenca = async (viagem, currentStatus) => {
     try {
-      setUpdatingPresenca(viagemId);
+      setUpdatingPresenca(viagem.id);
       const novoStatus = currentStatus !== 'Confirmado';
-      await alunoService.alterarPresencaViagem(viagemId, novoStatus);
-      setPresencasStatus({ ...presencasStatus, [viagemId]: novoStatus });
+      
+      // Get boarding point ID
+      let pontoEmbarqueId = viagem.ponto_embarque_id;
+      if (novoStatus && !pontoEmbarqueId) {
+        const pontos = await alunoService.listarPontosRota(viagem.rota_id);
+        if (pontos && pontos.length > 0) {
+          pontoEmbarqueId = pontos[0].id;
+        }
+      }
+      
+      await alunoService.alterarPresencaViagem(viagem.id, novoStatus, pontoEmbarqueId);
+      setPresencasStatus({ ...presencasStatus, [viagem.id]: novoStatus });
     } catch (error) {
       Alert.alert('Erro', error?.message || 'Não foi possível atualizar a presença.');
     } finally {
@@ -94,19 +94,18 @@ const RotaAluno = ({navigation, route}) => {
   };
 
   const podeConfirmar = (viagem) => {
-    if (viagem.horario_fim) {
-      const fimViagem = new Date(`${viagem.data}T${viagem.horario_fim}`);
-      return new Date() < fimViagem;
-    }
-    return true;
+    // Can confirm if trip date is today or future
+    const tripDate = new Date(viagem.data);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return tripDate >= today;
   };
 
   const getStatusFromViagem = (viagem) => {
-    if (viagem.horario_fim) {
-      const fimViagem = new Date(`${viagem.data}T${viagem.horario_fim}`);
-      if (new Date() > fimViagem) return 'Encerrada';
-    }
-    return presencasStatus[viagem.id] ? 'Confirmado' : 'Não confirmado';
+    // Check local state first (for optimistic updates after confirm action)
+    // Then fall back to status_confirmacao from backend
+    const isConfirmed = presencasStatus[viagem.id] ?? viagem.status_confirmacao;
+    return isConfirmed ? 'Confirmado' : 'Não confirmado';
   };
 
   const formatTime = (t) => t ? (t.includes('T') ? t.substring(11, 16) : t.substring(0, 5)) : '--:--';
