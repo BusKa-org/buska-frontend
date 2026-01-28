@@ -1,5 +1,10 @@
 import api from './api';
 import { Storage, STORAGE_KEYS } from '../utils/storage';
+import { 
+  ValidationError, 
+  ErrorCode,
+  errorLogger,
+} from '../utils/errors';
 
 export const authService = {
   /**
@@ -8,64 +13,82 @@ export const authService = {
    * Returns: { access_token, token_type }
    */
   async login(email, password) {
-    try {
-      const response = await api.post('/auth/login', {
-        email: email.trim().toLowerCase(),
-        password,
-      });
-
-      const { access_token } = response.data;
-
-      // Store token
-      await Storage.setItem(STORAGE_KEYS.ACCESS_TOKEN, access_token);
-
-      // Fetch user profile after login
-      const userResponse = await api.get('/users/me');
-      const user = userResponse.data;
-
-      // Store user info
-      await Storage.setItem(STORAGE_KEYS.USER, user);
-
-      return { access_token, user };
-    } catch (error) {
-      throw this.handleError(error);
+    // Client-side validation
+    if (!email?.trim()) {
+      throw new ValidationError('E-mail é obrigatório', 'email');
     }
+    if (!password) {
+      throw new ValidationError('Senha é obrigatória', 'password');
+    }
+
+    const response = await api.post('/auth/login', {
+      email: email.trim().toLowerCase(),
+      password,
+    });
+
+    const { access_token } = response.data;
+
+    // Store token
+    await Storage.setItem(STORAGE_KEYS.ACCESS_TOKEN, access_token);
+
+    // Fetch user profile after login
+    const userResponse = await api.get('/users/me');
+    const user = userResponse.data;
+
+    // Store user info
+    await Storage.setItem(STORAGE_KEYS.USER, user);
+
+    errorLogger.info('User logged in successfully', { userId: user.id, role: user.role });
+
+    return { access_token, user };
   },
 
   /**
    * Register new student (public endpoint)
    * Backend: POST /v1/alunos/signup
-   * Note: Only students can self-register. Drivers are created by Gestor.
    */
   async register(userData) {
-    try {
-      // For student registration
-      const response = await api.post('/alunos/signup', {
-        nome: userData.nome.trim(),
-        email: userData.email.trim().toLowerCase(),
-        password: userData.password,
-        cpf: userData.cpf || '00000000000', // Required by backend
-        matricula: userData.matricula || 'AUTO-' + Date.now(), // Required by backend
-        instituicao_id: userData.instituicao_id, // Required by backend - need to select institution
-        telefone: userData.telefone,
-        endereco_casa: userData.endereco_casa,
-      });
-
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error);
+    // Client-side validation
+    if (!userData.nome?.trim()) {
+      throw new ValidationError('Nome é obrigatório', 'nome');
     }
+    if (!userData.email?.trim()) {
+      throw new ValidationError('E-mail é obrigatório', 'email');
+    }
+    if (!userData.password || userData.password.length < 6) {
+      throw new ValidationError('Senha deve ter pelo menos 6 caracteres', 'password');
+    }
+    if (!userData.cpf || userData.cpf.replace(/\D/g, '').length !== 11) {
+      throw new ValidationError('CPF inválido. Informe os 11 dígitos', 'cpf');
+    }
+    if (!userData.matricula?.trim()) {
+      throw new ValidationError('Matrícula é obrigatória', 'matricula');
+    }
+
+    const response = await api.post('/alunos/signup', {
+      nome: userData.nome.trim(),
+      email: userData.email.trim().toLowerCase(),
+      password: userData.password,
+      cpf: userData.cpf.replace(/\D/g, ''),
+      matricula: userData.matricula.trim(),
+      instituicao_id: userData.instituicao_id,
+      telefone: userData.telefone?.replace(/\D/g, '') || undefined,
+      endereco_casa: userData.endereco_casa,
+    });
+
+    errorLogger.info('User registered successfully', { email: userData.email });
+
+    return response.data;
   },
 
   /**
    * Logout user
    */
   async logout() {
-    console.log('authService: Removendo token...');
+    errorLogger.info('User logging out...');
     await Storage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
-    console.log('authService: Removendo usuário...');
     await Storage.removeItem(STORAGE_KEYS.USER);
-    console.log('authService: Logout concluído');
+    errorLogger.info('User logged out successfully');
   },
 
   /**
@@ -79,14 +102,10 @@ export const authService = {
    * Refresh user data from server
    */
   async refreshUserData() {
-    try {
-      const response = await api.get('/users/me');
-      const user = response.data;
-      await Storage.setItem(STORAGE_KEYS.USER, user);
-      return user;
-    } catch (error) {
-      throw this.handleError(error);
-    }
+    const response = await api.get('/users/me');
+    const user = response.data;
+    await Storage.setItem(STORAGE_KEYS.USER, user);
+    return user;
   },
 
   /**
@@ -116,37 +135,19 @@ export const authService = {
    * Backend: POST /v1/users/change-password
    */
   async changePassword(currentPassword, newPassword) {
-    try {
-      const response = await api.post('/users/change-password', {
-        current_password: currentPassword,
-        new_password: newPassword,
-      });
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error);
+    if (!currentPassword) {
+      throw new ValidationError('Senha atual é obrigatória', 'current_password');
     }
-  },
+    if (!newPassword || newPassword.length < 6) {
+      throw new ValidationError('Nova senha deve ter pelo menos 6 caracteres', 'new_password');
+    }
 
-  /**
-   * Handle API errors
-   */
-  handleError(error) {
-    if (error.response) {
-      return {
-        message: error.response.data?.message || error.response.data?.error || 'Ocorreu um erro',
-        status: error.response.status,
-        data: error.response.data,
-      };
-    } else if (error.request) {
-      return {
-        message: 'Erro de conexão. Verifique sua internet.',
-        status: 0,
-      };
-    } else {
-      return {
-        message: error.message || 'Ocorreu um erro inesperado',
-        status: 0,
-      };
-    }
+    const response = await api.post('/users/change-password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
+    
+    errorLogger.info('Password changed successfully');
+    return response.data;
   },
 };

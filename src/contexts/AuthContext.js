@@ -1,6 +1,12 @@
 import React, { createContext, useState, useEffect, useContext, useMemo } from 'react';
 import { authService } from '../services/authService';
 import { userService } from '../services/userService';
+import { 
+  parseApiError, 
+  requiresReauth, 
+  errorLogger,
+  ErrorCategory,
+} from '../utils/errors';
 
 const AuthContext = createContext(null);
 
@@ -10,7 +16,6 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Check if user is already logged in
     checkAuthStatus();
   }, []);
 
@@ -19,25 +24,31 @@ export const AuthProvider = ({ children }) => {
       const hasToken = await authService.isAuthenticated();
 
       if (hasToken) {
-        // Sempre buscar dados atualizados do servidor usando /user/me
         try {
           const fullUserData = await userService.getCurrentUser();
-          // Atualizar o storage com os dados completos
           await authService.updateStoredUser(fullUserData);
           setUser(fullUserData);
           setIsAuthenticated(true);
+          errorLogger.info('Auth restored from token', { userId: fullUserData.id });
         } catch (error) {
-          console.error('Error fetching user data from server:', error);
-          // Se falhar, tentar usar dados do storage como fallback
-          const storedUser = await authService.getCurrentUser();
-          if (storedUser) {
-            setUser(storedUser);
-            setIsAuthenticated(true);
+          const parsedError = parseApiError(error);
+          errorLogger.warn('Failed to restore auth', { error: parsedError.message });
+          
+          // If auth error, clear tokens
+          if (requiresReauth(parsedError)) {
+            await authService.logout();
+          } else {
+            // Try using stored user as fallback
+            const storedUser = await authService.getCurrentUser();
+            if (storedUser) {
+              setUser(storedUser);
+              setIsAuthenticated(true);
+            }
           }
         }
       }
     } catch (error) {
-      console.error('Error checking auth status:', error);
+      errorLogger.error(error, { context: 'checkAuthStatus' });
     } finally {
       setLoading(false);
     }
@@ -47,28 +58,28 @@ export const AuthProvider = ({ children }) => {
     try {
       const { user: loggedInUser } = await authService.login(email, password);
       
-      // Buscar dados completos do usuário usando /user/me
+      // Try to get complete user data
       try {
         const fullUserData = await userService.getCurrentUser();
-        // Atualizar o storage com os dados completos
         await authService.updateStoredUser(fullUserData);
         setUser(fullUserData);
         setIsAuthenticated(true);
         return { success: true, user: fullUserData };
       } catch (error) {
-        console.error('Error fetching full user data after login:', error);
-        // Se falhar, usar dados do login como fallback
+        // Use login data as fallback
         setUser(loggedInUser);
         setIsAuthenticated(true);
         return { success: true, user: loggedInUser };
       }
     } catch (error) {
-      // Extract error message from the error object
-      // authService.handleError returns { message, status, data }
-      const errorMessage = error?.message || error?.error || 'Login failed. Please try again.';
+      const parsedError = parseApiError(error);
+      errorLogger.userError('login', parsedError, { email });
+      
       return {
         success: false,
-        error: errorMessage,
+        error: parsedError.message,
+        errorCode: parsedError.code,
+        errorCategory: parsedError.category,
       };
     }
   };
@@ -76,40 +87,38 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       const response = await authService.register(userData);
+      errorLogger.info('Registration successful', { email: userData.email });
       return { success: true, data: response };
     } catch (error) {
-      // Extract error message from the error object
-      // authService.handleError returns { message, status, data }
-      const errorMessage = error?.message || error?.error || 'Registration failed. Please try again.';
+      const parsedError = parseApiError(error);
+      errorLogger.userError('register', parsedError, { email: userData.email });
+      
       return {
         success: false,
-        error: errorMessage,
+        error: parsedError.message,
+        errorCode: parsedError.code,
+        errorCategory: parsedError.category,
+        field: parsedError.field,
       };
     }
   };
 
   const logout = async () => {
     try {
-      console.log('AuthContext: Iniciando logout...');
-      console.log('AuthContext: Estado antes - user:', user, 'isAuthenticated:', isAuthenticated);
-      
+      errorLogger.info('Logout initiated', { userId: user?.id });
       await authService.logout();
-      
-      console.log('AuthContext: Storage limpo, atualizando estado...');
       setUser(null);
       setIsAuthenticated(false);
       
-      // Forçar um pequeno delay para garantir que o estado foi atualizado
+      // Small delay to ensure state is updated
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      console.log('AuthContext: Estado atualizado, isAuthenticated = false');
-      console.log('AuthContext: Estado depois - user:', null, 'isAuthenticated:', false);
+      errorLogger.info('Logout completed');
     } catch (error) {
-      console.error('Error during logout:', error);
-      // Mesmo em caso de erro, limpar o estado local
+      errorLogger.error(error, { context: 'logout' });
+      // Force clear state even on error
       setUser(null);
       setIsAuthenticated(false);
-      console.log('AuthContext: Estado limpo após erro');
     }
   };
 
@@ -123,8 +132,6 @@ export const AuthProvider = ({ children }) => {
     checkAuthStatus,
   }), [user, loading, isAuthenticated]);
 
-  console.log('AuthContext Provider render:', { isAuthenticated, loading, userId: user?.id });
-
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
@@ -135,4 +142,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

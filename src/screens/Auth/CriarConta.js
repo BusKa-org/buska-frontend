@@ -16,6 +16,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
 import api from '../../services/api';
+import { 
+  ErrorCode, 
+  ErrorCategory,
+  getFieldValidationMessage,
+  errorLogger,
+} from '../../utils/errors';
 
 const CriarConta = ({navigation}) => {
   const [nome, setNome] = useState('');
@@ -29,7 +35,11 @@ const CriarConta = ({navigation}) => {
   const [instituicoes, setInstituicoes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingInstituicoes, setLoadingInstituicoes] = useState(true);
-  const [error, setError] = useState('');
+  
+  // Field-specific errors
+  const [errors, setErrors] = useState({});
+  const [generalError, setGeneralError] = useState('');
+  
   const { register } = useAuth();
 
   // Load institutions on mount
@@ -40,12 +50,10 @@ const CriarConta = ({navigation}) => {
   const loadInstituicoes = async () => {
     try {
       setLoadingInstituicoes(true);
-      // This endpoint may require auth - for MVP we'll handle the error gracefully
       const response = await api.get('/instituicoes/');
       setInstituicoes(response.data || []);
     } catch (error) {
-      console.log('Could not load institutions:', error);
-      // If we can't load institutions, we'll allow manual entry or skip
+      errorLogger.debug('Could not load institutions', { error: error.message });
       setInstituicoes([]);
     } finally {
       setLoadingInstituicoes(false);
@@ -53,41 +61,76 @@ const CriarConta = ({navigation}) => {
   };
 
   const formatCPF = (text) => {
-    // Remove non-digits
     const digits = text.replace(/\D/g, '');
-    // Format as XXX.XXX.XXX-XX
     if (digits.length <= 3) return digits;
     if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
     if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
     return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
   };
 
-  const handleCriarConta = async () => {
-    setError('');
-
-    // Validation
-    if (!nome.trim() || !email.trim() || !senha.trim()) {
-      setError('Por favor, preencha nome, e-mail e senha');
-      return;
+  const clearFieldError = (field) => {
+    if (errors[field]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
     }
-
-    if (!cpf.trim() || cpf.replace(/\D/g, '').length !== 11) {
-      setError('CPF inválido. Digite os 11 dígitos');
-      return;
+    if (generalError) {
+      setGeneralError('');
     }
+  };
 
+  const validateForm = () => {
+    const newErrors = {};
+    
+    // Nome
+    if (!nome.trim()) {
+      newErrors.nome = getFieldValidationMessage('nome', 'required');
+    } else if (nome.trim().length < 3) {
+      newErrors.nome = getFieldValidationMessage('nome', 'minLength');
+    }
+    
+    // Email
+    if (!email.trim()) {
+      newErrors.email = getFieldValidationMessage('email', 'required');
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = getFieldValidationMessage('email', 'invalid');
+    }
+    
+    // CPF
+    const cpfDigits = cpf.replace(/\D/g, '');
+    if (!cpfDigits) {
+      newErrors.cpf = getFieldValidationMessage('cpf', 'required');
+    } else if (cpfDigits.length !== 11) {
+      newErrors.cpf = getFieldValidationMessage('cpf', 'invalid');
+    }
+    
+    // Matrícula
     if (!matricula.trim()) {
-      setError('Por favor, informe sua matrícula');
-      return;
+      newErrors.matricula = getFieldValidationMessage('matricula', 'required');
     }
-
-    if (senha.length < 6) {
-      setError('A senha deve ter no mínimo 6 caracteres');
-      return;
+    
+    // Senha
+    if (!senha) {
+      newErrors.senha = getFieldValidationMessage('password', 'required');
+    } else if (senha.length < 6) {
+      newErrors.senha = getFieldValidationMessage('password', 'minLength');
     }
-
+    
+    // Confirmar senha
     if (senha !== confirmarSenha) {
-      setError('As senhas não coincidem');
+      newErrors.confirmarSenha = getFieldValidationMessage('password', 'mismatch');
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleCriarConta = async () => {
+    setGeneralError('');
+    
+    if (!validateForm()) {
       return;
     }
 
@@ -97,7 +140,7 @@ const CriarConta = ({navigation}) => {
         nome,
         email,
         password: senha,
-        cpf: cpf.replace(/\D/g, ''), // Send only digits
+        cpf: cpf.replace(/\D/g, ''),
         matricula,
         telefone: telefone || undefined,
         instituicao_id: instituicaoId || undefined,
@@ -106,18 +149,66 @@ const CriarConta = ({navigation}) => {
       if (result.success) {
         navigation.navigate('Login');
         setTimeout(() => {
-          Alert.alert('Sucesso', 'Conta criada com sucesso! Faça login para continuar.');
+          Alert.alert(
+            'Conta criada!', 
+            'Seu cadastro foi realizado com sucesso. Faça login para continuar.',
+            [{ text: 'OK' }]
+          );
         }, 300);
       } else {
-        const errorMessage = result.error || 'Não foi possível criar a conta';
-        setError(errorMessage);
+        // Handle specific error codes
+        handleRegistrationError(result);
       }
     } catch (error) {
-      const errorMessage = error?.message || 'Ocorreu um erro ao criar a conta. Verifique sua conexão e tente novamente.';
-      setError(errorMessage);
+      errorLogger.error(error, { context: 'CriarConta.handleCriarConta' });
+      setGeneralError(error.message || 'Ocorreu um erro inesperado. Tente novamente.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRegistrationError = (result) => {
+    const { error, errorCode, field } = result;
+    
+    // Handle field-specific errors
+    if (field) {
+      setErrors(prev => ({ ...prev, [field]: error }));
+      return;
+    }
+    
+    // Handle known error codes
+    switch (errorCode) {
+      case ErrorCode.EMAIL_ALREADY_EXISTS:
+        setErrors(prev => ({ ...prev, email: 'Este e-mail já está cadastrado.' }));
+        break;
+      case ErrorCode.CPF_ALREADY_EXISTS:
+        setErrors(prev => ({ ...prev, cpf: 'Este CPF já está cadastrado.' }));
+        break;
+      case ErrorCode.INVALID_EMAIL:
+        setErrors(prev => ({ ...prev, email: 'E-mail inválido.' }));
+        break;
+      case ErrorCode.INVALID_CPF:
+        setErrors(prev => ({ ...prev, cpf: 'CPF inválido.' }));
+        break;
+      case ErrorCode.NETWORK_ERROR:
+        setGeneralError('Sem conexão. Verifique sua internet e tente novamente.');
+        break;
+      case ErrorCode.SERVICE_UNAVAILABLE:
+        setGeneralError('Servidor indisponível. Tente novamente em alguns minutos.');
+        break;
+      default:
+        setGeneralError(error || 'Não foi possível criar a conta. Tente novamente.');
+    }
+  };
+
+  const renderFieldError = (field) => {
+    if (!errors[field]) return null;
+    return (
+      <View style={styles.fieldErrorContainer}>
+        <Icon name={IconNames.error} size="xs" color={colors.error.main} />
+        <Text style={styles.fieldErrorText}>{errors[field]}</Text>
+      </View>
+    );
   };
 
   return (
@@ -145,60 +236,69 @@ const CriarConta = ({navigation}) => {
 
             {/* Form */}
             <View style={styles.form}>
+              {/* Nome */}
               <Text style={styles.label}>Nome Completo *</Text>
               <TextInput
-                style={[styles.input, error && styles.inputError]}
+                style={[styles.input, errors.nome && styles.inputError]}
                 placeholder="Seu nome completo"
                 placeholderTextColor={colors.text.hint}
                 value={nome}
                 onChangeText={(text) => {
                   setNome(text);
-                  if (error) setError('');
+                  clearFieldError('nome');
                 }}
                 autoCapitalize="words"
               />
+              {renderFieldError('nome')}
 
+              {/* Email */}
               <Text style={styles.label}>E-mail *</Text>
               <TextInput
-                style={[styles.input, error && styles.inputError]}
+                style={[styles.input, errors.email && styles.inputError]}
                 placeholder="seu@email.com"
                 placeholderTextColor={colors.text.hint}
                 value={email}
                 onChangeText={(text) => {
                   setEmail(text);
-                  if (error) setError('');
+                  clearFieldError('email');
                 }}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
               />
+              {renderFieldError('email')}
 
+              {/* CPF */}
               <Text style={styles.label}>CPF *</Text>
               <TextInput
-                style={[styles.input, error && styles.inputError]}
+                style={[styles.input, errors.cpf && styles.inputError]}
                 placeholder="000.000.000-00"
                 placeholderTextColor={colors.text.hint}
                 value={cpf}
                 onChangeText={(text) => {
                   setCpf(formatCPF(text));
-                  if (error) setError('');
+                  clearFieldError('cpf');
                 }}
                 keyboardType="numeric"
                 maxLength={14}
               />
+              {renderFieldError('cpf')}
 
+              {/* Matrícula */}
               <Text style={styles.label}>Matrícula *</Text>
               <TextInput
-                style={[styles.input, error && styles.inputError]}
+                style={[styles.input, errors.matricula && styles.inputError]}
                 placeholder="Número da matrícula escolar"
                 placeholderTextColor={colors.text.hint}
                 value={matricula}
                 onChangeText={(text) => {
                   setMatricula(text);
-                  if (error) setError('');
+                  clearFieldError('matricula');
                 }}
               />
+              {renderFieldError('matricula')}
 
+              {/* Telefone */}
               <Text style={styles.label}>Telefone</Text>
               <TextInput
                 style={styles.input}
@@ -236,35 +336,47 @@ const CriarConta = ({navigation}) => {
                 </>
               )}
 
+              {/* Senha */}
               <Text style={styles.label}>Senha *</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, errors.senha && styles.inputError]}
                 placeholder="Mínimo 6 caracteres"
                 placeholderTextColor={colors.text.hint}
                 value={senha}
-                onChangeText={setSenha}
+                onChangeText={(text) => {
+                  setSenha(text);
+                  clearFieldError('senha');
+                }}
                 secureTextEntry
                 autoCapitalize="none"
               />
+              {renderFieldError('senha')}
 
+              {/* Confirmar Senha */}
               <Text style={styles.label}>Confirmar Senha *</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, errors.confirmarSenha && styles.inputError]}
                 placeholder="Digite a senha novamente"
                 placeholderTextColor={colors.text.hint}
                 value={confirmarSenha}
-                onChangeText={setConfirmarSenha}
+                onChangeText={(text) => {
+                  setConfirmarSenha(text);
+                  clearFieldError('confirmarSenha');
+                }}
                 secureTextEntry
                 autoCapitalize="none"
               />
+              {renderFieldError('confirmarSenha')}
 
-              {error ? (
+              {/* General Error */}
+              {generalError ? (
                 <View style={styles.errorContainer}>
                   <Icon name={IconNames.error} size="sm" color={colors.error.main} />
-                  <Text style={styles.errorText}>{error}</Text>
+                  <Text style={styles.errorText}>{generalError}</Text>
                 </View>
               ) : null}
 
+              {/* Submit Button */}
               <TouchableOpacity
                 style={[styles.criarContaButton, loading && styles.criarContaButtonDisabled]}
                 onPress={handleCriarConta}
@@ -279,6 +391,7 @@ const CriarConta = ({navigation}) => {
                 )}
               </TouchableOpacity>
 
+              {/* Login Link */}
               <View style={styles.loginContainer}>
                 <Text style={styles.loginText}>Já tem uma conta? </Text>
                 <TouchableOpacity onPress={() => navigation.navigate('Login')}>
@@ -359,6 +472,20 @@ const styles = StyleSheet.create({
     borderColor: colors.border.light,
     color: colors.text.primary,
   },
+  inputError: {
+    borderColor: colors.error.main,
+    borderWidth: 1.5,
+  },
+  fieldErrorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  fieldErrorText: {
+    ...textStyles.caption,
+    color: colors.error.main,
+  },
   instituicoesScroll: {
     marginBottom: spacing.sm,
   },
@@ -433,9 +560,6 @@ const styles = StyleSheet.create({
     ...textStyles.bodySmall,
     color: colors.error.dark,
     flex: 1,
-  },
-  inputError: {
-    borderColor: colors.error.main,
   },
   noteText: {
     ...textStyles.caption,
