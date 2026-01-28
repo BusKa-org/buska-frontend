@@ -49,7 +49,8 @@ const customFonts = {
 };
 
 // Toggle this when you install custom fonts
-const USE_CUSTOM_FONTS = false;
+// Set to true since Inter fonts are now installed in assets/fonts/
+const USE_CUSTOM_FONTS = true;
 
 export const fontFamily = USE_CUSTOM_FONTS ? customFonts : systemFonts;
 
