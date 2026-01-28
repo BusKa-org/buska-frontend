@@ -11,96 +11,72 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {motoristaService} from '../../services/motoristaService';
-import {useAuth} from '../../contexts/AuthContext';
-import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
+import { colors, spacing, borderRadius, shadows, textStyles, fontWeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
+import { useToast } from '../../components/Toast';
 
 const DefinirPontosRota = ({navigation, route}) => {
   const params = route?.params || {};
-  const {viagem, rota: rotaParam, isNovaRota} = params;
+  const {rota: rotaParam, viagem, isNovaRota} = params;
   
-  // Se vier de viagem, tentar extrair rota_id e criar objeto rota mínimo
-  const rota = rotaParam || (viagem?.rota_id ? {id: viagem.rota_id} : null);
+  // Determine route ID from params
+  const rotaId = rotaParam?.id || viagem?.rota_id;
+  const rotaNome = rotaParam?.nome || viagem?.rota_nome || 'Rota';
   
-  const {user} = useAuth();
+  const toast = useToast();
   
-  const [pontosPreDefinidos, setPontosPreDefinidos] = useState([]);
   const [pontosRota, setPontosRota] = useState([]);
+  const [pontosDisponiveis, setPontosDisponiveis] = useState([]);
   const [novoPontoNome, setNovoPontoNome] = useState('');
   const [novoPontoLat, setNovoPontoLat] = useState('');
   const [novoPontoLon, setNovoPontoLon] = useState('');
   const [mostrarFormNovoPonto, setMostrarFormNovoPonto] = useState(false);
-  const [editandoPonto, setEditandoPonto] = useState(null);
-  const [limiteExcedido, setLimiteExcedido] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
 
-  const handleEditarPonto = (ponto) => {
-    setEditandoPonto(ponto.id);
-    // Verificar se está dentro do limite de 2km dos colégios
-    // Temporariamente desabilitado - validação de distância não está implementada corretamente
-    // if (pontosPreDefinidos.length > 0) {
-    //   const distancia = Math.sqrt(
-    //     Math.pow(ponto.x - pontosPreDefinidos[0].x, 2) +
-    //       Math.pow(ponto.y - pontosPreDefinidos[0].y, 2),
-    //   );
-    //   if (distancia > 200) {
-    //     // Simulação de 2km (200 unidades)
-    //     setLimiteExcedido(true);
-    //     Alert.alert(
-    //       'Limite Excedido',
-    //       'O ponto está a mais de 2km dos colégios. Por favor, ajuste a posição.',
-    //     );
-    //   } else {
-    //     setLimiteExcedido(false);
-    //   }
-    // }
-    setLimiteExcedido(false);
-  };
-
+  // Load existing points
   useEffect(() => {
-    const carregarPontos = async () => {
-      // Se for uma nova rota, não precisa carregar pontos existentes
-      if (isNovaRota || !rota?.id) {
-        return;
-      }
-
+    const carregarDados = async () => {
       try {
         setLoading(true);
-        const pontosData = await motoristaService.listarPontosRota(rota.id);
         
-        // Converter os pontos do formato da API para o formato usado no componente
-        const pontosFormatados = pontosData.map((p, index) => ({
-          id: p.id || Date.now() + index,
-          nome: p.nome,
-          latitude: p.latitude,
-          longitude: p.longitude,
-          x: 50 + Math.random() * 200, // Posição simulada no mapa
-          y: 50 + Math.random() * 200,
-          editavel: true,
-        }));
+        // Load available points (municipality points)
+        const todosOsPontos = await motoristaService.listarPontos();
+        setPontosDisponiveis(todosOsPontos || []);
         
-        setPontosRota(pontosFormatados);
+        // Load route points if editing existing route
+        if (rotaId && !isNovaRota) {
+          const pontosData = await motoristaService.listarPontosRota(rotaId);
+          setPontosRota(pontosData || []);
+        }
       } catch (error) {
         console.error('Error loading points:', error);
-        // Não mostrar erro se não houver pontos ainda
-        if (error?.status !== 404) {
-          Alert.alert(
-            'Erro',
-            'Não foi possível carregar os pontos da rota. Você pode adicionar novos pontos.',
-          );
-        }
+        toast.error('Não foi possível carregar os pontos.');
       } finally {
         setLoading(false);
       }
     };
 
-    carregarPontos();
-  }, [rota?.id, isNovaRota]);
+    carregarDados();
+  }, [rotaId, isNovaRota]);
 
-  const handleAdicionarPonto = () => {
-    if (!novoPontoNome.trim() || !novoPontoLat || !novoPontoLon) {
-      Alert.alert('Erro', 'Preencha todos os campos do ponto');
+  const handleAdicionarPontoExistente = (ponto) => {
+    // Check if already added
+    if (pontosRota.some(p => p.id === ponto.id)) {
+      toast.warning('Este ponto já está na rota.');
+      return;
+    }
+    
+    setPontosRota([...pontosRota, {
+      ...ponto,
+      ordem: pontosRota.length + 1,
+    }]);
+    toast.success(`${ponto.nome || ponto.apelido} adicionado!`);
+  };
+
+  const handleCriarNovoPonto = async () => {
+    if (!novoPontoNome.trim()) {
+      toast.error('Informe o nome do ponto.');
       return;
     }
 
@@ -108,335 +84,316 @@ const DefinirPontosRota = ({navigation, route}) => {
     const lon = parseFloat(novoPontoLon);
 
     if (isNaN(lat) || isNaN(lon)) {
-      Alert.alert('Erro', 'Latitude e longitude devem ser números válidos');
+      toast.error('Latitude e longitude devem ser números válidos.');
       return;
     }
 
-    if (lat < -90 || lat > 90) {
-      Alert.alert('Erro', 'Latitude deve estar entre -90 e 90');
-      return;
-    }
-
-    if (lon < -180 || lon > 180) {
-      Alert.alert('Erro', 'Longitude deve estar entre -180 e 180');
-      return;
-    }
-
-    const novoPonto = {
-      id: Date.now(),
-      nome: novoPontoNome.trim(),
-      latitude: lat,
-      longitude: lon,
-      x: 50 + Math.random() * 200, // Posição simulada no mapa
-      y: 50 + Math.random() * 200,
-      editavel: true,
-    };
-
-    setPontosRota([...pontosRota, novoPonto]);
-    setNovoPontoNome('');
-    setNovoPontoLat('');
-    setNovoPontoLon('');
-    setMostrarFormNovoPonto(false);
-  };
-
-  const handleRemoverPonto = (pontoId) => {
-    Alert.alert(
-      'Remover Ponto',
-      'Tem certeza que deseja remover este ponto?',
-      [
-        {text: 'Cancelar', style: 'cancel'},
-        {
-          text: 'Remover',
-          style: 'destructive',
-          onPress: () => {
-            setPontosRota(pontosRota.filter((p) => p.id !== pontoId));
-          },
-        },
-      ],
-    );
-  };
-
-  const handleSalvarPontos = async () => {
-    // Determine which route ID to use
-    let rotaId = rota?.id;
-    if (!rotaId) {
-      const params = route?.params || {};
-      const rotaFromParams = params.rota || (params.viagem?.rota_id ? {id: params.viagem.rota_id} : null);
-      rotaId = rotaFromParams?.id;
-    }
-    
-    if (!rotaId) {
-      Alert.alert(
-        'Erro',
-        'Rota não encontrada. Por favor, volte e tente novamente.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }],
-      );
-      return;
-    }
-
-    if (pontosRota.length === 0) {
-      Alert.alert('Erro', 'Adicione pelo menos um ponto à rota');
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      toast.error('Coordenadas fora do intervalo válido.');
       return;
     }
 
     try {
       setSalvando(true);
       
-      // Backend requires two steps:
-      // 1. Create each point (POST /pontos/)
-      // 2. Add point to route (POST /rotas/{id}/pontos)
+      // Create point in backend
+      const novoPonto = await motoristaService.criarPonto({
+        apelido: novoPontoNome.trim(),
+        latitude: lat,
+        longitude: lon,
+      });
       
-      let addedCount = 0;
+      // Add to local list
+      setPontosRota([...pontosRota, {
+        id: novoPonto.id,
+        nome: novoPontoNome.trim(),
+        latitude: lat,
+        longitude: lon,
+        ordem: pontosRota.length + 1,
+        isNew: true,
+      }]);
       
-      for (let i = 0; i < pontosRota.length; i++) {
-        const ponto = pontosRota[i];
-        
-        try {
-          // Step 1: Create the point if it doesn't have a backend ID
-          let pontoId = ponto.backendId;
-          
-          if (!pontoId) {
-            const createdPonto = await motoristaService.criarPonto({
-              apelido: ponto.nome,
-              latitude: ponto.latitude,
-              longitude: ponto.longitude,
-            });
-            pontoId = createdPonto.id;
-          }
-          
-          // Step 2: Add point to route with order
-          await motoristaService.adicionarPontoRota(rotaId, pontoId, i + 1);
-          addedCount++;
-          
-        } catch (pointError) {
-          console.error(`Error processing point ${i + 1}:`, pointError);
-          // Continue with other points
-        }
-      }
-
-      if (addedCount > 0) {
-        Alert.alert(
-          'Sucesso', 
-          `${addedCount} ponto(s) adicionado(s) à rota!`, 
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
-        );
-      } else {
-        Alert.alert('Erro', 'Não foi possível adicionar os pontos. Tente novamente.');
-      }
+      // Clear form
+      setNovoPontoNome('');
+      setNovoPontoLat('');
+      setNovoPontoLon('');
+      setMostrarFormNovoPonto(false);
       
+      toast.success('Ponto criado e adicionado!');
     } catch (error) {
-      console.error('Error saving points:', error);
-      Alert.alert(
-        'Erro',
-        error?.message || 'Não foi possível salvar os pontos. Tente novamente.',
-      );
+      toast.error(error?.message || 'Erro ao criar ponto.');
     } finally {
       setSalvando(false);
     }
   };
 
+  const handleRemoverPonto = (pontoId) => {
+    Alert.alert(
+      'Remover Ponto',
+      'Tem certeza que deseja remover este ponto da rota?',
+      [
+        {text: 'Cancelar', style: 'cancel'},
+        {
+          text: 'Remover',
+          style: 'destructive',
+          onPress: () => {
+            setPontosRota(pontosRota.filter(p => p.id !== pontoId));
+            toast.info('Ponto removido.');
+          },
+        },
+      ],
+    );
+  };
+
+  const handleMoverPonto = (index, direction) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= pontosRota.length) return;
+    
+    const newPontos = [...pontosRota];
+    [newPontos[index], newPontos[newIndex]] = [newPontos[newIndex], newPontos[index]];
+    
+    // Update ordem
+    newPontos.forEach((p, i) => { p.ordem = i + 1; });
+    setPontosRota(newPontos);
+  };
+
+  const handleSalvarPontos = async () => {
+    if (!rotaId) {
+      toast.error('Rota não encontrada.');
+      return;
+    }
+
+    if (pontosRota.length === 0) {
+      toast.error('Adicione pelo menos um ponto.');
+      return;
+    }
+
+    try {
+      setSalvando(true);
+      
+      let successCount = 0;
+      
+      for (let i = 0; i < pontosRota.length; i++) {
+        const ponto = pontosRota[i];
+        try {
+          await motoristaService.adicionarPontoRota(rotaId, ponto.id, i + 1);
+          successCount++;
+        } catch (error) {
+          console.error(`Error adding point ${ponto.nome}:`, error);
+        }
+      }
+
+      if (successCount === pontosRota.length) {
+        toast.success('Pontos salvos com sucesso!');
+        navigation.goBack();
+      } else if (successCount > 0) {
+        toast.warning(`${successCount} de ${pontosRota.length} pontos salvos.`);
+      } else {
+        toast.error('Não foi possível salvar os pontos.');
+      }
+    } catch (error) {
+      toast.error(error?.message || 'Erro ao salvar pontos.');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.secondary.main} />
+          <Text style={styles.loadingText}>Carregando pontos...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
           <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Definir Pontos da Rota</Text>
+        <Text style={styles.title}>Pontos da Rota</Text>
+        <Text style={styles.subtitle}>{rotaNome}</Text>
       </View>
 
-      {loading && pontosRota.length === 0 && !isNovaRota ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.secondary.main} />
-          <Text style={styles.loadingText}>Carregando pontos da rota...</Text>
-        </View>
-      ) : (
-        <ScrollView style={styles.scrollView}>
-          <View style={styles.content}>
-          <View style={styles.infoBox}>
-            <Icon name={IconNames.warning} size="md" color={colors.warning.main} />
-            <Text style={styles.infoText}>
-              Você pode editar os pontos da rota, mas eles devem estar
-              dentro de um raio de 2km dos colégios.
-            </Text>
-          </View>
-
-          {/* Mapa Simplificado */}
-          <View style={styles.mapaContainer}>
-            <Text style={styles.mapaTitle}>Mapa da Rota</Text>
-            <View style={styles.mapaPlaceholder}>
-              {/* Pontos pré-definidos dos colégios */}
-              {pontosPreDefinidos.map((ponto) => (
-                  <View
-                  key={ponto.id}
-                  style={[
-                    styles.pontoMapa,
-                    styles.pontoColegio,
-                    {left: ponto.x, top: ponto.y},
-                  ]}>
-                  <Icon name={IconNames.badge} size="md" color={colors.primary.main} />
-                  <Text style={styles.pontoMapaNome}>{ponto.nome}</Text>
-                </View>
-              ))}
-
-              {/* Pontos editáveis da rota */}
-              {pontosRota.map((ponto) => (
-                <TouchableOpacity
-                  key={ponto.id}
-                  style={[
-                    styles.pontoMapa,
-                    styles.pontoEditavel,
-                    editandoPonto === ponto.id && styles.pontoEditando,
-                    {left: ponto.x, top: ponto.y},
-                  ]}
-                  onPress={() => handleEditarPonto(ponto)}>
-                  <Icon name={IconNames.location} size="md" color={colors.secondary.main} />
-                  <Text style={styles.pontoMapaNome}>{ponto.nome}</Text>
-                  {editandoPonto === ponto.id && (
-                    <View style={styles.editarIndicador}>
-                      <Text style={styles.editarIndicadorText}>Editar</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-
-              {/* Linhas da rota */}
-              <View style={styles.linhaRota} />
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.content}>
+          
+          {/* Current Route Points */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Pontos na Rota ({pontosRota.length})</Text>
             </View>
-          </View>
-
-          {/* Lista de Pontos */}
-          <View style={styles.listaPontos}>
-            <View style={styles.listaHeader}>
-              <Text style={styles.listaTitle}>Pontos da Rota</Text>
-              <TouchableOpacity
-                style={styles.adicionarButton}
-                onPress={() => setMostrarFormNovoPonto(!mostrarFormNovoPonto)}>
-                <Text style={styles.adicionarButtonText}>
-                  {mostrarFormNovoPonto ? '−' : '+'} Adicionar Ponto
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {mostrarFormNovoPonto && (
-              <View style={styles.formNovoPonto}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Nome do ponto"
-                  placeholderTextColor="#999"
-                  value={novoPontoNome}
-                  onChangeText={setNovoPontoNome}
-                />
-                <View style={styles.coordenadasRow}>
-                  <TextInput
-                    style={[styles.input, styles.inputCoordenada, styles.inputCoordenadaLeft]}
-                    placeholder="Latitude"
-                    placeholderTextColor="#999"
-                    value={novoPontoLat}
-                    onChangeText={setNovoPontoLat}
-                    keyboardType="numeric"
-                  />
-                  <TextInput
-                    style={[styles.input, styles.inputCoordenada, styles.inputCoordenadaRight]}
-                    placeholder="Longitude"
-                    placeholderTextColor="#999"
-                    value={novoPontoLon}
-                    onChangeText={setNovoPontoLon}
-                    keyboardType="numeric"
-                  />
-                </View>
-                <View style={styles.formButtons}>
-                  <TouchableOpacity
-                    style={styles.cancelarButton}
-                    onPress={() => {
-                      setMostrarFormNovoPonto(false);
-                      setNovoPontoNome('');
-                      setNovoPontoLat('');
-                      setNovoPontoLon('');
-                    }}>
-                    <Text style={styles.cancelarButtonText}>Cancelar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.confirmarButton}
-                    onPress={handleAdicionarPonto}>
-                    <Text style={styles.confirmarButtonText}>Adicionar</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-
+            
             {pontosRota.length === 0 ? (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>
-                  Nenhum ponto adicionado ainda
-                </Text>
+                <Icon name={IconNames.route} size="huge" color={colors.neutral[300]} />
+                <Text style={styles.emptyText}>Nenhum ponto adicionado</Text>
                 <Text style={styles.emptySubtext}>
-                  Clique em "Adicionar Ponto" para começar
+                  Selecione pontos existentes ou crie novos abaixo
                 </Text>
               </View>
             ) : (
-              pontosRota.map((ponto) => (
+              pontosRota.map((ponto, index) => (
                 <View key={ponto.id} style={styles.pontoItem}>
-                  <View style={styles.pontoItemLeft}>
-                    <Icon name={IconNames.location} size="md" color={colors.secondary.main} />
-                    <View style={styles.pontoItemInfo}>
-                      <Text style={styles.pontoItemNome}>{ponto.nome}</Text>
-                      <Text style={styles.pontoItemCoords}>
-                        {ponto.latitude?.toFixed?.(6) ?? 'N/A'}, {ponto.longitude?.toFixed?.(6) ?? 'N/A'}
-                      </Text>
-                    </View>
+                  <View style={styles.pontoOrdem}>
+                    <Text style={styles.pontoOrdemText}>{index + 1}</Text>
                   </View>
-                  <TouchableOpacity
-                    style={styles.removerButton}
-                    onPress={() => handleRemoverPonto(ponto.id)}>
-                    <Text style={styles.removerButtonText}>Remover</Text>
-                  </TouchableOpacity>
+                  
+                  <View style={styles.pontoInfo}>
+                    <Text style={styles.pontoNome}>{ponto.nome || ponto.apelido}</Text>
+                    {ponto.latitude != null && ponto.longitude != null && (
+                      <Text style={styles.pontoCoords}>
+                        {Number(ponto.latitude).toFixed(5)}, {Number(ponto.longitude).toFixed(5)}
+                      </Text>
+                    )}
+                  </View>
+                  
+                  <View style={styles.pontoActions}>
+                    <TouchableOpacity 
+                      style={styles.moveButton}
+                      onPress={() => handleMoverPonto(index, -1)}
+                      disabled={index === 0}>
+                      <Icon 
+                        name={IconNames.expandLess} 
+                        size="md" 
+                        color={index === 0 ? colors.neutral[300] : colors.text.secondary} 
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.moveButton}
+                      onPress={() => handleMoverPonto(index, 1)}
+                      disabled={index === pontosRota.length - 1}>
+                      <Icon 
+                        name={IconNames.expandMore} 
+                        size="md" 
+                        color={index === pontosRota.length - 1 ? colors.neutral[300] : colors.text.secondary} 
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.removeButton}
+                      onPress={() => handleRemoverPonto(ponto.id)}>
+                      <Icon name={IconNames.close} size="sm" color={colors.error.main} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))
             )}
           </View>
 
-          {limiteExcedido && (
-            <View style={styles.avisoBox}>
-              <Icon name={IconNames.warning} size="sm" color={colors.error.main} />
-              <Text style={styles.avisoText}>
-                Alguns pontos estão fora do limite de 2km
-              </Text>
+          {/* Available Points */}
+          {pontosDisponiveis.length > 0 && (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Pontos Disponíveis</Text>
+              <Text style={styles.cardSubtitle}>Toque para adicionar à rota</Text>
+              
+              <View style={styles.pontosGrid}>
+                {pontosDisponiveis
+                  .filter(p => !pontosRota.some(pr => pr.id === p.id))
+                  .slice(0, 10)
+                  .map(ponto => (
+                    <TouchableOpacity
+                      key={ponto.id}
+                      style={styles.pontoChip}
+                      onPress={() => handleAdicionarPontoExistente(ponto)}>
+                      <Icon name={IconNames.add} size="xs" color={colors.secondary.main} />
+                      <Text style={styles.pontoChipText} numberOfLines={1}>
+                        {ponto.apelido || ponto.nome}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+              </View>
             </View>
           )}
 
-          {(limiteExcedido || pontosRota.length === 0) && (
-            <View style={styles.infoBox}>
-              <Icon name={IconNames.warning} size="sm" color={colors.warning.main} />
-              <Text style={styles.infoText}>
-                {pontosRota.length === 0
-                  ? 'Adicione pelo menos um ponto antes de salvar'
-                  : 'Verifique os pontos antes de salvar'}
-              </Text>
-            </View>
-          )}
-
-          <TouchableOpacity
-            style={[
-              styles.salvarButton,
-              (limiteExcedido || salvando || pontosRota.length === 0) &&
-                styles.salvarButtonDisabled,
-            ]}
-            onPress={handleSalvarPontos}
-            disabled={limiteExcedido || salvando || pontosRota.length === 0}>
-            {salvando ? (
-              <ActivityIndicator color={colors.text.inverse} />
-            ) : (
-              <Text style={styles.salvarButtonText}>
-                Salvar Pontos da Rota ({pontosRota.length})
-              </Text>
+          {/* Create New Point */}
+          <View style={styles.card}>
+            <TouchableOpacity 
+              style={styles.cardHeaderButton}
+              onPress={() => setMostrarFormNovoPonto(!mostrarFormNovoPonto)}>
+              <View style={styles.cardHeaderLeft}>
+                <Icon name={IconNames.add} size="md" color={colors.success.main} />
+                <Text style={styles.cardTitle}>Criar Novo Ponto</Text>
+              </View>
+              <Icon 
+                name={mostrarFormNovoPonto ? IconNames.expandLess : IconNames.expandMore} 
+                size="md" 
+                color={colors.text.secondary} 
+              />
+            </TouchableOpacity>
+            
+            {mostrarFormNovoPonto && (
+              <View style={styles.formContainer}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Nome do ponto (ex: Escola Municipal)"
+                  placeholderTextColor={colors.text.hint}
+                  value={novoPontoNome}
+                  onChangeText={setNovoPontoNome}
+                />
+                <View style={styles.coordRow}>
+                  <TextInput
+                    style={[styles.input, styles.inputHalf]}
+                    placeholder="Latitude"
+                    placeholderTextColor={colors.text.hint}
+                    value={novoPontoLat}
+                    onChangeText={setNovoPontoLat}
+                    keyboardType="numeric"
+                  />
+                  <TextInput
+                    style={[styles.input, styles.inputHalf]}
+                    placeholder="Longitude"
+                    placeholderTextColor={colors.text.hint}
+                    value={novoPontoLon}
+                    onChangeText={setNovoPontoLon}
+                    keyboardType="numeric"
+                  />
+                </View>
+                <TouchableOpacity
+                  style={[styles.createButton, salvando && styles.buttonDisabled]}
+                  onPress={handleCriarNovoPonto}
+                  disabled={salvando}>
+                  {salvando ? (
+                    <ActivityIndicator size="small" color={colors.text.inverse} />
+                  ) : (
+                    <>
+                      <Icon name={IconNames.add} size="sm" color={colors.text.inverse} />
+                      <Text style={styles.createButtonText}>Criar e Adicionar</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
             )}
-          </TouchableOpacity>
+          </View>
         </View>
-        </ScrollView>
-      )}
+      </ScrollView>
+
+      {/* Save Button */}
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={[
+            styles.saveButton,
+            (salvando || pontosRota.length === 0) && styles.buttonDisabled,
+          ]}
+          onPress={handleSalvarPontos}
+          disabled={salvando || pontosRota.length === 0}>
+          {salvando ? (
+            <ActivityIndicator color={colors.text.inverse} />
+          ) : (
+            <>
+              <Icon name={IconNames.checkCircle} size="md" color={colors.text.inverse} />
+              <Text style={styles.saveButtonText}>
+                Salvar Rota ({pontosRota.length} pontos)
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
@@ -446,6 +403,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background.default,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: spacing.base,
+    ...textStyles.body,
+    color: colors.text.secondary,
+  },
   header: {
     backgroundColor: colors.background.paper,
     padding: spacing.base,
@@ -454,10 +421,10 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   backButton: {
-    marginBottom: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+    marginBottom: spacing.sm,
   },
   backButtonText: {
     ...textStyles.body,
@@ -467,283 +434,188 @@ const styles = StyleSheet.create({
     ...textStyles.h2,
     color: colors.text.primary,
   },
+  subtitle: {
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
+    marginTop: spacing.xxs,
+  },
   scrollView: {
     flex: 1,
   },
   content: {
     padding: spacing.base,
+    paddingBottom: spacing.xxxl,
   },
-  infoBox: {
-    backgroundColor: colors.warning.light,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.base,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-  },
-  infoText: {
-    ...textStyles.bodySmall,
-    color: colors.warning.dark,
-    flex: 1,
-  },
-  mapaContainer: {
+  card: {
     backgroundColor: colors.background.paper,
     borderRadius: borderRadius.lg,
     padding: spacing.base,
     marginBottom: spacing.base,
-    borderWidth: 1,
-    borderColor: colors.border.light,
     ...shadows.sm,
   },
-  mapaTitle: {
-    ...textStyles.h4,
-    color: colors.text.primary,
+  cardHeader: {
     marginBottom: spacing.md,
   },
-  mapaPlaceholder: {
-    height: 300,
-    backgroundColor: colors.success.light,
-    borderRadius: borderRadius.md,
-    position: 'relative',
-    borderWidth: 2,
-    borderColor: colors.success.main,
-    borderStyle: 'dashed',
-  },
-  pontoMapa: {
-    position: 'absolute',
-    alignItems: 'center',
-  },
-  pontoColegio: {
-    zIndex: 3,
-  },
-  pontoEditavel: {
-    zIndex: 2,
-  },
-  pontoEditando: {
-    zIndex: 10,
-    borderWidth: 2,
-    borderColor: colors.secondary.main,
-    borderRadius: borderRadius.md,
-    padding: spacing.xs,
-  },
-  pontoMapaNome: {
-    ...textStyles.caption,
-    color: colors.text.primary,
-    fontWeight: fontWeight.medium,
-    backgroundColor: colors.background.paper,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-    borderRadius: borderRadius.xs,
-    textAlign: 'center',
-  },
-  editarIndicador: {
-    backgroundColor: colors.secondary.main,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-    borderRadius: borderRadius.xs,
-    marginTop: spacing.xs,
-  },
-  editarIndicadorText: {
-    ...textStyles.caption,
-    color: colors.text.inverse,
-    fontWeight: fontWeight.bold,
-  },
-  linhaRota: {
-    position: 'absolute',
-    width: '80%',
-    height: 2,
-    backgroundColor: colors.secondary.main,
-    opacity: 0.5,
-    left: '10%',
-    top: '50%',
-    zIndex: 1,
-  },
-  listaPontos: {
-    backgroundColor: colors.background.paper,
-    borderRadius: borderRadius.lg,
-    padding: spacing.base,
-    marginBottom: spacing.base,
-    borderWidth: 1,
-    borderColor: colors.border.light,
-    ...shadows.sm,
-  },
-  listaHeader: {
+  cardHeaderButton: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
   },
-  listaTitle: {
+  cardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  cardTitle: {
     ...textStyles.h4,
     color: colors.text.primary,
-    flex: 1,
   },
-  adicionarButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.success.main,
-    ...shadows.xs,
-  },
-  adicionarButtonText: {
-    ...textStyles.buttonSmall,
-    color: colors.text.inverse,
-  },
-  formNovoPonto: {
-    backgroundColor: colors.background.default,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
+  cardSubtitle: {
+    ...textStyles.caption,
+    color: colors.text.secondary,
+    marginTop: spacing.xxs,
     marginBottom: spacing.md,
   },
-  input: {
-    backgroundColor: colors.background.paper,
-    borderRadius: borderRadius.sm,
-    padding: spacing.base,
-    ...textStyles.inputText,
-    borderWidth: 1,
-    borderColor: colors.border.light,
-    marginBottom: spacing.sm,
-    color: colors.text.primary,
-  },
-  coordenadasRow: {
-    flexDirection: 'row',
-    width: '100%',
-    marginBottom: spacing.sm,
-    gap: spacing.sm,
-  },
-  inputCoordenada: {
-    flex: 1,
-    minWidth: 0,
-    marginBottom: 0,
-  },
-  inputCoordenadaLeft: {
-    marginRight: spacing.sm,
-  },
-  inputCoordenadaRight: {
-    marginLeft: spacing.sm,
-  },
-  formButtons: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  cancelarButton: {
-    flex: 1,
-    padding: spacing.base,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.border.light,
-    alignItems: 'center',
-  },
-  cancelarButtonText: {
-    ...textStyles.buttonSmall,
-    color: colors.text.secondary,
-  },
-  confirmarButton: {
-    flex: 1,
-    padding: spacing.base,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.secondary.main,
-    alignItems: 'center',
-    ...shadows.xs,
-  },
-  confirmarButtonText: {
-    ...textStyles.buttonSmall,
-    color: colors.text.inverse,
-  },
   emptyState: {
-    padding: spacing.xl,
     alignItems: 'center',
+    paddingVertical: spacing.xl,
   },
   emptyText: {
     ...textStyles.body,
     color: colors.text.secondary,
-    marginBottom: spacing.xs,
+    marginTop: spacing.md,
   },
   emptySubtext: {
     ...textStyles.caption,
     color: colors.text.hint,
+    marginTop: spacing.xs,
+    textAlign: 'center',
   },
   pontoItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
   },
-  pontoItemLeft: {
-    flexDirection: 'row',
+  pontoOrdem: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.secondary.main,
+    justifyContent: 'center',
     alignItems: 'center',
-    flex: 1,
-    gap: spacing.md,
+    marginRight: spacing.md,
   },
-  pontoItemInfo: {
+  pontoOrdemText: {
+    ...textStyles.caption,
+    color: colors.text.inverse,
+    fontWeight: fontWeight.bold,
+  },
+  pontoInfo: {
     flex: 1,
   },
-  pontoItemNome: {
+  pontoNome: {
     ...textStyles.body,
     fontWeight: fontWeight.medium,
     color: colors.text.primary,
-    marginBottom: spacing.xxs,
   },
-  pontoItemCoords: {
+  pontoCoords: {
     ...textStyles.caption,
-    color: colors.text.secondary,
+    color: colors.text.hint,
+    marginTop: spacing.xxs,
   },
-  removerButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.error.main,
-    ...shadows.xs,
-  },
-  removerButtonText: {
-    ...textStyles.buttonSmall,
-    color: colors.text.inverse,
-    fontWeight: fontWeight.medium,
-  },
-  avisoBox: {
-    backgroundColor: colors.error.light,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.base,
+  pontoActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.xs,
+  },
+  moveButton: {
+    padding: spacing.sm,
+  },
+  removeButton: {
+    padding: spacing.sm,
+  },
+  pontosGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  avisoText: {
-    ...textStyles.bodySmall,
-    color: colors.error.dark,
+  pontoChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.secondary.lighter,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.full,
+    maxWidth: '48%',
+  },
+  pontoChipText: {
+    ...textStyles.caption,
+    color: colors.secondary.dark,
+    fontWeight: fontWeight.medium,
+  },
+  formContainer: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.light,
+  },
+  input: {
+    backgroundColor: colors.background.default,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    ...textStyles.body,
+    color: colors.text.primary,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    marginBottom: spacing.sm,
+  },
+  coordRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  inputHalf: {
     flex: 1,
   },
-  salvarButton: {
-    backgroundColor: colors.secondary.main,
-    borderRadius: borderRadius.md,
-    padding: spacing.base,
+  createButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    ...shadows.sm,
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.success.main,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.sm,
   },
-  salvarButtonDisabled: {
-    backgroundColor: colors.border.light,
-  },
-  salvarButtonText: {
+  createButtonText: {
     ...textStyles.button,
     color: colors.text.inverse,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xxxl,
+  footer: {
+    padding: spacing.base,
+    backgroundColor: colors.background.paper,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.light,
+    ...shadows.md,
   },
-  loadingText: {
-    marginTop: spacing.base,
-    ...textStyles.body,
-    color: colors.text.secondary,
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.secondary.main,
+    padding: spacing.base,
+    borderRadius: borderRadius.md,
+  },
+  saveButtonText: {
+    ...textStyles.button,
+    color: colors.text.inverse,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
 });
 
 export default DefinirPontosRota;
-
-
