@@ -61,11 +61,23 @@ export const alunoService = {
   /**
    * List upcoming trips for student agenda
    * Backend: GET /v1/viagens/aluno/agenda
+   * Normalizes backend response to frontend format
    */
   async listarViagens() {
     try {
       const response = await api.get('/viagens/aluno/agenda');
-      return response.data;
+      // Normalize backend response to match frontend expectations
+      return (response.data || []).map(viagem => ({
+        id: viagem.viagem_id,
+        data: viagem.data,
+        dia_semana: viagem.dia_semana,
+        horario_inicio: viagem.horario_saida,
+        tipo: viagem.sentido, // IDA, VOLTA, CIRCULAR
+        rota_id: viagem.rota_id,
+        rota_nome: viagem.rota_nome,
+        status_confirmacao: viagem.status_confirmacao,
+        ponto_embarque_id: viagem.ponto_embarque_id,
+      }));
     } catch (error) {
       throw this.handleError(error);
     }
@@ -76,12 +88,7 @@ export const alunoService = {
    * Uses same endpoint as listarViagens
    */
   async listarMinhasViagens() {
-    try {
-      const response = await api.get('/viagens/aluno/agenda');
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error);
-    }
+    return this.listarViagens();
   },
 
   /**
