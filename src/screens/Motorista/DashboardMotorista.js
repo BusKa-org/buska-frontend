@@ -6,6 +6,7 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import {motoristaService} from '../../services/motoristaService';
