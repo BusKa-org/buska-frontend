@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -15,23 +15,69 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
+import api from '../../services/api';
 
 const CriarConta = ({navigation}) => {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [matricula, setMatricula] = useState('');
+  const [telefone, setTelefone] = useState('');
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
-  const [municipio, setMunicipio] = useState('');
-  const [tipoUsuario, setTipoUsuario] = useState('aluno');
+  const [instituicaoId, setInstituicaoId] = useState('');
+  const [instituicoes, setInstituicoes] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingInstituicoes, setLoadingInstituicoes] = useState(true);
   const [error, setError] = useState('');
   const { register } = useAuth();
+
+  // Load institutions on mount
+  useEffect(() => {
+    loadInstituicoes();
+  }, []);
+
+  const loadInstituicoes = async () => {
+    try {
+      setLoadingInstituicoes(true);
+      // This endpoint may require auth - for MVP we'll handle the error gracefully
+      const response = await api.get('/instituicoes/');
+      setInstituicoes(response.data || []);
+    } catch (error) {
+      console.log('Could not load institutions:', error);
+      // If we can't load institutions, we'll allow manual entry or skip
+      setInstituicoes([]);
+    } finally {
+      setLoadingInstituicoes(false);
+    }
+  };
+
+  const formatCPF = (text) => {
+    // Remove non-digits
+    const digits = text.replace(/\D/g, '');
+    // Format as XXX.XXX.XXX-XX
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
+  };
 
   const handleCriarConta = async () => {
     setError('');
 
-    if (!nome.trim() || !email.trim() || !senha.trim() || !municipio.trim()) {
-      setError('Por favor, preencha todos os campos');
+    // Validation
+    if (!nome.trim() || !email.trim() || !senha.trim()) {
+      setError('Por favor, preencha nome, e-mail e senha');
+      return;
+    }
+
+    if (!cpf.trim() || cpf.replace(/\D/g, '').length !== 11) {
+      setError('CPF inválido. Digite os 11 dígitos');
+      return;
+    }
+
+    if (!matricula.trim()) {
+      setError('Por favor, informe sua matrícula');
       return;
     }
 
@@ -51,8 +97,10 @@ const CriarConta = ({navigation}) => {
         nome,
         email,
         password: senha,
-        role: tipoUsuario,
-        municipio,
+        cpf: cpf.replace(/\D/g, ''), // Send only digits
+        matricula,
+        telefone: telefone || undefined,
+        instituicao_id: instituicaoId || undefined,
       });
 
       if (result.success) {
@@ -71,12 +119,6 @@ const CriarConta = ({navigation}) => {
       setLoading(false);
     }
   };
-
-  const userTypes = [
-    { id: 'aluno', label: 'Aluno', icon: IconNames.person, color: colors.roles.aluno },
-    { id: 'motorista', label: 'Motorista', icon: IconNames.bus, color: colors.roles.motorista },
-    { id: 'gestor', label: 'Gestor', icon: IconNames.badge, color: colors.roles.gestor },
-  ];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -97,13 +139,13 @@ const CriarConta = ({navigation}) => {
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.brandName}>BusKá</Text>
-              <Text style={styles.title}>Criar Conta</Text>
-              <Text style={styles.subtitle}>Preencha os dados abaixo</Text>
+              <Text style={styles.title}>Cadastro de Aluno</Text>
+              <Text style={styles.subtitle}>Preencha seus dados para se cadastrar</Text>
             </View>
 
             {/* Form */}
             <View style={styles.form}>
-              <Text style={styles.label}>Nome Completo</Text>
+              <Text style={styles.label}>Nome Completo *</Text>
               <TextInput
                 style={[styles.input, error && styles.inputError]}
                 placeholder="Seu nome completo"
@@ -116,7 +158,7 @@ const CriarConta = ({navigation}) => {
                 autoCapitalize="words"
               />
 
-              <Text style={styles.label}>E-mail</Text>
+              <Text style={styles.label}>E-mail *</Text>
               <TextInput
                 style={[styles.input, error && styles.inputError]}
                 placeholder="seu@email.com"
@@ -131,33 +173,70 @@ const CriarConta = ({navigation}) => {
                 autoCorrect={false}
               />
 
-              <Text style={styles.label}>Tipo de Usuário</Text>
-              <View style={styles.tipoUsuarioContainer}>
-                {userTypes.map((type) => (
-                  <TouchableOpacity
-                    key={type.id}
-                    style={[
-                      styles.tipoUsuarioButton,
-                      tipoUsuario === type.id && [styles.tipoUsuarioButtonActive, { borderColor: type.color }],
-                    ]}
-                    onPress={() => setTipoUsuario(type.id)}>
-                    <Icon 
-                      name={type.icon} 
-                      size="md" 
-                      color={tipoUsuario === type.id ? type.color : colors.text.secondary} 
-                    />
-                    <Text
-                      style={[
-                        styles.tipoUsuarioText,
-                        tipoUsuario === type.id && { color: type.color, fontWeight: '600' },
-                      ]}>
-                      {type.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <Text style={styles.label}>CPF *</Text>
+              <TextInput
+                style={[styles.input, error && styles.inputError]}
+                placeholder="000.000.000-00"
+                placeholderTextColor={colors.text.hint}
+                value={cpf}
+                onChangeText={(text) => {
+                  setCpf(formatCPF(text));
+                  if (error) setError('');
+                }}
+                keyboardType="numeric"
+                maxLength={14}
+              />
 
-              <Text style={styles.label}>Senha</Text>
+              <Text style={styles.label}>Matrícula *</Text>
+              <TextInput
+                style={[styles.input, error && styles.inputError]}
+                placeholder="Número da matrícula escolar"
+                placeholderTextColor={colors.text.hint}
+                value={matricula}
+                onChangeText={(text) => {
+                  setMatricula(text);
+                  if (error) setError('');
+                }}
+              />
+
+              <Text style={styles.label}>Telefone</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="(00) 00000-0000"
+                placeholderTextColor={colors.text.hint}
+                value={telefone}
+                onChangeText={setTelefone}
+                keyboardType="phone-pad"
+              />
+
+              {/* Institution selection */}
+              {instituicoes.length > 0 && (
+                <>
+                  <Text style={styles.label}>Instituição de Ensino</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.instituicoesScroll}>
+                    <View style={styles.instituicoesContainer}>
+                      {instituicoes.map((inst) => (
+                        <TouchableOpacity
+                          key={inst.id}
+                          style={[
+                            styles.instituicaoButton,
+                            instituicaoId === inst.id && styles.instituicaoButtonActive,
+                          ]}
+                          onPress={() => setInstituicaoId(inst.id)}>
+                          <Text style={[
+                            styles.instituicaoText,
+                            instituicaoId === inst.id && styles.instituicaoTextActive,
+                          ]}>
+                            {inst.nome}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </ScrollView>
+                </>
+              )}
+
+              <Text style={styles.label}>Senha *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Mínimo 6 caracteres"
@@ -168,7 +247,7 @@ const CriarConta = ({navigation}) => {
                 autoCapitalize="none"
               />
 
-              <Text style={styles.label}>Confirmar Senha</Text>
+              <Text style={styles.label}>Confirmar Senha *</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Digite a senha novamente"
@@ -177,19 +256,6 @@ const CriarConta = ({navigation}) => {
                 onChangeText={setConfirmarSenha}
                 secureTextEntry
                 autoCapitalize="none"
-              />
-
-              <Text style={styles.label}>Município</Text>
-              <TextInput
-                style={[styles.input, error && styles.inputError]}
-                placeholder="Ex: CAMPINA GRANDE"
-                placeholderTextColor={colors.text.hint}
-                value={municipio}
-                onChangeText={(text) => {
-                  setMunicipio(text);
-                  if (error) setError('');
-                }}
-                autoCapitalize="characters"
               />
 
               {error ? (
@@ -219,6 +285,10 @@ const CriarConta = ({navigation}) => {
                   <Text style={styles.loginLink}>Entrar</Text>
                 </TouchableOpacity>
               </View>
+
+              <Text style={styles.noteText}>
+                * Campos obrigatórios
+              </Text>
             </View>
           </View>
         </ScrollView>
@@ -254,7 +324,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.xl,
   },
   brandName: {
     ...textStyles.h3,
@@ -262,13 +332,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   title: {
-    ...textStyles.h1,
+    ...textStyles.h2,
     color: colors.secondary.main,
     marginBottom: spacing.xs,
   },
   subtitle: {
-    ...textStyles.body,
+    ...textStyles.bodySmall,
     color: colors.text.secondary,
+    textAlign: 'center',
   },
   form: {
     width: '100%',
@@ -277,7 +348,7 @@ const styles = StyleSheet.create({
     ...textStyles.inputLabel,
     color: colors.text.primary,
     marginBottom: spacing.sm,
-    marginTop: spacing.base,
+    marginTop: spacing.md,
   },
   input: {
     backgroundColor: colors.background.paper,
@@ -288,26 +359,32 @@ const styles = StyleSheet.create({
     borderColor: colors.border.light,
     color: colors.text.primary,
   },
-  tipoUsuarioContainer: {
+  instituicoesScroll: {
+    marginBottom: spacing.sm,
+  },
+  instituicoesContainer: {
     flexDirection: 'row',
     gap: spacing.sm,
   },
-  tipoUsuarioButton: {
-    flex: 1,
+  instituicaoButton: {
     backgroundColor: colors.background.paper,
     borderRadius: borderRadius.md,
-    padding: spacing.md,
-    alignItems: 'center',
-    borderWidth: 2,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
     borderColor: colors.border.light,
-    gap: spacing.xs,
   },
-  tipoUsuarioButtonActive: {
-    backgroundColor: colors.neutral[50],
+  instituicaoButtonActive: {
+    backgroundColor: colors.secondary.lighter,
+    borderColor: colors.secondary.main,
   },
-  tipoUsuarioText: {
-    ...textStyles.caption,
+  instituicaoText: {
+    ...textStyles.bodySmall,
     color: colors.text.secondary,
+  },
+  instituicaoTextActive: {
+    color: colors.secondary.dark,
+    fontWeight: '600',
   },
   criarContaButton: {
     flexDirection: 'row',
@@ -348,7 +425,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.error.light,
     borderRadius: borderRadius.md,
     padding: spacing.md,
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
     borderLeftWidth: 4,
     borderLeftColor: colors.error.main,
   },
@@ -359,6 +436,12 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: colors.error.main,
+  },
+  noteText: {
+    ...textStyles.caption,
+    color: colors.text.hint,
+    textAlign: 'center',
+    marginTop: spacing.lg,
   },
 });
 
