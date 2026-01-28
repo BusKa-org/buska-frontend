@@ -206,7 +206,7 @@ const DashboardAluno = ({navigation}) => {
         <View style={styles.botoesRapidos}>
           <TouchableOpacity
             style={styles.botaoRapido}
-            onPress={() => navigation.navigate('MinhasRotas')}>
+            onPress={() => navigation.navigate('SelecaoRotas')}>
             <View style={[styles.botaoIconContainer, { backgroundColor: colors.secondary.lighter }]}>
               <Icon name={IconNames.bus} size="lg" color={colors.secondary.dark} />
             </View>
