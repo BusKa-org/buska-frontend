@@ -68,6 +68,25 @@ export const ToastProvider = ({ children }) => {
     }
   }, [fadeAnim, hideToast]);
 
+  // Helper methods for common toast types
+  const success = useCallback((message, duration) => {
+    showToast({ type: 'success', message, duration });
+  }, [showToast]);
+
+  const error = useCallback((message, duration) => {
+    showToast({ type: 'error', message, duration: duration || 5000 });
+  }, [showToast]);
+
+  const warning = useCallback((message, duration) => {
+    showToast({ type: 'warning', message, duration });
+  }, [showToast]);
+
+  const info = useCallback((message, duration) => {
+    showToast({ type: 'info', message, duration });
+  }, [showToast]);
+
+  const contextValue = { showToast, success, error, warning, info };
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -80,7 +99,7 @@ export const ToastProvider = ({ children }) => {
   const config = toast ? TOAST_CONFIG[toast.type] || TOAST_CONFIG.info : null;
 
   return (
-    <ToastContext.Provider value={{ showToast, hideToast }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       {toast && (
         <Animated.View
