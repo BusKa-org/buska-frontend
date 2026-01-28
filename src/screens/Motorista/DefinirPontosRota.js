@@ -93,14 +93,15 @@ const RotaMapaSimples = ({ pontos }) => {
         <Text style={mapStyles.subtitle}>{positions.length} pontos</Text>
       </View>
       
-      <View style={[mapStyles.mapWrapper, { overflow: 'hidden' }]}>
+      <View style={[mapStyles.mapWrapper, { overflow: 'hidden', height: 220 }]}>
         <div style={{ 
           transform: `scale(${zoomLevel})`,
           transformOrigin: 'center center',
           width: '100%',
-          height: 220,
+          height: '100%',
+          position: 'relative',
         }}>
-        <View style={mapStyles.mapArea}>
+        <View style={[mapStyles.mapArea, { height: '100%' }]}>
           {/* Terrain-like background */}
           <View style={mapStyles.terrainBase} />
           <View style={mapStyles.terrainOverlay} />
@@ -260,10 +261,11 @@ const mapStyles = StyleSheet.create({
   },
   mapWrapper: {
     padding: spacing.sm,
+    position: 'relative',
   },
   mapArea: {
     width: '100%',
-    height: 220,
+    height: '100%',
     borderRadius: borderRadius.md,
     position: 'relative',
     overflow: 'hidden',
