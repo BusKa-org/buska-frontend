@@ -136,7 +136,9 @@ const SelecaoRotas = ({navigation}) => {
                       <View style={styles.rotaMeta}>
                         <Icon name={IconNames.location} size="sm" color={colors.text.secondary} />
                         <Text style={styles.rotaBairro}>
-                          {rota.municipio_nome || `Município ID: ${rota.municipio_id}`}
+                          {rota.municipio_nome 
+                            ? `${rota.municipio_nome}${rota.municipio_uf ? ` - ${rota.municipio_uf}` : ''}`
+                            : 'Município não informado'}
                         </Text>
                       </View>
                     </View>
