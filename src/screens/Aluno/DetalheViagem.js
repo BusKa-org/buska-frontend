@@ -64,6 +64,21 @@ const DetalheViagem = ({navigation, route}) => {
 
   const podeConfirmarPresenca = () => situacaoViagem === 'em andamento';
 
+  // Get origin and destination from route points
+  const getOrigem = () => {
+    if (pontosRota.length > 0) {
+      return pontosRota[0].apelido || pontosRota[0].nome || 'Ponto inicial';
+    }
+    return viagem?.origem || rota?.nome || 'Não informado';
+  };
+
+  const getDestino = () => {
+    if (pontosRota.length > 1) {
+      return pontosRota[pontosRota.length - 1].apelido || pontosRota[pontosRota.length - 1].nome || 'Ponto final';
+    }
+    return viagem?.destino || 'Não informado';
+  };
+
   const handleConfirmarPresenca = async () => {
     try {
       // Get ponto_embarque_id from viagem or use first route point
@@ -132,7 +147,7 @@ const DetalheViagem = ({navigation, route}) => {
                 </View>
                 <View style={styles.pontoInfo}>
                   <Text style={styles.pontoLabel}>Origem</Text>
-                  <Text style={styles.pontoNome}>{viagem.origem || 'Não informado'}</Text>
+                  <Text style={styles.pontoNome}>{getOrigem()}</Text>
                 </View>
               </View>
               <View style={styles.linhaRota} />
@@ -142,7 +157,7 @@ const DetalheViagem = ({navigation, route}) => {
                 </View>
                 <View style={styles.pontoInfo}>
                   <Text style={styles.pontoLabel}>Destino</Text>
-                  <Text style={styles.pontoNome}>{viagem.destino || 'Não informado'}</Text>
+                  <Text style={styles.pontoNome}>{getDestino()}</Text>
                 </View>
               </View>
             </View>

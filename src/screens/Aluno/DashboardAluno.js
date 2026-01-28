@@ -74,23 +74,17 @@ const DashboardAluno = ({navigation}) => {
         if (upcomingTrips.length > 0) {
           const nextTrip = upcomingTrips[0];
           
-          let presencaStatus = 'Não confirmado';
-          try {
-            const presencaData = await alunoService.obterPresencaViagem(nextTrip.id);
-            presencaStatus = presencaData.presente ? 'Confirmado' : 'Não confirmado';
-          } catch (e) {
-            // Silent fail - use default status
-          }
+          // Use status_confirmacao directly from normalized trip data
+          const presencaStatus = nextTrip.status_confirmacao ? 'Confirmado' : 'Não confirmado';
           
           setProximaViagem({
-            id: nextTrip.id,
+            // Include all trip data for navigation to DetalheViagem
+            ...nextTrip,
+            // Add formatted fields for display
             horario: nextTrip.horario_inicio
               ? nextTrip.horario_inicio.substring(0, 5)
               : '--:--',
-            tipo: nextTrip.tipo,
             status: presencaStatus,
-            rota_id: nextTrip.rota_id,
-            data: nextTrip.data,
           });
         } else {
           setProximaViagem(null);
