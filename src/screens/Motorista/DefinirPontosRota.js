@@ -477,9 +477,18 @@ const DefinirPontosRota = ({navigation, route}) => {
       try {
         setLoading(true);
         
-        // Load available points (municipality points)
+        // Load available points (municipality points) and deduplicate
         const todosOsPontos = await motoristaService.listarPontos();
-        setPontosDisponiveis(todosOsPontos || []);
+        const pontosUnicos = [];
+        const idsVistos = new Set();
+        for (const ponto of (todosOsPontos || [])) {
+          const pontoId = String(ponto.id);
+          if (!idsVistos.has(pontoId)) {
+            idsVistos.add(pontoId);
+            pontosUnicos.push(ponto);
+          }
+        }
+        setPontosDisponiveis(pontosUnicos);
         
         // Load route points if editing existing route
         if (rotaId && !isNovaRota) {
