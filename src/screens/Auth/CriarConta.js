@@ -169,24 +169,62 @@ const CriarConta = ({navigation}) => {
   const handleRegistrationError = (result) => {
     const { error, errorCode, field, fieldErrors } = result;
     
+    // Debug: log the full error result
+    console.log('Registration error result:', JSON.stringify(result, null, 2));
+    
     // Handle multiple field errors from backend
     if (fieldErrors && Object.keys(fieldErrors).length > 0) {
+      console.log('fieldErrors received:', fieldErrors);
+      
       // Map backend field names to form field names
       const fieldMapping = {
         'password': 'senha',
         'instituicao_id': 'instituicaoId',
       };
       
+      // Valid form fields that exist in the UI
+      const validFormFields = ['nome', 'email', 'cpf', 'matricula', 'telefone', 'senha', 'confirmarSenha', 'instituicaoId'];
+      
       const mappedErrors = {};
+      const unmappedFields = [];
+      
       for (const [fieldName, errorMsg] of Object.entries(fieldErrors)) {
         const mappedField = fieldMapping[fieldName] || fieldName;
-        mappedErrors[mappedField] = errorMsg;
+        
+        // Only set error if field exists in the form
+        if (validFormFields.includes(mappedField)) {
+          // Handle string or array error messages
+          if (typeof errorMsg === 'string') {
+            mappedErrors[mappedField] = errorMsg;
+          } else if (Array.isArray(errorMsg) && errorMsg.length > 0) {
+            mappedErrors[mappedField] = errorMsg[0];
+          } else if (typeof errorMsg === 'object') {
+            // Nested error object (e.g., endereco_casa.rua)
+            mappedErrors[mappedField] = 'Campo inválido';
+          }
+        } else {
+          // Track unmapped fields for general error
+          unmappedFields.push(fieldName);
+        }
       }
       
-      setErrors(prev => ({ ...prev, ...mappedErrors }));
+      console.log('mappedErrors:', mappedErrors);
+      console.log('unmappedFields:', unmappedFields);
       
-      // Only show general error if there are multiple field errors
-      if (Object.keys(fieldErrors).length > 1) {
+      // Set field errors
+      if (Object.keys(mappedErrors).length > 0) {
+        setErrors(prev => ({ ...prev, ...mappedErrors }));
+      }
+      
+      // Show general error for unmapped fields or when multiple errors exist
+      if (unmappedFields.length > 0) {
+        // Build a user-friendly message for unmapped fields
+        const fieldLabels = {
+          'endereco_casa': 'Endereço',
+        };
+        const unmappedLabels = unmappedFields.map(f => fieldLabels[f] || f).join(', ');
+        setGeneralError(`Erro em: ${unmappedLabels}. Verifique os dados e tente novamente.`);
+      } else if (Object.keys(mappedErrors).length > 1) {
         setGeneralError('Verifique os campos destacados em vermelho.');
       }
       return;

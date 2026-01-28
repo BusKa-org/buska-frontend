@@ -146,15 +146,29 @@ function extractErrorDetails(responseData) {
   if (errorsObj && typeof errorsObj === 'object') {
     details = errorsObj;
     
+    // Helper to extract error message from various formats
+    const extractErrorMessage = (errorValue) => {
+      if (typeof errorValue === 'string') {
+        return errorValue;
+      }
+      if (Array.isArray(errorValue) && errorValue.length > 0) {
+        return typeof errorValue[0] === 'string' ? errorValue[0] : 'Campo inválido';
+      }
+      if (typeof errorValue === 'object' && errorValue !== null) {
+        // Nested object - extract first error from nested fields
+        if (errorValue.message) return errorValue.message;
+        // Marshmallow nested: { "rua": ["Required"], "cidade": ["Required"] }
+        const nestedErrors = Object.values(errorValue);
+        if (nestedErrors.length > 0) {
+          return extractErrorMessage(nestedErrors[0]);
+        }
+      }
+      return 'Campo inválido';
+    };
+    
     // Convert errors object to fieldErrors map
     for (const [fieldName, errorMsg] of Object.entries(errorsObj)) {
-      if (typeof errorMsg === 'string') {
-        fieldErrors[fieldName] = errorMsg;
-      } else if (Array.isArray(errorMsg) && errorMsg.length > 0) {
-        fieldErrors[fieldName] = errorMsg[0];
-      } else if (typeof errorMsg === 'object' && errorMsg.message) {
-        fieldErrors[fieldName] = errorMsg.message;
-      }
+      fieldErrors[fieldName] = extractErrorMessage(errorMsg);
     }
     
     // If there's only one field error, use it as the main message
