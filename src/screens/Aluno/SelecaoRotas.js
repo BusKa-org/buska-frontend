@@ -119,7 +119,41 @@ const SelecaoRotas = ({navigation}) => {
             />
           }>
           <View style={styles.content}>
-            <Text style={styles.sectionTitle}>
+            {/* Minhas Rotas Cadastradas */}
+            {rotasInscritas.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>
+                  Minhas Rotas ({rotasInscritas.length})
+                </Text>
+                {rotasInscritas.map((rota) => (
+                  <TouchableOpacity 
+                    key={rota.id} 
+                    style={[styles.rotaCard, styles.rotaCardInscrita]}
+                    onPress={() => navigation.navigate('RotaAluno', { rota })}>
+                    <View style={styles.rotaHeader}>
+                      <View style={[styles.rotaIconContainer, { backgroundColor: colors.success.light }]}>
+                        <Icon name={IconNames.checkCircle} size="lg" color={colors.success.main} />
+                      </View>
+                      <View style={styles.rotaInfo}>
+                        <Text style={styles.rotaNome}>{rota.nome}</Text>
+                        <View style={styles.rotaMeta}>
+                          <Icon name={IconNames.location} size="sm" color={colors.text.secondary} />
+                          <Text style={styles.rotaBairro}>
+                            {rota.municipio_nome 
+                              ? `${rota.municipio_nome}${rota.municipio_uf ? ` - ${rota.municipio_uf}` : ''}`
+                              : 'Município não informado'}
+                          </Text>
+                        </View>
+                      </View>
+                      <Icon name={IconNames.chevronRight} size="md" color={colors.text.secondary} />
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+
+            {/* Rotas Disponíveis para Inscrição */}
+            <Text style={[styles.sectionTitle, rotasInscritas.length > 0 && { marginTop: spacing.lg }]}>
               Rotas Disponíveis ({rotasFiltradas.length})
             </Text>
 
@@ -239,6 +273,10 @@ const styles = StyleSheet.create({
     padding: spacing.base,
     marginBottom: spacing.md,
     ...shadows.sm,
+  },
+  rotaCardInscrita: {
+    borderLeftWidth: 4,
+    borderLeftColor: colors.success.main,
   },
   rotaHeader: {
     flexDirection: 'row',
