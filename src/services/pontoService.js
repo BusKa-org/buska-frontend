@@ -11,7 +11,7 @@ import api from './api';
  * @returns {Promise<Array>} List of points
  */
 export const getPontosByRota = async (rotaId) => {
-  const response = await api.get(`/pontos/rota/${rotaId}`);
+  const response = await api.get(`/rotas/${rotaId}/pontos`);
   return response.data;
 };
 

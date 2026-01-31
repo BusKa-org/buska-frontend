@@ -40,6 +40,11 @@ const DetalheViagemMotorista = ({navigation, route}) => {
 
   const [situacaoViagem, setSituacaoViagem] = useState(viagem.status);
   const [pontosRota, setPontosRota] = useState([]);
+  useEffect(() => {
+    if (viagem.pontos) {
+      setPontosRota(viagem.pontos);
+    }
+  }, [viagem]);
   // Use data directly from viagem object (from /viagens/minhas response)
   const alunosInfo = {
     totalAlunos: viagem.total_alunos || 0,
@@ -213,7 +218,7 @@ const DetalheViagemMotorista = ({navigation, route}) => {
                   )}
                 </View>
                 <View style={styles.pontoItemRight}>
-                  <Text style={styles.pontoItemNome}>{ponto.nome}</Text>
+                  <Text style={styles.pontoItemNome}>{ponto.apelido}</Text>
                   <Text style={styles.pontoItemTipo}>
                     {ponto.tipo === 'origem'
                       ? 'Origem'
