@@ -35,33 +35,55 @@ jobs:
       - name: Make Gradlew executable
         run: chmod +x android/gradlew
 
-      # If you want the release APK to be signed in CI even without prod keystore,
-      # generate a debug keystore (your gradle can use it for debug builds anyway).
+      # Ensure debug.keystore exists (useful if your release build falls back to debug signing in CI)
       - name: Create debug keystore (CI)
         run: |
           cd android/app
-          keytool -genkeypair -v \
-            -storetype PKCS12 \
-            -keystore debug.keystore \
-            -storepass android \
-            -alias androiddebugkey \
-            -keypass android \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Android Debug,O=Android,C=US"
+          if [ ! -f debug.keystore ]; then
+            keytool -genkeypair -v \
+              -storetype PKCS12 \
+              -keystore debug.keystore \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
 
       - name: Build Release APK
         run: |
           cd android
-          ./gradlew clean assembleRelease --no-daemon
+          ./gradlew clean :app:assembleRelease --no-daemon --stacktrace
+
+      - name: List build outputs (debugging)
+        run: |
+          echo "=== outputs/apk ==="
+          ls -R android/app/build/outputs/apk || true
+          echo "=== outputs/bundle ==="
+          ls -R android/app/build/outputs/bundle || true
+          echo "=== find APKs ==="
+          find android/app/build/outputs -type f -name "*.apk" -print || true
+
+      - name: Locate release APK
+        id: locate_apk
+        run: |
+          APK_PATH=$(find android/app/build/outputs/apk -type f -name "*release*.apk" | head -n 1)
+          echo "Found APK: $APK_PATH"
+          if [ -z "$APK_PATH" ]; then
+            echo "No release APK found under android/app/build/outputs/apk"
+            exit 1
+          fi
+          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release-${{ github.run_number }}
-          path: android/app/build/outputs/apk/release/app-release.apk
+          path: ${{ steps.locate_apk.outputs.apk_path }}
           retention-days: 30
+          if-no-files-found: error
 
       - name: Get APK info
         run: |
           echo "✅ Release APK generated!"
-          ls -lh android/app/build/outputs/apk/release/app-release.apk
+          ls -lh "${{ steps.locate_apk.outputs.apk_path }}"
