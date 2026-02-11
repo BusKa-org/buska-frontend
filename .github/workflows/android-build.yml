@@ -75,6 +75,20 @@ jobs:
           fi
           echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
 
+      - name: Verify APK (aapt + apksigner)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y apksigner
+
+          APK="${{ steps.locate_apk.outputs.apk_path }}"
+          echo "APK: $APK"
+
+          echo "== apksigner verify =="
+          apksigner verify --verbose "$APK"
+
+          echo "== print manifest info (package/version/sdk) =="
+          $ANDROID_SDK_ROOT/build-tools/*/aapt dump badging "$APK" | head -n 40
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:

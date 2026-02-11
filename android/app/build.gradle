@@ -62,9 +62,11 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            // Only sign release if keystore.properties exists (Release workflow provides it).
+            // Use release keystore if available, otherwise fall back to debug signing
             if (hasReleaseKeystore) {
                 signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
             }
 
             minifyEnabled enableProguardInReleaseBuilds
