@@ -1,8 +1,10 @@
-import React from 'react';
-import {Platform} from 'react-native';
+import React, { useEffect } from 'react';
+import {Platform, View, ActivityIndicator, StyleSheet} from 'react-native';
 import SelecaoFluxo from '../screens/SelecaoFluxo';
 import AlunoNavigator from './AlunoNavigator';
 import MotoristaNavigator from './MotoristaNavigator';
+import AuthNavigator from './AuthNavigator';
+import { useAuth } from '../contexts/AuthContext';
 import {
   NavigationProvider,
   Navigator,
@@ -21,15 +23,49 @@ if (!isWeb) {
     const ReactNavigation = require('@react-navigation/native-stack');
     createNativeStackNavigator = ReactNavigation.createNativeStackNavigator;
   } catch (e) {
-    console.log('React Navigation não disponível, usando navegação simples');
+    // React Navigation not available, using simple navigation
   }
 }
 
+// Get the correct navigator based on user role
+const getInitialRoute = (role) => {
+  const normalizedRole = role?.toUpperCase?.() || '';
+  switch (normalizedRole) {
+    case 'ALUNO':
+      return 'AlunoNavigator';
+    case 'MOTORISTA':
+      return 'MotoristaNavigator';
+    case 'GESTOR':
+      // Gestores usam MotoristaNavigator por enquanto (têm acesso às mesmas telas + admin)
+      return 'MotoristaNavigator';
+    default:
+      return 'SelecaoFluxo';
+  }
+};
+
 const MainNavigator = () => {
-  // Se estiver na web ou React Navigation não estiver disponível, usa navegação simples
+  const { isAuthenticated, user, loading } = useAuth();
+
+  // Show loading screen while checking auth status
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#1a73e8" />
+      </View>
+    );
+  }
+
+  // If not authenticated, show auth screens
+  if (!isAuthenticated) {
+    return <AuthNavigator />;
+  }
+
+  const initialRoute = getInitialRoute(user?.role);
+
+  // If authenticated, show role-based navigator
   if (isWeb || !createNativeStackNavigator) {
     return (
-      <NavigationProvider initialRoute="SelecaoFluxo">
+      <NavigationProvider initialRoute={initialRoute}>
         <Navigator>
           <Screen name="SelecaoFluxo" component={SelecaoFluxo} />
           <Screen name="AlunoNavigator" component={AlunoNavigator} />
@@ -48,7 +84,7 @@ const MainNavigator = () => {
 
   return (
     <Stack.Navigator
-      initialRouteName="SelecaoFluxo"
+      initialRouteName={initialRoute}
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
@@ -59,6 +95,15 @@ const MainNavigator = () => {
     </Stack.Navigator>
   );
 };
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+});
 
 export default MainNavigator;
 

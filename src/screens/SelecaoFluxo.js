@@ -6,12 +6,58 @@ import {
   StyleSheet,
   SafeAreaView,
 } from 'react-native';
+import { colors, spacing, borderRadius, shadows, textStyles } from '../theme';
+import Icon, { IconNames } from '../components/Icon';
+import { useAuth } from '../contexts/AuthContext';
 
 const SelecaoFluxo = ({navigation}) => {
+  const { user } = useAuth();
+  const userRole = user?.role?.toUpperCase?.() || '';
+
+  // Define all user types with role requirements
+  const allUserTypes = [
+    {
+      id: 'aluno',
+      label: 'Aluno',
+      description: 'Confirme sua presença e acompanhe sua rota',
+      icon: IconNames.person,
+      color: colors.roles.aluno,
+      bgColor: colors.secondary.lighter,
+      route: 'AlunoNavigator',
+      allowedRoles: ['ALUNO'],
+    },
+    {
+      id: 'motorista',
+      label: 'Motorista',
+      description: 'Gerencie suas rotas e viagens',
+      icon: IconNames.bus,
+      color: colors.roles.motorista,
+      bgColor: colors.neutral[100],
+      route: 'MotoristaNavigator',
+      allowedRoles: ['MOTORISTA', 'GESTOR'],
+    },
+    {
+      id: 'gestor',
+      label: 'Gestor',
+      description: 'Gerencie usuários, rotas e viagens',
+      icon: IconNames.badge,
+      color: colors.roles.gestor,
+      bgColor: colors.accent.light,
+      route: 'MotoristaNavigator', // Gestores usam mesmas telas por enquanto
+      allowedRoles: ['GESTOR'],
+    },
+  ];
+
+  // Filter to only show roles the user has access to
+  const userTypes = allUserTypes.filter(
+    type => type.allowedRoles.includes(userRole)
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.header}>
+          <Text style={styles.brandName}>BusKá</Text>
           <Text style={styles.title}>Transporte Escolar</Text>
           <Text style={styles.subtitle}>Gestão Municipal</Text>
           <Text style={styles.description}>
@@ -20,35 +66,30 @@ const SelecaoFluxo = ({navigation}) => {
         </View>
 
         <View style={styles.fluxosContainer}>
-          <TouchableOpacity
-            style={styles.fluxoCard}
-            onPress={() => navigation.navigate('AlunoNavigator')}>
-            <Text style={styles.fluxoIcon}>🎒</Text>
-            <Text style={styles.fluxoTitle}>Aluno</Text>
-            <Text style={styles.fluxoDescription}>
-              Confirme sua presença e acompanhe sua rota
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.fluxoCard}
-            onPress={() => navigation.navigate('MotoristaNavigator')}>
-            <Text style={styles.fluxoIcon}>🚌</Text>
-            <Text style={styles.fluxoTitle}>Motorista</Text>
-            <Text style={styles.fluxoDescription}>
-              Gerencie suas rotas e viagens
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.fluxoCard, styles.fluxoCardDisabled]}>
-            <Text style={styles.fluxoIcon}>👔</Text>
-            <Text style={styles.fluxoTitle}>Gestor</Text>
-            <Text style={styles.fluxoDescription}>
-              Acompanhe relatórios e estatísticas
-            </Text>
-            <Text style={styles.comingSoon}>Em breve</Text>
-          </TouchableOpacity>
+          {userTypes.length > 0 ? (
+            userTypes.map((type) => (
+              <TouchableOpacity
+                key={type.id}
+                style={styles.fluxoCard}
+                onPress={() => navigation.navigate(type.route)}>
+                <View style={[styles.iconContainer, { backgroundColor: type.bgColor }]}>
+                  <Icon name={type.icon} size="xxl" color={type.color} />
+                </View>
+                <View style={styles.fluxoTextContainer}>
+                  <Text style={styles.fluxoTitle}>{type.label}</Text>
+                  <Text style={styles.fluxoDescription}>{type.description}</Text>
+                </View>
+                <Icon name={IconNames.chevronRight} size="lg" color={colors.neutral[400]} />
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={styles.noAccessContainer}>
+              <Icon name={IconNames.warning} size="xl" color={colors.warning.main} />
+              <Text style={styles.noAccessText}>
+                Seu perfil ({userRole || 'indefinido'}) não tem acesso a nenhuma área.
+              </Text>
+            </View>
+          )}
         </View>
       </View>
     </SafeAreaView>
@@ -58,76 +99,80 @@ const SelecaoFluxo = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.default,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
-    padding: 24,
+    padding: spacing.xl,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: spacing.xxxl,
+  },
+  brandName: {
+    ...textStyles.display2,
+    color: colors.primary.main,
+    marginBottom: spacing.xs,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1a73e8',
-    marginBottom: 8,
+    ...textStyles.h2,
+    color: colors.secondary.main,
+    marginBottom: spacing.xs,
   },
   subtitle: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 16,
+    ...textStyles.body,
+    color: colors.text.secondary,
+    marginBottom: spacing.lg,
   },
   description: {
-    fontSize: 14,
-    color: '#999',
+    ...textStyles.bodySmall,
+    color: colors.text.hint,
     textAlign: 'center',
   },
   fluxosContainer: {
-    gap: 16,
+    gap: spacing.base,
   },
   fluxoCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
+    flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#1a73e8',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
+    ...shadows.md,
   },
-  fluxoCardDisabled: {
-    borderColor: '#e0e0e0',
-    opacity: 0.6,
+  noAccessContainer: {
+    alignItems: 'center',
+    padding: spacing.xl,
+    backgroundColor: colors.warning.lighter,
+    borderRadius: borderRadius.lg,
+    gap: spacing.sm,
   },
-  fluxoIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  fluxoTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  fluxoDescription: {
-    fontSize: 14,
-    color: '#666',
+  noAccessText: {
+    ...textStyles.body,
+    color: colors.warning.dark,
     textAlign: 'center',
   },
-  comingSoon: {
-    marginTop: 8,
-    fontSize: 12,
-    color: '#999',
-    fontStyle: 'italic',
+  iconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: borderRadius.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.base,
+  },
+  fluxoTextContainer: {
+    flex: 1,
+  },
+  fluxoTitle: {
+    ...textStyles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.xxs,
+  },
+  fluxoDescription: {
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
   },
 });
 
 export default SelecaoFluxo;
-
-

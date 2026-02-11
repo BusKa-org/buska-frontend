@@ -1,5 +1,6 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const webpack = require('webpack');
 
 module.exports = {
   entry: './index.web.js',
@@ -16,12 +17,13 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'bundle.js',
+    publicPath: '/',
   },
   module: {
     rules: [
       {
         test: /\.(js|jsx|mjs)$/,
-        exclude: /node_modules\/(?!@react-navigation)/,
+        exclude: /node_modules\/(?!(@react-navigation|react-native-vector-icons))/,
         use: {
           loader: 'babel-loader',
           options: {
@@ -33,11 +35,29 @@ module.exports = {
         test: /\.css$/,
         use: ['style-loader', 'css-loader'],
       },
+      // Font files (Inter, Material Icons)
+      {
+        test: /\.(ttf|otf|woff|woff2|eot)$/,
+        type: 'asset/resource',
+        generator: {
+          filename: 'fonts/[name][ext]',
+        },
+      },
+      // Image files
+      {
+        test: /\.(png|jpg|jpeg|gif|svg)$/,
+        type: 'asset/resource',
+        generator: {
+          filename: 'images/[name][ext]',
+        },
+      },
     ],
   },
   resolve: {
     alias: {
       'react-native$': 'react-native-web',
+      // Alias for vector icons on web
+      'react-native-vector-icons/MaterialIcons': 'react-native-vector-icons/dist/MaterialIcons',
     },
     extensions: ['.web.js', '.js', '.jsx', '.json', '.mjs'],
     fallback: {
@@ -50,6 +70,9 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: './public/index.html',
       filename: 'index.html',
+    }),
+    new webpack.DefinePlugin({
+      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
     }),
   ],
 };

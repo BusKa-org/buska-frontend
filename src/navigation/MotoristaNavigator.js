@@ -2,9 +2,13 @@ import React from 'react';
 import {Platform} from 'react-native';
 import DashboardMotorista from '../screens/Motorista/DashboardMotorista';
 import RotaMotorista from '../screens/Motorista/RotaMotorista';
+import CriarRota from '../screens/Motorista/CriarRota';
+import CriarViagem from '../screens/Motorista/CriarViagem';
+import ListaViagens from '../screens/Motorista/ListaViagens';
 import DetalheViagemMotorista from '../screens/Motorista/DetalheViagemMotorista';
 import ListaAlunosConfirmados from '../screens/Motorista/ListaAlunosConfirmados';
 import DefinirPontosRota from '../screens/Motorista/DefinirPontosRota';
+import DefinirHorariosRota from '../screens/Motorista/DefinirHorariosRota';
 import RotaOtimizada from '../screens/Motorista/RotaOtimizada';
 import InicioFimViagem from '../screens/Motorista/InicioFimViagem';
 import ChatGestor from '../screens/Motorista/ChatGestor';
@@ -39,6 +43,9 @@ const MotoristaNavigator = () => {
         <Navigator>
           <Screen name="DashboardMotorista" component={DashboardMotorista} />
           <Screen name="RotaMotorista" component={RotaMotorista} />
+          <Screen name="CriarRota" component={CriarRota} />
+          <Screen name="CriarViagem" component={CriarViagem} />
+          <Screen name="ListaViagens" component={ListaViagens} />
           <Screen
             name="DetalheViagemMotorista"
             component={DetalheViagemMotorista}
@@ -48,6 +55,7 @@ const MotoristaNavigator = () => {
             component={ListaAlunosConfirmados}
           />
           <Screen name="DefinirPontosRota" component={DefinirPontosRota} />
+          <Screen name="DefinirHorariosRota" component={DefinirHorariosRota} />
           <Screen name="RotaOtimizada" component={RotaOtimizada} />
           <Screen name="InicioFimViagem" component={InicioFimViagem} />
           <Screen name="ChatGestor" component={ChatGestor} />
@@ -76,6 +84,9 @@ const MotoristaNavigator = () => {
       }}>
       <Stack.Screen name="DashboardMotorista" component={DashboardMotorista} />
       <Stack.Screen name="RotaMotorista" component={RotaMotorista} />
+      <Stack.Screen name="CriarRota" component={CriarRota} />
+      <Stack.Screen name="CriarViagem" component={CriarViagem} />
+      <Stack.Screen name="ListaViagens" component={ListaViagens} />
       <Stack.Screen
         name="DetalheViagemMotorista"
         component={DetalheViagemMotorista}
@@ -85,6 +96,7 @@ const MotoristaNavigator = () => {
         component={ListaAlunosConfirmados}
       />
       <Stack.Screen name="DefinirPontosRota" component={DefinirPontosRota} />
+      <Stack.Screen name="DefinirHorariosRota" component={DefinirHorariosRota} />
       <Stack.Screen name="RotaOtimizada" component={RotaOtimizada} />
       <Stack.Screen name="InicioFimViagem" component={InicioFimViagem} />
       <Stack.Screen name="ChatGestor" component={ChatGestor} />

@@ -1,6 +1,12 @@
 apply plugin: "com.android.application"
 apply plugin: "com.facebook.react"
 
+// Vector Icons - copy font files
+project.ext.vectoricons = [
+    iconFontNames: [ 'MaterialIcons.ttf' ]
+]
+apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
+
 import java.util.Properties
 
 def enableProguardInReleaseBuilds = false

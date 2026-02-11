@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -6,175 +6,260 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
+import { alunoService } from '../../services';
+import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
+import { useToast } from '../../components/Toast';
 
 const RotaAluno = ({navigation, route}) => {
-  const rota = route?.params?.rota || {
-    id: 1,
-    nome: 'Rota Centro - Zona Norte',
-    bairro: 'Centro',
-  };
+  const rota = route?.params?.rota; // Can be null to show all trips
+  const toast = useToast();
+  const [viagens, setViagens] = useState([]);
+  const [presencasStatus, setPresencasStatus] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [updatingPresenca, setUpdatingPresenca] = useState(null);
+  const isMountedRef = useRef(true);
 
-  // Dados mockados - viagens do dia
-  const [viagens, setViagens] = useState([
-    {
-      id: 1,
-      tipo: 'Manhã',
-      horario: '07:30',
-      status: 'Confirmado',
-      origem: 'Centro',
-      destino: 'Escola Municipal',
-    },
-    {
-      id: 2,
-      tipo: 'Tarde',
-      horario: '13:00',
-      status: 'Não confirmado',
-      origem: 'Centro',
-      destino: 'Escola Municipal',
-    },
-    {
-      id: 3,
-      tipo: 'Noite',
-      horario: '17:30',
-      status: 'Encerrada',
-      origem: 'Escola Municipal',
-      destino: 'Centro',
-    },
-  ]);
+  const isAllTrips = !rota; // Show all trips mode
+  const screenTitle = isAllTrips ? 'Minhas Viagens' : rota.nome;
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Confirmado':
-        return '#34a853';
-      case 'Não confirmado':
-        return '#fbbc04';
-      case 'Encerrada':
-        return '#666';
-      case 'Cancelada':
-        return '#ea4335';
-      default:
-        return '#999';
+  const loadViagens = async () => {
+    try {
+      const todasViagens = await alunoService.listarViagens();
+      
+      // Filter by route if a specific route is provided, otherwise show all
+      const viagensFiltradas = isAllTrips 
+        ? todasViagens 
+        : todasViagens.filter((v) => v.rota_id === rota.id);
+      
+      setViagens(viagensFiltradas || []);
+      
+      // Use status_confirmacao from the agenda response directly
+      const statusMap = {};
+      viagensFiltradas.forEach((viagem) => {
+        statusMap[viagem.id] = viagem.status_confirmacao || false;
+      });
+      setPresencasStatus(statusMap);
+    } catch (error) {
+      toast.error('Não foi possível carregar as viagens.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const getStatusBgColor = (status) => {
+  useEffect(() => {
+    loadViagens();
+    return () => { isMountedRef.current = false; };
+  }, [rota?.id]);
+
+  useEffect(() => {
+    const unsubscribe = navigation?.addListener?.('focus', () => {
+      if (isMountedRef.current) loadViagens();
+    });
+    return unsubscribe;
+  }, [navigation, rota?.id]);
+
+  const getStatusConfig = (status) => {
     switch (status) {
       case 'Confirmado':
-        return '#e8f5e9';
+        return { color: colors.success.main, bg: colors.success.light, icon: IconNames.checkCircle };
       case 'Não confirmado':
-        return '#fff3cd';
+        return { color: colors.warning.main, bg: colors.warning.light, icon: IconNames.warning };
       case 'Encerrada':
-        return '#f5f5f5';
+        return { color: colors.text.secondary, bg: colors.neutral[100], icon: IconNames.checkCircle };
       case 'Cancelada':
-        return '#ffebee';
+        return { color: colors.error.main, bg: colors.error.light, icon: IconNames.error };
       default:
-        return '#f5f5f5';
+        return { color: colors.text.hint, bg: colors.neutral[100], icon: IconNames.info };
     }
   };
 
-  const handleConfirmarPresenca = (viagemId) => {
-    setViagens(
-      viagens.map((v) =>
-        v.id === viagemId
-          ? {
-              ...v,
-              status:
-                v.status === 'Confirmado' ? 'Não confirmado' : 'Confirmado',
-            }
-          : v,
-      ),
-    );
+  const handleConfirmarPresenca = async (viagem, currentStatus) => {
+    try {
+      setUpdatingPresenca(viagem.id);
+      const novoStatus = currentStatus !== 'Confirmado';
+      
+      // Get boarding point ID
+      let pontoEmbarqueId = viagem.ponto_embarque_id;
+      
+      if (novoStatus && !pontoEmbarqueId && viagem.rota_id) {
+        try {
+          const pontos = await alunoService.listarPontosRota(viagem.rota_id);
+          if (pontos && pontos.length > 0) {
+            pontoEmbarqueId = pontos[0].id;
+          }
+        } catch (e) {
+          toast.error(`Erro ao buscar pontos da rota: ${e.message || 'erro desconhecido'}`);
+          return;
+        }
+      }
+      
+      if (novoStatus && !pontoEmbarqueId) {
+        toast.error(`Nenhum ponto de embarque disponível. Rota ID: ${viagem.rota_id || 'não definido'}`);
+        return;
+      }
+      
+      await alunoService.alterarPresencaViagem(viagem.id, novoStatus, pontoEmbarqueId);
+      
+      // Reload data from backend to get fresh status
+      await loadViagens();
+      
+      toast.success(novoStatus ? 'Presença confirmada!' : 'Presença cancelada.');
+    } catch (error) {
+      const errorMessage = error?.message || error?.error || 'Não foi possível atualizar a presença.';
+      toast.error(errorMessage);
+    } finally {
+      setUpdatingPresenca(null);
+    }
   };
 
   const podeConfirmar = (viagem) => {
-    return (
-      viagem.status !== 'Encerrada' &&
-      viagem.status !== 'Cancelada'
-    );
+    // Can confirm if trip date is today or future
+    if (!viagem.data) return true;
+    
+    // Parse date as local time (not UTC) to avoid timezone issues
+    // '2026-01-28' -> new Date(2026, 0, 28) in local timezone
+    const [year, month, day] = viagem.data.split('-').map(Number);
+    const tripDate = new Date(year, month - 1, day); // month is 0-indexed
+    
+    if (isNaN(tripDate.getTime())) return true;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return tripDate >= today;
   };
+
+  const getStatusFromViagem = (viagem) => {
+    // Check local state first (for optimistic updates after confirm action)
+    // Then fall back to status_confirmacao from backend
+    const isConfirmed = presencasStatus[viagem.id] ?? viagem.status_confirmacao;
+    return isConfirmed ? 'Confirmado' : 'Não confirmado';
+  };
+
+  const formatTime = (t) => t ? (t.includes('T') ? t.substring(11, 16) : t.substring(0, 5)) : '--:--';
+  const formatDate = (d) => d ? new Date(d).toLocaleDateString('pt-BR') : '';
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.secondary.main} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← Voltar</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>{rota.nome}</Text>
-        <Text style={styles.subtitle}>{rota.bairro}</Text>
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.title}>{screenTitle}</Text>
+            <Text style={styles.headerSubtitle}>{viagens.length} viagem{viagens.length !== 1 ? 'ns' : ''}</Text>
+          </View>
+          <View style={styles.headerIcon}>
+            <Icon name={IconNames.route} size="lg" color={colors.secondary.contrast} />
+          </View>
+        </View>
       </View>
 
-      <ScrollView style={styles.scrollView}>
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadViagens(); }}
+            colors={[colors.secondary.main]} tintColor={colors.secondary.main} />
+        }>
         <View style={styles.content}>
-          <Text style={styles.sectionTitle}>Viagens do Dia</Text>
+          <Text style={styles.sectionTitle}>Viagens</Text>
 
-          {viagens.map((viagem) => (
-            <View key={viagem.id} style={styles.viagemCard}>
-              <View style={styles.viagemHeader}>
-                <View style={styles.viagemInfo}>
-                  <View style={styles.viagemTipoContainer}>
-                    <Text style={styles.viagemTipo}>{viagem.tipo}</Text>
-                    <Text style={styles.viagemHorario}>{viagem.horario}</Text>
+          {viagens.length > 0 ? viagens.map((viagem) => {
+            const status = getStatusFromViagem(viagem);
+            const statusConfig = getStatusConfig(status);
+            const isUpdating = updatingPresenca === viagem.id;
+
+            return (
+              <View key={viagem.id} style={styles.viagemCard}>
+                <View style={styles.viagemHeader}>
+                  <View style={styles.viagemInfo}>
+                    <View style={styles.viagemTipoContainer}>
+                      <View style={styles.tipoBadge}>
+                        <Text style={styles.viagemTipo}>{viagem.tipo}</Text>
+                      </View>
+                      <Text style={styles.viagemHorario}>{formatTime(viagem.horario_inicio)}</Text>
+                    </View>
+                    <View style={styles.dateRow}>
+                      <Icon name={IconNames.calendarToday} size="sm" color={colors.text.secondary} />
+                      <Text style={styles.viagemData}>{formatDate(viagem.data)}</Text>
+                    </View>
+                    {isAllTrips && viagem.rota_nome && (
+                      <View style={styles.dateRow}>
+                        <Icon name={IconNames.route} size="sm" color={colors.text.secondary} />
+                        <Text style={styles.viagemData}>{viagem.rota_nome}</Text>
+                      </View>
+                    )}
                   </View>
-                  <View style={styles.viagemRota}>
-                    <Text style={styles.viagemOrigem}>
-                      📍 {viagem.origem}
-                    </Text>
-                    <Text style={styles.viagemDestino}>
-                      🎯 {viagem.destino}
-                    </Text>
+                  <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
+                    <Icon name={statusConfig.icon} size="xs" color={statusConfig.color} />
+                    <Text style={[styles.statusText, { color: statusConfig.color }]}>{status}</Text>
                   </View>
                 </View>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    {backgroundColor: getStatusBgColor(viagem.status)},
-                  ]}>
-                  <Text
+
+                {podeConfirmar(viagem) && (
+                  <TouchableOpacity
                     style={[
-                      styles.statusText,
-                      {color: getStatusColor(viagem.status)},
-                    ]}>
-                    {viagem.status}
-                  </Text>
-                </View>
-              </View>
+                      styles.confirmarButton,
+                      status === 'Confirmado' && styles.confirmarButtonActive,
+                      isUpdating && styles.confirmarButtonDisabled,
+                    ]}
+                    onPress={() => handleConfirmarPresenca(viagem, status)}
+                    disabled={isUpdating}>
+                    {isUpdating ? (
+                      <ActivityIndicator color={colors.primary.contrast} />
+                    ) : (
+                      <>
+                        <Icon 
+                          name={status === 'Confirmado' ? IconNames.close : IconNames.checkCircle} 
+                          size="md" 
+                          color={colors.primary.contrast} 
+                        />
+                        <Text style={styles.confirmarButtonText}>
+                          {status === 'Confirmado' ? 'Cancelar Presença' : 'Confirmar Presença'}
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                )}
 
-              {podeConfirmar(viagem) && (
                 <TouchableOpacity
-                  style={[
-                    styles.confirmarButton,
-                    viagem.status === 'Confirmado' &&
-                      styles.confirmarButtonActive,
-                  ]}
-                  onPress={() => handleConfirmarPresenca(viagem.id)}>
-                  <Text
-                    style={[
-                      styles.confirmarButtonText,
-                      viagem.status === 'Confirmado' &&
-                        styles.confirmarButtonTextActive,
-                    ]}>
-                    {viagem.status === 'Confirmado'
-                      ? 'Cancelar Presença'
-                      : 'Confirmar Presença'}
-                  </Text>
+                  style={styles.detalhesButton}
+                  onPress={() => navigation.navigate('DetalheViagem', { 
+                    rota: rota || { id: viagem.rota_id, nome: viagem.rota_nome }, 
+                    viagem 
+                  })}>
+                  <Text style={styles.detalhesButtonText}>Ver Detalhes</Text>
+                  <Icon name={IconNames.chevronRight} size="md" color={colors.secondary.main} />
                 </TouchableOpacity>
-              )}
-
-              <TouchableOpacity
-                style={styles.detalhesButton}
-                onPress={() =>
-                  navigation.navigate('DetalheViagem', {
-                    rota,
-                    viagem,
-                  })
-                }>
-                <Text style={styles.detalhesButtonText}>Ver Detalhes →</Text>
-              </TouchableOpacity>
+              </View>
+            );
+          }) : (
+            <View style={styles.emptyState}>
+              <Icon name={IconNames.schedule} size="huge" color={colors.neutral[300]} />
+              <Text style={styles.emptyStateText}>
+                {isAllTrips 
+                  ? 'Nenhuma viagem agendada nas suas rotas' 
+                  : 'Nenhuma viagem encontrada para esta rota'}
+              </Text>
             </View>
-          ))}
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -182,127 +267,103 @@ const RotaAluno = ({navigation, route}) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
+  container: { flex: 1, backgroundColor: colors.background.default },
   header: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    backgroundColor: colors.secondary.main,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.xl,
+    borderBottomLeftRadius: borderRadius.xxl,
+    borderBottomRightRadius: borderRadius.xxl,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   backButton: {
-    marginBottom: 8,
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  backButtonText: {
-    fontSize: 16,
-    color: '#1a73e8',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-  },
-  scrollView: {
+  headerTitleContainer: {
     flex: 1,
+    marginLeft: spacing.md,
   },
-  content: {
-    padding: 16,
+  title: { ...textStyles.h3, color: colors.secondary.contrast },
+  headerSubtitle: {
+    ...textStyles.bodySmall,
+    color: colors.secondary.light,
+    marginTop: spacing.xs,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 16,
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
+  scrollView: { flex: 1 },
+  content: { padding: spacing.base },
+  sectionTitle: { ...textStyles.h4, color: colors.text.primary, marginBottom: spacing.base },
   viagemCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.md,
+    ...shadows.sm,
   },
-  viagemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+  viagemHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.base },
+  viagemInfo: { flex: 1 },
+  viagemTipoContainer: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm },
+  tipoBadge: {
+    backgroundColor: colors.secondary.lighter,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: borderRadius.sm,
   },
-  viagemInfo: {
-    flex: 1,
-  },
-  viagemTipoContainer: {
+  viagemTipo: { ...textStyles.caption, color: colors.secondary.dark, fontWeight: '600' },
+  viagemHorario: { ...textStyles.h3, color: colors.text.primary },
+  dateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  viagemData: { ...textStyles.bodySmall, color: colors.text.secondary },
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-    gap: 12,
-  },
-  viagemTipo: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a73e8',
-  },
-  viagemHorario: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  viagemRota: {
-    gap: 4,
-  },
-  viagemOrigem: {
-    fontSize: 14,
-    color: '#666',
-  },
-  viagemDestino: {
-    fontSize: 14,
-    color: '#666',
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    gap: spacing.xxs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
     alignSelf: 'flex-start',
   },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
+  statusText: { ...textStyles.caption, fontWeight: '600' },
   confirmarButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 12,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadows.xs,
   },
-  confirmarButtonActive: {
-    backgroundColor: '#ea4335',
-  },
-  confirmarButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  confirmarButtonTextActive: {
-    color: '#fff',
-  },
+  confirmarButtonActive: { backgroundColor: colors.error.main },
+  confirmarButtonDisabled: { opacity: 0.6 },
+  confirmarButtonText: { ...textStyles.button, color: colors.primary.contrast },
   detalhesButton: {
-    padding: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    padding: spacing.sm,
   },
-  detalhesButtonText: {
-    color: '#1a73e8',
-    fontSize: 14,
-    fontWeight: '500',
-  },
+  detalhesButtonText: { ...textStyles.bodySmall, color: colors.secondary.main, fontWeight: '600' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyState: { alignItems: 'center', padding: spacing.xxl, gap: spacing.base },
+  emptyStateText: { ...textStyles.body, color: colors.text.secondary, textAlign: 'center' },
 });
 
 export default RotaAluno;
-
-

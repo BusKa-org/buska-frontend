@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -7,170 +7,213 @@ import {
   SafeAreaView,
   ScrollView,
   TextInput,
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
 } from 'react-native';
+import { alunoService } from '../../services';
+import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
 
 const SelecaoRotas = ({navigation}) => {
   const [busca, setBusca] = useState('');
+  const [rotasDisponiveis, setRotasDisponiveis] = useState([]);
+  const [rotasInscritas, setRotasInscritas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [subscribing, setSubscribing] = useState(null);
 
-  // Dados mockados - todas as rotas disponíveis no município
-  const rotasDisponiveis = [
-    {
-      id: 1,
-      nome: 'Rota Centro - Zona Norte',
-      bairroOrigem: 'Centro',
-      distancia: '2.5 km',
-      alunosCadastrados: 25,
-      capacidade: 40,
-    },
-    {
-      id: 2,
-      nome: 'Rota Centro - Zona Sul',
-      bairroOrigem: 'Centro',
-      distancia: '3.2 km',
-      alunosCadastrados: 18,
-      capacidade: 40,
-    },
-    {
-      id: 3,
-      nome: 'Rota Jardim América - Centro',
-      bairroOrigem: 'Jardim América',
-      distancia: '1.8 km',
-      alunosCadastrados: 32,
-      capacidade: 40,
-    },
-    {
-      id: 4,
-      nome: 'Rota Vila Nova - Escola Municipal',
-      bairroOrigem: 'Vila Nova',
-      distancia: '4.1 km',
-      alunosCadastrados: 15,
-      capacidade: 40,
-    },
-    {
-      id: 5,
-      nome: 'Rota Bela Vista - Zona Leste',
-      bairroOrigem: 'Bela Vista',
-      distancia: '2.9 km',
-      alunosCadastrados: 28,
-      capacidade: 40,
-    },
-  ];
+  const loadRotas = async () => {
+    try {
+      const rotas = await alunoService.listarRotas();
+      const rotasInscritasData = await alunoService.listarMinhasRotas();
+      setRotasDisponiveis(rotas || []);
+      setRotasInscritas(rotasInscritasData || []);
+    } catch (error) {
+      console.error('Error loading routes:', error);
+      Alert.alert('Erro', 'Não foi possível carregar as rotas. Tente novamente.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
-  const rotasFiltradas = rotasDisponiveis.filter(
-    (rota) =>
-      rota.nome.toLowerCase().includes(busca.toLowerCase()) ||
-      rota.bairroOrigem.toLowerCase().includes(busca.toLowerCase()),
+  useEffect(() => {
+    loadRotas();
+  }, []);
+
+  const rotasIdsInscritas = rotasInscritas.map((r) => r.id);
+  const rotasDisponiveisFiltradas = rotasDisponiveis.filter(
+    (rota) => !rotasIdsInscritas.includes(rota.id),
   );
 
-  const handleCadastrar = (rota) => {
-    // Simulação de cadastro
-    console.log('Cadastrar na rota:', rota);
-    // Aqui você mostraria uma confirmação e depois voltaria para o dashboard
-    navigation.goBack();
+  const rotasFiltradas = rotasDisponiveisFiltradas.filter(
+    (rota) => rota.nome.toLowerCase().includes(busca.toLowerCase()),
+  );
+
+  const handleCadastrar = async (rota) => {
+    try {
+      setSubscribing(rota.id);
+      await alunoService.gerenciarInscricaoRota(rota.id, 'inscrever');
+      const rotasInscritasAtualizadas = await alunoService.listarMinhasRotas();
+      setRotasInscritas(rotasInscritasAtualizadas || []);
+      setRotasDisponiveis(rotasDisponiveis.filter((r) => r.id !== rota.id));
+      Alert.alert('Sucesso', 'Você foi cadastrado nesta rota!', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    } catch (error) {
+      console.error('Error subscribing to route:', error);
+      Alert.alert('Erro', error?.message || 'Não foi possível cadastrar na rota. Tente novamente.');
+    } finally {
+      setSubscribing(null);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadRotas();
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← Voltar</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Selecionar Rota</Text>
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.title}>Rotas</Text>
+            <Text style={styles.headerSubtitle}>Encontre sua rota escolar</Text>
+          </View>
+          <View style={styles.headerIcon}>
+            <Icon name={IconNames.bus} size="lg" color={colors.secondary.contrast} />
+          </View>
+        </View>
       </View>
 
-      {/* Busca */}
       <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Buscar rota ou bairro..."
-          placeholderTextColor="#999"
-          value={busca}
-          onChangeText={setBusca}
-        />
+        <View style={styles.searchInputContainer}>
+          <Icon name={IconNames.search} size="md" color={colors.text.hint} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar rota..."
+            placeholderTextColor={colors.text.hint}
+            value={busca}
+            onChangeText={setBusca}
+          />
+          {busca.length > 0 && (
+            <TouchableOpacity onPress={() => setBusca('')}>
+              <Icon name={IconNames.close} size="md" color={colors.text.hint} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.content}>
-          <Text style={styles.sectionTitle}>
-            Rotas Disponíveis ({rotasFiltradas.length})
-          </Text>
-
-          {rotasFiltradas.map((rota) => {
-            const vagasDisponiveis = rota.capacidade - rota.alunosCadastrados;
-            const temVagas = vagasDisponiveis > 0;
-
-            return (
-              <View key={rota.id} style={styles.rotaCard}>
-                <View style={styles.rotaHeader}>
-                  <View style={styles.rotaInfo}>
-                    <Text style={styles.rotaNome}>{rota.nome}</Text>
-                    <View style={styles.rotaMeta}>
-                      <Text style={styles.rotaBairro}>
-                        📍 {rota.bairroOrigem}
-                      </Text>
-                      <Text style={styles.rotaDistancia}>
-                        📏 {rota.distancia} da sua casa
-                      </Text>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.secondary.main} />
+          <Text style={styles.loadingText}>Carregando rotas...</Text>
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.scrollView}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              colors={[colors.secondary.main]}
+              tintColor={colors.secondary.main}
+            />
+          }>
+          <View style={styles.content}>
+            {/* Minhas Rotas Cadastradas */}
+            {rotasInscritas.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>
+                  Minhas Rotas ({rotasInscritas.length})
+                </Text>
+                {rotasInscritas.map((rota) => (
+                  <TouchableOpacity 
+                    key={rota.id} 
+                    style={[styles.rotaCard, styles.rotaCardInscrita]}
+                    onPress={() => navigation.navigate('RotaAluno', { rota })}>
+                    <View style={styles.rotaHeader}>
+                      <View style={[styles.rotaIconContainer, { backgroundColor: colors.success.light }]}>
+                        <Icon name={IconNames.checkCircle} size="lg" color={colors.success.main} />
+                      </View>
+                      <View style={styles.rotaInfo}>
+                        <Text style={styles.rotaNome}>{rota.nome}</Text>
+                        <View style={styles.rotaMeta}>
+                          <Icon name={IconNames.location} size="sm" color={colors.text.secondary} />
+                          <Text style={styles.rotaBairro}>
+                            {rota.municipio_nome 
+                              ? `${rota.municipio_nome}${rota.municipio_uf ? ` - ${rota.municipio_uf}` : ''}`
+                              : 'Município não informado'}
+                          </Text>
+                        </View>
+                      </View>
+                      <Icon name={IconNames.chevronRight} size="md" color={colors.text.secondary} />
                     </View>
-                  </View>
-                </View>
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
 
-                <View style={styles.rotaFooter}>
-                  <View style={styles.vagasInfo}>
-                    <Text style={styles.vagasText}>
-                      {vagasDisponiveis} vagas disponíveis
-                    </Text>
-                    <View
-                      style={[
-                        styles.vagasBar,
-                        temVagas ? styles.vagasBarOk : styles.vagasBarFull,
-                      ]}>
-                      <View
-                        style={[
-                          styles.vagasBarFill,
-                          {
-                            width: `${(rota.alunosCadastrados / rota.capacidade) * 100}%`,
-                          },
-                          temVagas ? styles.vagasBarFillOk : styles.vagasBarFillFull,
-                        ]}
-                      />
+            {/* Rotas Disponíveis para Inscrição */}
+            <Text style={[styles.sectionTitle, rotasInscritas.length > 0 && { marginTop: spacing.lg }]}>
+              Rotas Disponíveis ({rotasFiltradas.length})
+            </Text>
+
+            {rotasFiltradas.map((rota) => {
+              const isSubscribing = subscribing === rota.id;
+              return (
+                <View key={rota.id} style={styles.rotaCard}>
+                  <View style={styles.rotaHeader}>
+                    <View style={styles.rotaIconContainer}>
+                      <Icon name={IconNames.route} size="lg" color={colors.secondary.main} />
+                    </View>
+                    <View style={styles.rotaInfo}>
+                      <Text style={styles.rotaNome}>{rota.nome}</Text>
+                      <View style={styles.rotaMeta}>
+                        <Icon name={IconNames.location} size="sm" color={colors.text.secondary} />
+                        <Text style={styles.rotaBairro}>
+                          {rota.municipio_nome 
+                            ? `${rota.municipio_nome}${rota.municipio_uf ? ` - ${rota.municipio_uf}` : ''}`
+                            : 'Município não informado'}
+                        </Text>
+                      </View>
                     </View>
                   </View>
 
                   <TouchableOpacity
-                    style={[
-                      styles.cadastrarButton,
-                      !temVagas && styles.cadastrarButtonDisabled,
-                    ]}
+                    style={[styles.cadastrarButton, isSubscribing && styles.cadastrarButtonDisabled]}
                     onPress={() => handleCadastrar(rota)}
-                    disabled={!temVagas}>
-                    <Text
-                      style={[
-                        styles.cadastrarButtonText,
-                        !temVagas && styles.cadastrarButtonTextDisabled,
-                      ]}>
-                      {temVagas ? 'Cadastrar nesta rota' : 'Sem vagas'}
-                    </Text>
+                    disabled={isSubscribing}>
+                    {isSubscribing ? (
+                      <ActivityIndicator color={colors.primary.contrast} />
+                    ) : (
+                      <>
+                        <Icon name={IconNames.add} size="md" color={colors.primary.contrast} />
+                        <Text style={styles.cadastrarButtonText}>Cadastrar nesta rota</Text>
+                      </>
+                    )}
                   </TouchableOpacity>
                 </View>
-              </View>
-            );
-          })}
+              );
+            })}
 
-          {rotasFiltradas.length === 0 && (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>
-                Nenhuma rota encontrada
-              </Text>
-              <Text style={styles.emptyStateSubtext}>
-                Tente buscar com outros termos
-              </Text>
-            </View>
-          )}
-        </View>
-      </ScrollView>
+            {rotasFiltradas.length === 0 && (
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIconContainer}>
+                  <Icon name={IconNames.search} size="huge" color={colors.neutral[300]} />
+                </View>
+                <Text style={styles.emptyStateTitle}>Nenhuma rota encontrada</Text>
+                <Text style={styles.emptyStateText}>Tente buscar com outros termos</Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 };
@@ -178,151 +221,164 @@ const SelecaoRotas = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    backgroundColor: colors.secondary.main,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.xl,
+    borderBottomLeftRadius: borderRadius.xxl,
+    borderBottomRightRadius: borderRadius.xxl,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   backButton: {
-    marginBottom: 8,
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  backButtonText: {
-    fontSize: 16,
-    color: '#1a73e8',
+  headerTitleContainer: {
+    flex: 1,
+    marginLeft: spacing.md,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    ...textStyles.h3,
+    color: colors.secondary.contrast,
+  },
+  headerSubtitle: {
+    ...textStyles.bodySmall,
+    color: colors.secondary.light,
+    marginTop: spacing.xs,
+  },
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   searchContainer: {
-    padding: 16,
-    backgroundColor: '#fff',
+    padding: spacing.base,
+    backgroundColor: colors.background.paper,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: colors.border.light,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.neutral[100],
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
   },
   searchInput: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    flex: 1,
+    paddingVertical: spacing.md,
+    ...textStyles.body,
+    color: colors.text.primary,
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: spacing.base,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
+    ...textStyles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.base,
   },
   rotaCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.md,
+    ...shadows.sm,
+  },
+  rotaCardInscrita: {
+    borderLeftWidth: 4,
+    borderLeftColor: colors.success.main,
   },
   rotaHeader: {
-    marginBottom: 12,
+    flexDirection: 'row',
+    marginBottom: spacing.base,
+  },
+  rotaIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.secondary.lighter,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
   },
   rotaInfo: {
-    marginBottom: 8,
+    flex: 1,
   },
   rotaNome: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    ...textStyles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
   rotaMeta: {
-    gap: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   rotaBairro: {
-    fontSize: 14,
-    color: '#666',
-  },
-  rotaDistancia: {
-    fontSize: 14,
-    color: '#666',
-  },
-  rotaFooter: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  vagasInfo: {
-    marginBottom: 12,
-  },
-  vagasText: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 6,
-  },
-  vagasBar: {
-    height: 6,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  vagasBarOk: {
-    backgroundColor: '#e8f5e9',
-  },
-  vagasBarFull: {
-    backgroundColor: '#ffebee',
-  },
-  vagasBarFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  vagasBarFillOk: {
-    backgroundColor: '#34a853',
-  },
-  vagasBarFillFull: {
-    backgroundColor: '#ea4335',
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
   },
   cadastrarButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 14,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    ...shadows.xs,
   },
   cadastrarButtonDisabled: {
-    backgroundColor: '#e0e0e0',
+    opacity: 0.6,
   },
   cadastrarButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  cadastrarButtonTextDisabled: {
-    color: '#999',
+    ...textStyles.button,
+    color: colors.primary.contrast,
   },
   emptyState: {
     alignItems: 'center',
-    padding: 48,
+    padding: spacing.xxxl,
+  },
+  emptyIconContainer: {
+    marginBottom: spacing.base,
+  },
+  emptyStateTitle: {
+    ...textStyles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
   },
   emptyStateText: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 8,
+    ...textStyles.body,
+    color: colors.text.secondary,
   },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: '#999',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  loadingText: {
+    ...textStyles.body,
+    color: colors.text.secondary,
   },
 });
 
 export default SelecaoRotas;
-
-
