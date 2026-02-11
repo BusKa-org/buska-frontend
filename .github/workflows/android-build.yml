@@ -1,4 +1,4 @@
-name: Android Build APK (Debug)
+name: Android Build APK (Installable)
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: Build Android Debug APK
+    name: Build Android Installable APK (Release)
     runs-on: ubuntu-latest
 
     steps:
@@ -35,7 +35,8 @@ jobs:
       - name: Make Gradlew executable
         run: chmod +x android/gradlew
 
-      # Ensure debug.keystore exists for debug builds (some repos don't commit it)
+      # If you want the release APK to be signed in CI even without prod keystore,
+      # generate a debug keystore (your gradle can use it for debug builds anyway).
       - name: Create debug keystore (CI)
         run: |
           cd android/app
@@ -48,19 +49,19 @@ jobs:
             -keyalg RSA -keysize 2048 -validity 10000 \
             -dname "CN=Android Debug,O=Android,C=US"
 
-      - name: Build Debug APK
+      - name: Build Release APK
         run: |
           cd android
-          ./gradlew clean assembleDebug --no-daemon
+          ./gradlew clean assembleRelease --no-daemon
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-${{ github.run_number }}
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: app-release-${{ github.run_number }}
+          path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
 
       - name: Get APK info
         run: |
-          echo "✅ Debug APK generated!"
-          ls -lh android/app/build/outputs/apk/debug/app-debug.apk
+          echo "✅ Release APK generated!"
+          ls -lh android/app/build/outputs/apk/release/app-release.apk
