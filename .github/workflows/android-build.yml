@@ -32,6 +32,44 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Configure Android SDK path
+        run: |
+          if [ -z "$ANDROID_SDK_ROOT" ] && [ -n "$ANDROID_HOME" ]; then
+            echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          fi
+
+          if [ -z "$ANDROID_SDK_ROOT" ]; then
+            for d in /opt/android-sdk /usr/lib/android-sdk /usr/local/android-sdk $HOME/Android/Sdk; do
+              if [ -d "$d" ]; then
+                echo "ANDROID_SDK_ROOT=$d" >> "$GITHUB_ENV"
+                break
+              fi
+            done
+          fi
+
+          if [ -z "$ANDROID_SDK_ROOT" ]; then
+            echo "Android SDK not found. Will attempt to install via setup-android."
+          fi
+
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+
+      - name: Setup Android SDK (if missing)
+        if: env.ANDROID_SDK_ROOT == ''
+        uses: android-actions/setup-android@v3
+
+      - name: Ensure local.properties
+        run: |
+          if [ -z "$ANDROID_SDK_ROOT" ] && [ -n "$ANDROID_HOME" ]; then
+            ANDROID_SDK_ROOT="$ANDROID_HOME"
+          fi
+
+          if [ -z "$ANDROID_SDK_ROOT" ]; then
+            echo "Android SDK still not found after setup."
+            exit 1
+          fi
+
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+
       - name: Make Gradlew executable
         run: chmod +x android/gradlew
 
