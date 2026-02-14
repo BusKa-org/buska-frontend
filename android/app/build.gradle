@@ -1,13 +1,20 @@
 apply plugin: "com.android.application"
 apply plugin: "com.facebook.react"
 
-// Vector Icons - copy font files
+import java.util.Properties
+
+project.ext.envConfigFiles = [
+    debug: ".env",
+    release: ".env.production",
+]
+
+apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
+
+// Vector Icons
 project.ext.vectoricons = [
     iconFontNames: [ 'MaterialIcons.ttf' ]
 ]
 apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
-
-import java.util.Properties
 
 def enableProguardInReleaseBuilds = false
 def jscFlavor = 'org.webkit:android-jsc:+'
@@ -24,23 +31,26 @@ android {
     ndkVersion rootProject.ext.ndkVersion
     compileSdkVersion rootProject.ext.compileSdkVersion
 
-    namespace "com.projeto1"
+    namespace "br.edu.ufcg.projeto1.buska"
 
     buildFeatures {
         buildConfig true
     }
     
     defaultConfig {
-        applicationId "com.projeto1"
+        applicationId "br.edu.ufcg.projeto1.buska"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        
+        // 3. Dynamic App Name Placeholder
+        // This pulls the APP_NAME from your .env file via the config plugin
+        resValue "string", "build_config_package", "br.edu.ufcg.projeto1.buska"
     }
 
     signingConfigs {
         debug {
-            // In CI, we generate this file if it doesn't exist.
             storeFile file("debug.keystore")
             storePassword "android"
             keyAlias "androiddebugkey"
@@ -60,14 +70,17 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            // Use a suffix so both Dev and Prod can be installed at once
+            applicationIdSuffix ".debug" 
+            resValue "string", "app_name", Config.APP_NAME_DEBUG
         }
         release {
-            // Use release keystore if available, otherwise fall back to debug signing
             if (hasReleaseKeystore) {
                 signingConfig signingConfigs.release
             } else {
                 signingConfig signingConfigs.debug
             }
+            resValue "string", "app_name", Config.APP_NAME_RELEASE
 
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
