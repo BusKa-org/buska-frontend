@@ -67,10 +67,9 @@ yarn-error.log
 /coverage
 
 # Android Secrets
+debug.keystore.properties
 keystore.properties
 *.keystore
-!debug.keystore
-
 # Environment Configs
 .env
 .env.*

@@ -1,6 +1,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const webpack = require('webpack');
+const Dotenv = require('dotenv-webpack');
 
 module.exports = {
   entry: './index.web.js',
@@ -70,6 +71,11 @@ module.exports = {
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
       __DEV__: process.env.NODE_ENV !== 'production' || true,
+    }),
+    new Dotenv({
+      path: './.env', // Garante que ele leia o arquivo da raiz
+      safe: false,    // Define como true se quiser carregar um .env.example
+      systemvars: true // Permite carregar variáveis do sistema também
     }),
   ],
 };

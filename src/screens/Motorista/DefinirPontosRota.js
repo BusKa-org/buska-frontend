@@ -280,7 +280,7 @@ const mapStyles = StyleSheet.create({
     position: 'absolute',
     width: '100%',
     height: '100%',
-    background: 'linear-gradient(135deg, #F0F4E8 0%, #E8F0E8 50%, #E0E8E0 100%)',
+    backgroundColor: 'linear-gradient(135deg, #F0F4E8 0%, #E8F0E8 50%, #E0E8E0 100%)',
   },
   roadsPattern: {
     position: 'absolute',
