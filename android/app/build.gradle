@@ -8,8 +8,6 @@ project.ext.envConfigFiles = [
     release: ".env.production",
 ]
 
-apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
-
 // Vector Icons
 project.ext.vectoricons = [
     iconFontNames: [ 'MaterialIcons.ttf' ]
@@ -43,10 +41,6 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
-        
-        // 3. Dynamic App Name Placeholder
-        // This pulls the APP_NAME from your .env file via the config plugin
-        resValue "string", "build_config_package", "br.edu.ufcg.projeto1.buska"
     }
 
     signingConfigs {
@@ -72,7 +66,6 @@ android {
             signingConfig signingConfigs.debug
             // Use a suffix so both Dev and Prod can be installed at once
             applicationIdSuffix ".debug" 
-            resValue "string", "app_name", Config.APP_NAME_DEBUG
         }
         release {
             if (hasReleaseKeystore) {
@@ -80,7 +73,6 @@ android {
             } else {
                 signingConfig signingConfigs.debug
             }
-            resValue "string", "app_name", Config.APP_NAME_RELEASE
 
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
@@ -96,7 +88,5 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+    
 }
-
-apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle");
-applyNativeModulesAppBuildGradle(project)

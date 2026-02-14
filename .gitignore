@@ -79,4 +79,6 @@ keystore.properties
 # Web artifacts
 dist/
 .cache/
+# react-native-config codegen
+ios/tmp.xcconfig
 bundle.js

@@ -1,4 +1,4 @@
-package com.projeto1;
+package br.edu.ufcg.projeto1.buska;
 
 import android.app.Application;
 
