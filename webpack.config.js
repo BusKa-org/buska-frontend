@@ -13,6 +13,7 @@ module.exports = {
     port: 3000,
     hot: true,
     open: true,
+    historyApiFallback: true, // Crucial for React Navigation
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -22,12 +23,15 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /\.(js|jsx|mjs)$/,
-        exclude: /node_modules\/(?!(@react-navigation|react-native-vector-icons))/,
+        test: /\.(js|jsx|mjs|ts|tsx)$/,
+        // Many native libs need to be processed by babel-loader to work on web.
+        exclude: /node_modules\/(?!(react-native-vector-icons|react-native-safe-area-context|react-native-screens|@react-navigation|expo-font|@expo-google-fonts)\/).*/,
         use: {
           loader: 'babel-loader',
           options: {
-            presets: ['@babel/preset-env', '@babel/preset-react'],
+            // Using the Metro preset ensures compatibility with React Native code
+            presets: ['module:metro-react-native-babel-preset', '@babel/preset-react'],
+            plugins: ['react-native-web'],
           },
         },
       },
@@ -35,7 +39,6 @@ module.exports = {
         test: /\.css$/,
         use: ['style-loader', 'css-loader'],
       },
-      // Font files (Inter, Material Icons)
       {
         test: /\.(ttf|otf|woff|woff2|eot)$/,
         type: 'asset/resource',
@@ -43,7 +46,6 @@ module.exports = {
           filename: 'fonts/[name][ext]',
         },
       },
-      // Image files
       {
         test: /\.(png|jpg|jpeg|gif|svg)$/,
         type: 'asset/resource',
@@ -56,15 +58,9 @@ module.exports = {
   resolve: {
     alias: {
       'react-native$': 'react-native-web',
-      // Alias for vector icons on web
-      'react-native-vector-icons/MaterialIcons': 'react-native-vector-icons/dist/MaterialIcons',
+      'react-native-vector-icons': 'react-native-vector-icons/dist',
     },
-    extensions: ['.web.js', '.js', '.jsx', '.json', '.mjs'],
-    fallback: {
-      'react-native-screens': false,
-      'react-native-safe-area-context': false,
-    },
-    fullySpecified: false, // Permite importações sem extensão
+    extensions: ['.web.js', '.js', '.jsx', '.json', '.mjs', '.ts', '.tsx'],
   },
   plugins: [
     new HtmlWebpackPlugin({
@@ -73,7 +69,7 @@ module.exports = {
     }),
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+      __DEV__: process.env.NODE_ENV !== 'production' || true,
     }),
   ],
 };
-

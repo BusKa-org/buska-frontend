@@ -1,20 +1,16 @@
-const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
-
-/**
- * Metro configuration
- * https://facebook.github.io/metro/docs/configuration
- *
- * @type {import('metro-config').MetroConfig}
- */
-const defaultConfig = getDefaultConfig(__dirname);
+const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 const exclusionList = require('metro-config/src/defaults/exclusionList');
 
-module.exports = mergeConfig(defaultConfig, {
+const defaultConfig = getDefaultConfig(__dirname);
+
+const config = {
   resolver: {
-    // Faz o Metro preferir builds compatíveis com RN/browser
-    resolverMainFields: ['react-native', 'browser', 'main'],
+    resolverMainFields: ['react-native', 'main'],
+    sourceExts: [...defaultConfig.resolver.sourceExts, 'jsx', 'js', 'json', 'ts', 'tsx'],
     blockList: exclusionList([
-        /node_modules\/axios\/dist\/node\/.*/,
-      ]),
+      /node_modules\/axios\/dist\/node\/.*/,
+    ]),
   },
-});
+};
+
+module.exports = mergeConfig(defaultConfig, config);
