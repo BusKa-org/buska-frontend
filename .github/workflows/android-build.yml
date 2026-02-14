@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       GRADLE_PARAMS:
-        description: 'Parâmetros do Gradle para o build'
+        description: 'Gradle parameters for the build'
         required: true
         default: 'Release'
         type: choice
@@ -17,13 +17,13 @@ on:
           - Debug
           - Release
       VERSION_NAME:
-        description: 'Nome da Versão (Opcional - ex: 1.0.0)'
+        description: 'Version name (Optional - ex: 1.0.0)'
         required: false
         default: ''
 
 jobs:
   build:
-    name: Build Android (${{ inputs.GRADLE_PARAMS || 'Release' }})
+    name: (${{ inputs.GRADLE_PARAMS || 'Release' }}) - ${{ github.run_number }}
     runs-on: self-hosted
 
     steps:
@@ -144,28 +144,31 @@ jobs:
       - name: Rename and Prepare Artifact
         id: prepare_artifact
         run: |
-          MANUAL_VERSION="${{ inputs.VERSION_NAME }}"
-          if [ -n "$MANUAL_VERSION" ]; then
-            FINAL_VERSION="$MANUAL_VERSION"
-          else
-            FINAL_VERSION=$(echo "${{ github.ref_name }}" | sed 's|.*/||')
-          fi
-          
-          echo "FINAL_VERSION=$FINAL_VERSION" >> $GITHUB_ENV
-          
           TYPE="${{ inputs.GRADLE_PARAMS }}"
           if [[ "${{ github.ref }}" == refs/tags/* ]] || [ -z "$TYPE" ]; then TYPE="Release"; fi
-          echo "ACTUAL_TYPE=$TYPE" >> $GITHUB_ENV
           
-          cd android/app/build/outputs/apk/${TYPE,,}
+          RUN="${{ github.run_number }}"
           
-          ORIGINAL_APK=$(find . -name "*.apk" -maxdepth 1 | head -n 1)
+          if [[ "$TYPE" == "Release" ]]; then
+            VERSION="${{ inputs.VERSION_NAME }}"
+            if [ -z "$VERSION" ]; then VERSION=$(echo "${{ github.ref_name }}" | sed 's|.*/||'); fi
+            FINAL_NAME="release-${VERSION}-${RUN}"
+          else
+            BRANCH=$(echo "${{ github.ref_name }}" | sed 's|.*/||')
+            FINAL_NAME="debug-${BRANCH}-${RUN}"
+          fi
 
+          cd android/app/build/outputs/apk/${TYPE,,}
+          ORIGINAL_APK=$(find . -name "*.apk" -maxdepth 1 | head -n 1)
+          
           if [ -f "$ORIGINAL_APK" ]; then
-            NEW_NAME="buska-${FINAL_VERSION}.apk"
+            NEW_NAME="buska-${FINAL_NAME}.apk"
             mv "$ORIGINAL_APK" "$NEW_NAME"
+            
+            echo "FINAL_VERSION=$FINAL_NAME" >> $GITHUB_ENV
+            echo "ACTUAL_TYPE=$TYPE" >> $GITHUB_ENV
+            echo "APK_SIZE=$(du -sh "$NEW_NAME" | cut -f1)" >> $GITHUB_ENV
             echo "ARTIFACT_PATH=$(pwd)/$NEW_NAME" >> $GITHUB_ENV
-            echo "✅ Renamed to $NEW_NAME"
           else
             echo "❌ APK not found!"
             exit 1
@@ -188,34 +191,29 @@ jobs:
       - name: Notify Discord
         if: always()
         run: |
-          STATUS="${{ job.status }}"
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          COMMIT_MSG=$(git log -1 --pretty=%s)
           
-          # Cores e Emojis
-          if [ "$STATUS" = "success" ]; then 
-            COLOR=3066993 
-            EMOJI="✅"
-            CONTENT="🚀 New BusKá build available!\n📦 **Download here:** [View Artifacts]($RUN_URL)"
+          if [ "${{ job.status }}" == "success" ]; then
+            COLOR=3066993
+            CONTENT="🚀 **New BusKá build available!**\n📦 **Download:** [Artifacts Page]($RUN_URL)"
             PING="@here"
-          else 
-            COLOR=15158332 
-            EMOJI="❌"
-            CONTENT="⚠️ The build failed! Check here: [Logs]($RUN_URL)" 
+          else
+            COLOR=15158332
+            CONTENT="❌ **The build failed!**\n🔍 **Logs:** [View on GitHub]($RUN_URL)"
             PING="<@111425103445860352>"
           fi
-          
-          # Monta a mensagem para o Embed
-          MESSAGE="**Build Android - BusKá**\n- **Type:** ${{ env.ACTUAL_TYPE }}\n- **Version:** ${{ env.FINAL_VERSION }}\n- **Status:** ${STATUS^^}\n\n$CONTENT"
 
-          # Usando uma variável limpa para o JSON (Resistente ao Linter)
+          MSG="**File:** \`buska-${{ env.FINAL_VERSION }}.apk\`\n**Type:** \`${{ env.ACTUAL_TYPE }}\`\n**Size:** \`${{ env.APK_SIZE }}\`\n**Change:** \`$COMMIT_MSG\`"
+
           PAYLOAD='{
             "content": "'"$PING"'",
             "embeds": [{
-              "title": "BusKá CI/CD Update",
-              "description": "'"$MESSAGE"'",
+              "title": "BusKá Build Update",
+              "description": "'"$MSG"'\n\n'"$CONTENT"'",
               "color": '$COLOR',
-              "footer": { "text": "Executed by: ${{ github.actor }}" }
+              "footer": { "text": "Author: ${{ github.actor }} | Branch: ${{ github.ref_name }} | Commit: ${{ github.sha }}" }
             }]
           }'
-          
+
           curl -X POST -H "Content-Type: application/json" -d "$PAYLOAD" ${{ secrets.DISCORD_WEBHOOK }}
