@@ -104,10 +104,7 @@ jobs:
         id: signing
         run: |
           TYPE="${{ inputs.GRADLE_PARAMS }}"
-          if [[ "${{ github.ref }}" == refs/tags/* ]]; then TYPE="Release"; fi
-          if [ -z "$TYPE" ]; then TYPE="Release"; fi
-          
-          echo "Build Type is: $TYPE"
+          if [[ "${{ github.ref }}" == refs/tags/* ]] || [ -z "$TYPE" ]; then TYPE="Release"; fi
           
           cat > android/keystore.properties << EOF
           debug.storeFile=debug.keystore
@@ -118,6 +115,7 @@ jobs:
           
           if [[ "$TYPE" == "Release" ]]; then
             if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+              echo "🔐 Injecting Release Keys..."
               echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/buska-release-key.keystore
               
               cat >> android/keystore.properties << EOF
@@ -127,7 +125,8 @@ jobs:
           release.keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
           EOF
             else
-              echo "⚠️ Warning: Release build selected but no secrets found!"
+              echo "❌ Release build selected but no secrets found!"
+              exit 1
             fi
           else
             echo "ℹ️ Debug build selected. Skipping release keystore decoding."
@@ -139,13 +138,8 @@ jobs:
           chmod +x gradlew
           
           TYPE="${{ inputs.GRADLE_PARAMS }}"
-          if [[ "${{ github.ref }}" == refs/tags/* ]]; then TYPE="Release"; fi
-          if [ -z "$TYPE" ]; then TYPE="Release"; fi
-          
-          TASK="assemble$TYPE"
-          
-          echo "🚀 Running Gradle Task: $TASK"
-          ./gradlew clean $TASK --no-daemon
+          if [[ "${{ github.ref }}" == refs/tags/* ]] || [ -z "$TYPE" ]; then TYPE="Release"; fi
+          ./gradlew clean assemble$TYPE --no-daemon
       
       - name: Rename and Prepare Artifact
         id: prepare_artifact
@@ -161,6 +155,7 @@ jobs:
           
           TYPE="${{ inputs.GRADLE_PARAMS }}"
           if [[ "${{ github.ref }}" == refs/tags/* ]] || [ -z "$TYPE" ]; then TYPE="Release"; fi
+          echo "ACTUAL_TYPE=$TYPE" >> $GITHUB_ENV
           
           cd android/app/build/outputs/apk/${TYPE,,}
           
@@ -169,11 +164,10 @@ jobs:
           if [ -f "$ORIGINAL_APK" ]; then
             NEW_NAME="buska-${FINAL_VERSION}.apk"
             mv "$ORIGINAL_APK" "$NEW_NAME"
-            echo "✅ Renomeado para: $NEW_NAME"
-            
             echo "ARTIFACT_PATH=$(pwd)/$NEW_NAME" >> $GITHUB_ENV
+            echo "✅ Renamed to $NEW_NAME"
           else
-            echo "❌ Erro: Nenhum APK encontrado em $(pwd)"
+            echo "❌ APK not found!"
             exit 1
           fi
           
@@ -182,47 +176,46 @@ jobs:
         with:
           name: buska-${{ env.FINAL_VERSION }}
           path: ${{ env.ARTIFACT_PATH }}
-          if-no-files-found: error
-      
-      - name: Notify Discord
-        if: always()
-        run: |
-          STATUS="${{ job.status }}"
-          COLOR=3066993 # Blue for success
-          if [ "$STATUS" = "failure" ]; then COLOR=15158332; fi # Red for failure
-          
-          MESSAGE="**Build Android - BusKá**\n"
-          MESSAGE+="- **Tipo:** ${{ inputs.GRADLE_PARAMS }}\n"
-          MESSAGE+="- **Versão:** ${{ env.FINAL_VERSION }}\n"
-          MESSAGE+="- **Status:** ${STATUS^^}\n"
-          
-          if [ "$STATUS" = "success" ]; then
-            MESSAGE+="\n✅ APK gerado com sucesso! Baixe nos artefatos ou na Release."
-          else
-            MESSAGE+="\n❌ O build falhou. Verifique os logs no GitHub Actions."
-          fi
-
-          curl -X POST -H "Content-Type: application/json" \
-          -d "{
-            \"embeds\": [{
-              \"title\": \"BusKá CI/CD Update\",
-              \"description\": \"$MESSAGE\",
-              \"color\": $COLOR
-            }]
-          }" ${{ secrets.DISCORD_WEBHOOK }}
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
           files: ${{ env.ARTIFACT_PATH }}
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Cleanup sensitive files
+
+      - name: Notify Discord
         if: always()
         run: |
-          echo "Cleaning up sensitive files..."
-          rm -f .env .env.production android/keystore.properties android/app/buska-release-key.keystore
+          STATUS="${{ job.status }}"
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          
+          # Cores e Emojis
+          if [ "$STATUS" = "success" ]; then 
+            COLOR=3066993 
+            EMOJI="✅"
+            CONTENT="🚀 New BusKá build available!\n📦 **Download here:** [View Artifacts]($RUN_URL)"
+            PING="@here"
+          else 
+            COLOR=15158332 
+            EMOJI="❌"
+            CONTENT="⚠️ The build failed! Check here: [Logs]($RUN_URL)" 
+            PING="<@111425103445860352>"
+          fi
+          
+          # Monta a mensagem para o Embed
+          MESSAGE="**Build Android - BusKá**\n- **Type:** ${{ env.ACTUAL_TYPE }}\n- **Version:** ${{ env.FINAL_VERSION }}\n- **Status:** ${STATUS^^}\n\n$CONTENT"
+
+          # Usando uma variável limpa para o JSON (Resistente ao Linter)
+          PAYLOAD='{
+            "content": "'"$PING"'",
+            "embeds": [{
+              "title": "BusKá CI/CD Update",
+              "description": "'"$MESSAGE"'",
+              "color": '$COLOR',
+              "footer": { "text": "Executed by: ${{ github.actor }}" }
+            }]
+          }'
+          
+          curl -X POST -H "Content-Type: application/json" -d "$PAYLOAD" ${{ secrets.DISCORD_WEBHOOK }}
