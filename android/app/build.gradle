@@ -9,10 +9,6 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
-project.ext.envConfigFiles = [
-    debug: ".env",
-    release: ".env.production",
-]
 apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
 
 // Vector Icons
@@ -38,7 +34,7 @@ android {
         applicationId "br.edu.ufcg.projeto1.buska"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
+        versionCode System.getenv("GITHUB_RUN_NUMBER") ? System.getenv("GITHUB_RUN_NUMBER").toInteger() : 1
         versionName "1.0"
         resValue "string", "build_config_package", "br.edu.ufcg.projeto1.buska"
     }

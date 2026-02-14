@@ -1,27 +1,41 @@
-name: Android Build APK (Installable)
+name: Android Build APK
 
 on:
   push:
     branches: [ main, develop, chore/add-ci ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main, develop ]
   workflow_dispatch:
+    inputs:
+      GRADLE_PARAMS:
+        description: 'Parâmetros do Gradle para o build'
+        required: true
+        default: 'Release'
+        type: choice
+        options:
+          - Debug
+          - Release
+      VERSION_NAME:
+        description: 'Nome da Versão (Opcional - ex: 1.0.0)'
+        required: false
+        default: ''
 
 jobs:
   build:
-    name: Build Android Installable APK (Release)
+    name: Build Android (${{ inputs.GRADLE_PARAMS || 'Release' }})
     runs-on: self-hosted
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Environment
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-
+      
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -32,13 +46,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Force the correct use of SDK
+      - name: Configure Android SDK (Self-Hosted)
         run: |
           echo "ANDROID_SDK_ROOT=/home/ubuntu/.android/sdk" >> $GITHUB_ENV
           echo "sdk.dir=/home/ubuntu/.android/sdk" > android/local.properties
-
-      - name: Configure Android SDK path
-        run: |
+          
           if [ -z "$ANDROID_SDK_ROOT" ] && [ -n "$ANDROID_HOME" ]; then
             echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
           fi
@@ -57,11 +69,11 @@ jobs:
           fi
 
           echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
-
+      
       - name: Setup Android SDK (if missing)
         if: env.ANDROID_SDK_ROOT == ''
         uses: android-actions/setup-android@v3
-
+      
       - name: Ensure local.properties
         run: |
           if [ -z "$ANDROID_SDK_ROOT" ] && [ -n "$ANDROID_HOME" ]; then
@@ -74,73 +86,141 @@ jobs:
           fi
 
           echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
-
-      - name: Make Gradlew executable
-        run: chmod +x android/gradlew
-
-      # Ensure debug.keystore exists (useful if your release build falls back to debug signing in CI)
-      - name: Create debug keystore (CI)
+      
+      - name: Prepare Environment (.env)
         run: |
-          cd android/app
-          if [ ! -f debug.keystore ]; then
-            keytool -genkeypair -v \
-              -storetype PKCS12 \
-              -keystore debug.keystore \
-              -storepass android \
-              -alias androiddebugkey \
-              -keypass android \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -dname "CN=Android Debug,O=Android,C=US"
+          if [[ "${{ inputs.GRADLE_PARAMS }}" == "Release" ]]; then
+            echo "API_URL=${{ secrets.API_URL_PRODUCTION }}" > .env
+            echo "APP_NAME=BusKá" >> .env
+          else
+            echo "API_URL=${{ secrets.API_URL_DEVELOPMENT || 'http://localhost:5000' }}" > .env
+            echo "APP_NAME=BusKá Development" >> .env
+          fi
+          echo "✅ Single .env generated for build of ${{ inputs.GRADLE_PARAMS }}."
+
+      - name: Configure Keystore (Conditional)
+        id: signing
+        run: |
+          TYPE="${{ inputs.GRADLE_PARAMS }}"
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then TYPE="Release"; fi
+          if [ -z "$TYPE" ]; then TYPE="Release"; fi
+          
+          echo "Build Type is: $TYPE"
+          
+          cat > android/keystore.properties << EOF
+          debug.storeFile=debug.keystore
+          debug.storePassword=android
+          debug.keyAlias=androiddebugkey
+          debug.keyPassword=android
+          EOF
+          
+          if [[ "$TYPE" == "Release" ]]; then
+            if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+              echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/buska-release-key.keystore
+              
+              cat >> android/keystore.properties << EOF
+          release.storeFile=buska-release-key.keystore
+          release.storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          release.keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          release.keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          EOF
+            else
+              echo "⚠️ Warning: Release build selected but no secrets found!"
+            fi
+          else
+            echo "ℹ️ Debug build selected. Skipping release keystore decoding."
           fi
 
-      - name: Build Release APK
+      - name: Build Android App
         run: |
           cd android
-          ./gradlew clean :app:assembleRelease --no-daemon --stacktrace
-
-      - name: List build outputs (debugging)
+          chmod +x gradlew
+          
+          TYPE="${{ inputs.GRADLE_PARAMS }}"
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then TYPE="Release"; fi
+          if [ -z "$TYPE" ]; then TYPE="Release"; fi
+          
+          TASK="assemble$TYPE"
+          
+          echo "🚀 Running Gradle Task: $TASK"
+          ./gradlew clean $TASK --no-daemon
+      
+      - name: Rename and Prepare Artifact
+        id: prepare_artifact
         run: |
-          echo "=== outputs/apk ==="
-          ls -R android/app/build/outputs/apk || true
-          echo "=== outputs/bundle ==="
-          ls -R android/app/build/outputs/bundle || true
-          echo "=== find APKs ==="
-          find android/app/build/outputs -type f -name "*.apk" -print || true
+          MANUAL_VERSION="${{ inputs.VERSION_NAME }}"
+          if [ -n "$MANUAL_VERSION" ]; then
+            FINAL_VERSION="$MANUAL_VERSION"
+          else
+            FINAL_VERSION=$(echo "${{ github.ref_name }}" | sed 's|.*/||')
+          fi
+          
+          echo "FINAL_VERSION=$FINAL_VERSION" >> $GITHUB_ENV
+          
+          TYPE="${{ inputs.GRADLE_PARAMS }}"
+          if [[ "${{ github.ref }}" == refs/tags/* ]] || [ -z "$TYPE" ]; then TYPE="Release"; fi
+          
+          cd android/app/build/outputs/apk/${TYPE,,}
+          
+          ORIGINAL_APK=$(find . -name "*.apk" -maxdepth 1 | head -n 1)
 
-      - name: Locate release APK
-        id: locate_apk
-        run: |
-          APK_PATH=$(find android/app/build/outputs/apk -type f -name "*release*.apk" | head -n 1)
-          echo "Found APK: $APK_PATH"
-          if [ -z "$APK_PATH" ]; then
-            echo "No release APK found under android/app/build/outputs/apk"
+          if [ -f "$ORIGINAL_APK" ]; then
+            NEW_NAME="buska-${FINAL_VERSION}.apk"
+            mv "$ORIGINAL_APK" "$NEW_NAME"
+            echo "✅ Renomeado para: $NEW_NAME"
+            
+            echo "ARTIFACT_PATH=$(pwd)/$NEW_NAME" >> $GITHUB_ENV
+          else
+            echo "❌ Erro: Nenhum APK encontrado em $(pwd)"
             exit 1
           fi
-          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
-
-      - name: Verify APK (aapt + apksigner)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y apksigner
-
-          APK="${{ steps.locate_apk.outputs.apk_path }}"
-          echo "APK: $APK"
-
-          echo "== apksigner verify =="
-          apksigner verify --verbose "$APK"
-
-          echo "== print manifest info (package/version/sdk) =="
-          $ANDROID_SDK_ROOT/build-tools/*/aapt dump badging "$APK" | head -n 40
-
-      - name: Upload APK artifact
+          
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-${{ github.run_number }}
-          path: ${{ steps.locate_apk.outputs.apk_path }}
-          retention-days: 30
+          name: buska-${{ env.FINAL_VERSION }}
+          path: ${{ env.ARTIFACT_PATH }}
           if-no-files-found: error
-
-      - name: Get APK info
+      
+      - name: Notify Discord
+        if: always()
         run: |
-          echo "✅ Release APK generated!"
-          ls -lh "${{ steps.locate_apk.outputs.apk_path }}"
+          STATUS="${{ job.status }}"
+          COLOR=3066993 # Blue for success
+          if [ "$STATUS" = "failure" ]; then COLOR=15158332; fi # Red for failure
+          
+          MESSAGE="**Build Android - BusKá**\n"
+          MESSAGE+="- **Tipo:** ${{ inputs.GRADLE_PARAMS }}\n"
+          MESSAGE+="- **Versão:** ${{ env.FINAL_VERSION }}\n"
+          MESSAGE+="- **Status:** ${STATUS^^}\n"
+          
+          if [ "$STATUS" = "success" ]; then
+            MESSAGE+="\n✅ APK gerado com sucesso! Baixe nos artefatos ou na Release."
+          else
+            MESSAGE+="\n❌ O build falhou. Verifique os logs no GitHub Actions."
+          fi
+
+          curl -X POST -H "Content-Type: application/json" \
+          -d "{
+            \"embeds\": [{
+              \"title\": \"BusKá CI/CD Update\",
+              \"description\": \"$MESSAGE\",
+              \"color\": $COLOR
+            }]
+          }" ${{ secrets.DISCORD_WEBHOOK }}
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.ARTIFACT_PATH }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Cleanup sensitive files
+        if: always()
+        run: |
+          echo "Cleaning up sensitive files..."
+          rm -f .env .env.production android/keystore.properties android/app/buska-release-key.keystore
