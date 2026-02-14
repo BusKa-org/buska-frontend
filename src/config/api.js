@@ -7,6 +7,7 @@ import Config from "react-native-config";
 // true during development and false in release builds.
 const isDevelopment = __DEV__;
 
+console.log("API URL ATUAL:", Config.API_URL);
 export const API_BASE_URL = Config.API_URL;
 
 const API_CONFIG = {
