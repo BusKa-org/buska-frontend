@@ -23,7 +23,7 @@ on:
 
 jobs:
   build:
-    name: (${{ inputs.GRADLE_PARAMS || 'Release' }}) - ${{ github.run_number }}
+    name: ${{ inputs.GRADLE_PARAMS || 'Release' }} - ${{ github.run_number }}
     runs-on: self-hosted
 
     steps:
@@ -45,6 +45,27 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+      
+      - name: Setup Global Variables
+        id: vars
+        run: |
+          TYPE="${{ inputs.GRADLE_PARAMS }}"
+          if [[ "${{ github.ref }}" == refs/tags/* ]] || [ -z "$TYPE" ]; then TYPE="Release"; fi
+          
+          REF_NAME=$(echo "${{ github.ref_name }}" | sed 's|.*/||')
+          
+          if [[ "$TYPE" == "Release" ]]; then
+            VER="${{ inputs.VERSION_NAME }}"
+            if [ -z "$VER" ]; then VER="$REF_NAME"; fi
+            FINAL_VERSION="release-${VER}-${{ github.run_number }}"
+          else
+            FINAL_VERSION="debug-${REF_NAME}-${{ github.run_number }}"
+          fi
+
+          echo "BUILD_TYPE=$TYPE" >> $GITHUB_ENV
+          echo "VERSION=$FINAL_VERSION" >> $GITHUB_ENV
+          echo "BRANCH_NAME=$REF_NAME" >> $GITHUB_ENV
+          echo "RUN_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
       
       - name: Force the correct use of SDK
         run: |
@@ -91,21 +112,18 @@ jobs:
       
       - name: Prepare Environment (.env)
         run: |
-          if [[ "${{ inputs.GRADLE_PARAMS }}" == "Release" ]]; then
+          if [[ "${{ env.BUILD_TYPE }}" == "Release" ]]; then
             echo "API_URL=${{ secrets.API_URL_PRODUCTION }}" > .env
             echo "APP_NAME=BusKá" >> .env
           else
             echo "API_URL=${{ secrets.API_URL_DEVELOPMENT || 'http://localhost:5000' }}" > .env
             echo "APP_NAME=BusKá Development" >> .env
           fi
-          echo "✅ Single .env generated for build of ${{ inputs.GRADLE_PARAMS }}."
+          echo "✅ Single .env generated for build of ${{ env.BUILD_TYPE }}."
 
       - name: Configure Keystore (Conditional)
         id: signing
         run: |
-          TYPE="${{ inputs.GRADLE_PARAMS }}"
-          if [[ "${{ github.ref }}" == refs/tags/* ]] || [ -z "$TYPE" ]; then TYPE="Release"; fi
-          
           cat > android/keystore.properties << EOF
           debug.storeFile=debug.keystore
           debug.storePassword=android
@@ -113,7 +131,7 @@ jobs:
           debug.keyPassword=android
           EOF
           
-          if [[ "$TYPE" == "Release" ]]; then
+          if [[ "${{ env.BUILD_TYPE }}" == "Release" ]]; then
             if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
               echo "🔐 Injecting Release Keys..."
               echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/buska-release-key.keystore
@@ -137,36 +155,22 @@ jobs:
           cd android
           chmod +x gradlew
           
-          TYPE="${{ inputs.GRADLE_PARAMS }}"
-          if [[ "${{ github.ref }}" == refs/tags/* ]] || [ -z "$TYPE" ]; then TYPE="Release"; fi
-          ./gradlew clean assemble$TYPE --no-daemon
+          ./gradlew clean assemble${{ env.BUILD_TYPE }} --no-daemon
       
       - name: Rename and Prepare Artifact
         id: prepare_artifact
         run: |
-          TYPE="${{ inputs.GRADLE_PARAMS }}"
-          if [[ "${{ github.ref }}" == refs/tags/* ]] || [ -z "$TYPE" ]; then TYPE="Release"; fi
+          ANDROID_BUILD_VARIANT=$(echo "${{ env.BUILD_TYPE }}" | tr '[:upper:]' '[:lower:]')
+          echo "Android build variant: $ANDROID_BUILD_VARIANT"
           
-          RUN="${{ github.run_number }}"
-          
-          if [[ "$TYPE" == "Release" ]]; then
-            VERSION="${{ inputs.VERSION_NAME }}"
-            if [ -z "$VERSION" ]; then VERSION=$(echo "${{ github.ref_name }}" | sed 's|.*/||'); fi
-            FINAL_NAME="release-${VERSION}-${RUN}"
-          else
-            BRANCH=$(echo "${{ github.ref_name }}" | sed 's|.*/||')
-            FINAL_NAME="debug-${BRANCH}-${RUN}"
-          fi
-
-          cd android/app/build/outputs/apk/${TYPE,,}
+          cd android/app/build/outputs/apk/$ANDROID_BUILD_VARIANT
+          echo "Current directory: $(pwd)"
           ORIGINAL_APK=$(find . -name "*.apk" -maxdepth 1 | head -n 1)
           
           if [ -f "$ORIGINAL_APK" ]; then
-            NEW_NAME="buska-${FINAL_NAME}.apk"
+            NEW_NAME="buska-${{ env.VERSION }}.apk"
             mv "$ORIGINAL_APK" "$NEW_NAME"
             
-            echo "FINAL_VERSION=$FINAL_NAME" >> $GITHUB_ENV
-            echo "ACTUAL_TYPE=$TYPE" >> $GITHUB_ENV
             echo "APK_SIZE=$(du -sh "$NEW_NAME" | cut -f1)" >> $GITHUB_ENV
             echo "ARTIFACT_PATH=$(pwd)/$NEW_NAME" >> $GITHUB_ENV
           else
@@ -177,7 +181,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: buska-${{ env.FINAL_VERSION }}
+          name: buska-${{ env.VERSION }}
           path: ${{ env.ARTIFACT_PATH }}
 
       - name: Create GitHub Release
@@ -204,7 +208,7 @@ jobs:
             PING="<@111425103445860352>"
           fi
 
-          MSG="**File:** \`buska-${{ env.FINAL_VERSION }}.apk\`\n**Type:** \`${{ env.ACTUAL_TYPE }}\`\n**Size:** \`${{ env.APK_SIZE }}\`\n**Change:** \`$COMMIT_MSG\`"
+          MSG="**File:** \`buska-${{ env.VERSION }}.apk\`\n**Type:** \`${{ env.BUILD_TYPE }}\`\n**Size:** \`${{ env.APK_SIZE }}\`\n**Change:** \`$COMMIT_MSG\`\n**Branch:** \`${{ env.BRANCH_NAME }}\`"
 
           PAYLOAD='{
             "content": "'"$PING"'",
@@ -212,7 +216,7 @@ jobs:
               "title": "BusKá Build Update",
               "description": "'"$MSG"'\n\n'"$CONTENT"'",
               "color": '$COLOR',
-              "footer": { "text": "Author: ${{ github.actor }} | Branch: ${{ github.ref_name }} | Commit: ${{ github.sha }}" }
+              "footer": { "text": "Author: ${{ github.actor }} | Branch: ${{ env.BRANCH_NAME }} | Commit: ${{ github.sha }}" }
             }]
           }'
 
