@@ -10,6 +10,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
 
 const ChatGestor = ({navigation}) => {
   const [mensagens, setMensagens] = useState([
@@ -54,14 +56,19 @@ const ChatGestor = ({navigation}) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← Voltar</Text>
-        </TouchableOpacity>
-        <View style={styles.headerInfo}>
-          <Text style={styles.title}>Chat com Gestor</Text>
-          <Text style={styles.subtitle}>Gestor Municipal</Text>
+        <View style={styles.headerTop}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
+            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.title}>Chat</Text>
+            <Text style={styles.headerSubtitle}>Gestor Municipal</Text>
+          </View>
+          <View style={styles.headerIcon}>
+            <Icon name={IconNames.chat} size="lg" color={colors.secondary.contrast} />
+          </View>
         </View>
       </View>
 
@@ -85,8 +92,14 @@ const ChatGestor = ({navigation}) => {
                   mensagem.remetente === 'motorista' &&
                     styles.mensagemMotorista,
                 ]}>
-                <Text style={styles.mensagemTexto}>{mensagem.texto}</Text>
-                <Text style={styles.mensagemHorario}>{mensagem.horario}</Text>
+                <Text style={[
+                  styles.mensagemTexto,
+                  mensagem.remetente === 'motorista' && { color: colors.text.inverse }
+                ]}>{mensagem.texto}</Text>
+                <Text style={[
+                  styles.mensagemHorario,
+                  mensagem.remetente === 'motorista' && { color: colors.text.inverse, opacity: 0.8 }
+                ]}>{mensagem.horario}</Text>
               </View>
             </View>
           ))}
@@ -96,7 +109,7 @@ const ChatGestor = ({navigation}) => {
           <TextInput
             style={styles.input}
             placeholder="Digite sua mensagem..."
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.text.hint}
             value={novaMensagem}
             onChangeText={setNovaMensagem}
             multiline
@@ -119,33 +132,48 @@ const ChatGestor = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    backgroundColor: colors.secondary.main,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.lg,
+    borderBottomLeftRadius: borderRadius.xxl,
+    borderBottomRightRadius: borderRadius.xxl,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   backButton: {
-    marginBottom: 8,
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  backButtonText: {
-    fontSize: 16,
-    color: '#1a73e8',
-  },
-  headerInfo: {
-    marginTop: 4,
+  headerTitleContainer: {
+    flex: 1,
+    marginLeft: spacing.md,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    ...textStyles.h3,
+    color: colors.secondary.contrast,
   },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
+  headerSubtitle: {
+    ...textStyles.bodySmall,
+    color: colors.secondary.light,
+    marginTop: spacing.xs,
+  },
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   keyboardView: {
     flex: 1,
@@ -154,10 +182,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mensagensContent: {
-    padding: 16,
+    padding: spacing.base,
   },
   mensagemContainer: {
-    marginBottom: 16,
+    marginBottom: spacing.base,
     alignItems: 'flex-start',
   },
   mensagemContainerMotorista: {
@@ -165,57 +193,59 @@ const styles = StyleSheet.create({
   },
   mensagem: {
     maxWidth: '80%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
+    ...shadows.xs,
   },
   mensagemMotorista: {
-    backgroundColor: '#1a73e8',
-    borderColor: '#1a73e8',
+    backgroundColor: colors.secondary.main,
+    borderColor: colors.secondary.main,
   },
   mensagemTexto: {
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 4,
+    ...textStyles.body,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
   mensagemHorario: {
-    fontSize: 12,
-    color: '#999',
+    ...textStyles.caption,
+    color: colors.text.hint,
     alignSelf: 'flex-end',
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: 16,
-    backgroundColor: '#fff',
+    padding: spacing.base,
+    backgroundColor: colors.background.paper,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: colors.border.light,
     alignItems: 'flex-end',
+    ...shadows.sm,
   },
   input: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 16,
+    backgroundColor: colors.background.default,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.base,
+    ...textStyles.inputText,
     maxHeight: 100,
-    marginRight: 8,
+    marginRight: spacing.sm,
   },
   enviarButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    backgroundColor: colors.secondary.main,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.base,
+    ...shadows.xs,
   },
   enviarButtonDisabled: {
-    backgroundColor: '#e0e0e0',
+    backgroundColor: colors.border.light,
   },
   enviarButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    ...textStyles.button,
+    color: colors.text.inverse,
   },
 });
 

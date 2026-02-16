@@ -4,24 +4,29 @@ const NavigationContext = createContext();
 
 export const NavigationProvider = ({children, initialRoute = 'Login'}) => {
   const [currentRoute, setCurrentRoute] = useState(initialRoute);
-  const [history, setHistory] = useState([initialRoute]);
+  const [routeParams, setRouteParams] = useState({});
+  const [history, setHistory] = useState([{route: initialRoute, params: {}}]);
 
-  const navigate = (routeName) => {
+  const navigate = (routeName, params = {}) => {
     setCurrentRoute(routeName);
-    setHistory([...history, routeName]);
+    setRouteParams(params);
+    setHistory([...history, {route: routeName, params}]);
   };
 
   const goBack = () => {
     if (history.length > 1) {
       const newHistory = [...history];
       newHistory.pop();
+      const previous = newHistory[newHistory.length - 1];
       setHistory(newHistory);
-      setCurrentRoute(newHistory[newHistory.length - 1]);
+      setCurrentRoute(previous.route);
+      setRouteParams(previous.params || {});
     }
   };
 
   const value = {
     currentRoute,
+    routeParams,
     navigate,
     goBack,
     canGoBack: history.length > 1,
@@ -43,13 +48,13 @@ export const useNavigation = () => {
 };
 
 export const Navigator = ({children, initialRoute}) => {
-  const {currentRoute} = useNavigation();
+  const {currentRoute, routeParams} = useNavigation();
 
   return (
     <>
       {React.Children.map(children, (child) => {
         if (React.isValidElement(child) && child.props.name === currentRoute) {
-          return child;
+          return React.cloneElement(child, {routeParams});
         }
         return null;
       })}
@@ -57,12 +62,15 @@ export const Navigator = ({children, initialRoute}) => {
   );
 };
 
-export const Screen = ({name, component: Component}) => {
-  const {navigate, goBack, canGoBack} = useNavigation();
+export const Screen = ({name, component: Component, routeParams: screenParams}) => {
+  const {navigate, goBack, canGoBack, routeParams} = useNavigation();
+  
+  // Usa os params do screen se disponíveis, senão usa os do contexto
+  const params = screenParams !== undefined ? screenParams : routeParams;
   
   // Cria objeto navigation compatível com React Navigation
   const navigation = {
-    navigate: (routeName) => navigate(routeName),
+    navigate: (routeName, navParams) => navigate(routeName, navParams || {}),
     goBack: () => goBack(),
     canGoBack: () => canGoBack,
     // Métodos adicionais que podem ser usados
@@ -74,6 +82,12 @@ export const Screen = ({name, component: Component}) => {
     },
   };
 
-  return <Component navigation={navigation} />;
+  // Cria objeto route compatível com React Navigation
+  const route = {
+    params: params || {},
+    name: name,
+  };
+
+  return <Component navigation={navigation} route={route} />;
 };
 

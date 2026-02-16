@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -7,120 +7,83 @@ import {
   SafeAreaView,
   ScrollView,
 } from 'react-native';
+import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
 
 const ListaAlunosConfirmados = ({navigation, route}) => {
-  const viagem = route?.params?.viagem || {
-    id: 1,
-    tipo: 'Manhã',
-    horario: '07:30',
-  };
-
-  // Dados mockados - alunos confirmados
-  const [alunos, setAlunos] = useState([
-    {
-      id: 1,
-      nome: 'João Silva',
-      pontoEmbarque: 'Centro - Rua Principal',
-      confirmadoAntes: true,
-      foto: null,
-    },
-    {
-      id: 2,
-      nome: 'Maria Santos',
-      pontoEmbarque: 'Centro - Praça da República',
-      confirmadoAntes: true,
-      foto: null,
-    },
-    {
-      id: 3,
-      nome: 'Pedro Oliveira',
-      pontoEmbarque: 'Avenida Principal',
-      confirmadoAntes: false, // Confirmado após início da viagem
-      foto: null,
-    },
-    {
-      id: 4,
-      nome: 'Ana Costa',
-      pontoEmbarque: 'Centro - Rua Principal',
-      confirmadoAntes: true,
-      foto: null,
-    },
-    {
-      id: 5,
-      nome: 'Lucas Ferreira',
-      pontoEmbarque: 'Praça da República',
-      confirmadoAntes: false, // Confirmado após início da viagem
-      foto: null,
-    },
-  ]);
+  const viagem = route?.params?.viagem || {};
+  
+  // Use alunos data from viagem object (from /viagens/minhas response)
+  // Filter to show only confirmed students
+  const alunosConfirmados = (viagem.alunos || [])
+    .filter(a => a.confirmacao)
+    .map((a, index) => ({
+      id: a.aluno_id || index,
+      nome: a.nome || 'Aluno',
+      pontoEmbarque: a.ponto_embarque || 'Não informado',
+      pontoDestino: a.ponto_destino || 'Não informado',
+    }));
+  
+  const totalAlunos = viagem.total_alunos || viagem.alunos?.length || 0;
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← Voltar</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Alunos Confirmados</Text>
-        <Text style={styles.subtitle}>
-          {viagem.tipo} - {viagem.horario}
-        </Text>
+        <View style={styles.headerTop}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
+            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.title}>Alunos Confirmados</Text>
+            <Text style={styles.headerSubtitle}>
+              {viagem.tipo} • {viagem.horario}
+            </Text>
+          </View>
+          <View style={styles.headerIcon}>
+            <Icon name={IconNames.group} size="lg" color={colors.secondary.contrast} />
+          </View>
+        </View>
       </View>
 
       <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
           <View style={styles.resumo}>
             <Text style={styles.resumoText}>
-              {alunos.length} alunos confirmados
-            </Text>
-            <Text style={styles.resumoSubtext}>
-              {alunos.filter((a) => !a.confirmadoAntes).length} confirmações
-              após início
+              {alunosConfirmados.length} de {totalAlunos} alunos confirmados
             </Text>
           </View>
 
-          {alunos.map((aluno) => (
-            <View
-              key={aluno.id}
-              style={[
-                styles.alunoCard,
-                !aluno.confirmadoAntes && styles.alunoCardNovo,
-              ]}>
+          {alunosConfirmados.map((aluno) => (
+            <View key={aluno.id} style={styles.alunoCard}>
               <View style={styles.alunoHeader}>
                 <View style={styles.alunoAvatar}>
-                  {aluno.foto ? (
-                    <Text style={styles.alunoFoto}>📷</Text>
-                  ) : (
-                    <Text style={styles.alunoInicial}>
-                      {aluno.nome.charAt(0)}
-                    </Text>
-                  )}
+                  <Text style={styles.alunoInicial}>
+                    {aluno.nome?.charAt(0) || '?'}
+                  </Text>
                 </View>
                 <View style={styles.alunoInfo}>
-                  <View style={styles.alunoNomeContainer}>
-                    <Text style={styles.alunoNome}>{aluno.nome}</Text>
-                    {!aluno.confirmadoAntes && (
-                      <View style={styles.novoBadge}>
-                        <Text style={styles.novoBadgeText}>NOVO</Text>
-                      </View>
-                    )}
-                  </View>
+                  <Text style={styles.alunoNome}>{aluno.nome}</Text>
                   <View style={styles.pontoContainer}>
-                    <Text style={styles.pontoIcon}>📍</Text>
-                    <Text style={styles.pontoEmbarque}>
-                      {aluno.pontoEmbarque}
-                    </Text>
+                    <Icon name={IconNames.location} size="sm" color={colors.text.secondary} />
+                    <Text style={styles.pontoEmbarque}>{aluno.pontoEmbarque}</Text>
                   </View>
+                  {aluno.pontoDestino && aluno.pontoDestino !== 'Não informado' && (
+                    <View style={styles.pontoContainer}>
+                      <Icon name={IconNames.flag} size="sm" color={colors.text.hint} />
+                      <Text style={styles.pontoDestino}>{aluno.pontoDestino}</Text>
+                    </View>
+                  )}
                 </View>
                 <View style={styles.confirmadoIcon}>
-                  <Text style={styles.confirmadoIconText}>✓</Text>
+                  <Icon name={IconNames.checkCircle} size="md" color={colors.text.inverse} />
                 </View>
               </View>
             </View>
           ))}
 
-          {alunos.length === 0 && (
+          {alunosConfirmados.length === 0 && (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateText}>
                 Nenhum aluno confirmado ainda
@@ -136,67 +99,86 @@ const ListaAlunosConfirmados = ({navigation, route}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    backgroundColor: colors.secondary.main,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.xl,
+    borderBottomLeftRadius: borderRadius.xxl,
+    borderBottomRightRadius: borderRadius.xxl,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   backButton: {
-    marginBottom: 8,
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  backButtonText: {
-    fontSize: 16,
-    color: '#1a73e8',
+  headerTitleContainer: {
+    flex: 1,
+    marginLeft: spacing.md,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    ...textStyles.h3,
+    color: colors.secondary.contrast,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
+  headerSubtitle: {
+    ...textStyles.bodySmall,
+    color: colors.secondary.light,
+    marginTop: spacing.xs,
+  },
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: spacing.base,
   },
   resumo: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.base,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
+    ...shadows.sm,
   },
   resumoText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    ...textStyles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
   resumoSubtext: {
-    fontSize: 14,
-    color: '#666',
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
   },
   alunoCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
+    ...shadows.sm,
   },
   alunoCardNovo: {
-    borderColor: '#1a73e8',
+    borderColor: colors.secondary.main,
     borderWidth: 2,
-    backgroundColor: '#e3f2fd',
+    backgroundColor: colors.info.light,
   },
   alunoHeader: {
     flexDirection: 'row',
@@ -205,19 +187,19 @@ const styles = StyleSheet.create({
   alunoAvatar: {
     width: 50,
     height: 50,
-    borderRadius: 25,
-    backgroundColor: '#1a73e8',
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.main,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   alunoFoto: {
-    fontSize: 24,
+    fontSize: fontSize.h3,
   },
   alunoInicial: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
+    ...textStyles.h3,
+    fontWeight: fontWeight.bold,
+    color: colors.text.inverse,
   },
   alunoInfo: {
     flex: 1,
@@ -225,57 +207,53 @@ const styles = StyleSheet.create({
   alunoNomeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-    gap: 8,
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
   },
   alunoNome: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    ...textStyles.body,
+    fontWeight: fontWeight.semiBold,
+    color: colors.text.primary,
   },
   novoBadge: {
-    backgroundColor: '#1a73e8',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
+    backgroundColor: colors.secondary.main,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: borderRadius.full,
   },
   novoBadgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
+    ...textStyles.caption,
+    color: colors.text.inverse,
+    fontWeight: fontWeight.bold,
   },
   pontoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  pontoIcon: {
-    fontSize: 14,
-    marginRight: 4,
+    gap: spacing.xs,
   },
   pontoEmbarque: {
-    fontSize: 14,
-    color: '#666',
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
+  },
+  pontoDestino: {
+    ...textStyles.caption,
+    color: colors.text.hint,
   },
   confirmadoIcon: {
     width: 32,
     height: 32,
-    borderRadius: 16,
-    backgroundColor: '#34a853',
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.success.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  confirmadoIconText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
   emptyState: {
     alignItems: 'center',
-    padding: 48,
+    padding: spacing.xxxl,
   },
   emptyStateText: {
-    fontSize: 16,
-    color: '#666',
+    ...textStyles.body,
+    color: colors.text.secondary,
   },
 });
 

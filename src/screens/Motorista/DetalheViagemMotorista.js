@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -6,68 +6,94 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
+import {motoristaService} from '../../services/motoristaService';
+import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
 
 const DetalheViagemMotorista = ({navigation, route}) => {
-  const {viagem} = route?.params || {
-    viagem: {
-      id: 1,
-      tipo: 'Manhã',
-      horario: '07:30',
-      origem: 'Centro',
-      destino: 'Escola Municipal',
-      alunosConfirmados: 18,
-      totalAlunos: 25,
-      status: 'A iniciar',
-    },
-  };
+  const {viagem} = route?.params || {};
+
+  if (!viagem) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}>
+              <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+            </TouchableOpacity>
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.title}>Detalhes da Viagem</Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.emptyContainer}>
+          <Icon name={IconNames.warning} size="xxl" color={colors.warning.main} />
+          <Text style={styles.emptyContainerText}>Dados da viagem não disponíveis</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const [situacaoViagem, setSituacaoViagem] = useState(viagem.status);
-
-  // Simula pontos da rota
-  const pontosRota = [
-    {id: 1, nome: 'Centro - Rua Principal', tipo: 'origem', alunos: 5},
-    {id: 2, nome: 'Praça da República', tipo: 'parada', alunos: 3},
-    {id: 3, nome: 'Avenida Principal', tipo: 'parada', alunos: 4},
-    {id: 4, nome: 'Rua das Flores', tipo: 'parada', alunos: 2},
-    {id: 5, nome: 'Escola Municipal', tipo: 'destino', alunos: 0},
-  ];
+  const [pontosRota, setPontosRota] = useState([]);
+  useEffect(() => {
+    if (viagem.pontos) {
+      setPontosRota(viagem.pontos);
+    }
+  }, [viagem]);
+  // Use data directly from viagem object (from /viagens/minhas response)
+  const alunosInfo = {
+    totalAlunos: viagem.total_alunos || 0,
+    alunosConfirmados: viagem.alunos_confirmados_count || 0,
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
       case 'A iniciar':
-        return '#fbbc04';
+        return colors.warning.main;
       case 'Em andamento':
-        return '#1a73e8';
+        return colors.secondary.main;
       case 'Finalizada':
-        return '#34a853';
+        return colors.success.main;
       default:
-        return '#999';
+        return colors.text.hint;
     }
   };
 
   const getStatusBgColor = (status) => {
     switch (status) {
       case 'A iniciar':
-        return '#fff3cd';
+        return colors.warning.light;
       case 'Em andamento':
-        return '#e3f2fd';
+        return colors.info.light;
       case 'Finalizada':
-        return '#e8f5e9';
+        return colors.success.light;
       default:
-        return '#f5f5f5';
+        return colors.background.default;
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← Voltar</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Detalhes da Viagem</Text>
+        <View style={styles.headerTop}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
+            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.title}>Detalhes da Viagem</Text>
+            <Text style={styles.headerSubtitle}>{viagem.tipo} • {viagem.horario}</Text>
+          </View>
+          <View style={styles.headerIcon}>
+            <Icon name={IconNames.route} size="lg" color={colors.secondary.contrast} />
+          </View>
+        </View>
       </View>
 
       <ScrollView style={styles.scrollView}>
@@ -97,7 +123,7 @@ const DetalheViagemMotorista = ({navigation, route}) => {
             <View style={styles.rotaInfo}>
               <View style={styles.pontoRota}>
                 <View style={styles.pontoIcon}>
-                  <Text style={styles.pontoIconText}>📍</Text>
+                  <Icon name={IconNames.location} size="md" color={colors.secondary.main} />
                 </View>
                 <View style={styles.pontoInfo}>
                   <Text style={styles.pontoLabel}>Origem</Text>
@@ -109,7 +135,7 @@ const DetalheViagemMotorista = ({navigation, route}) => {
 
               <View style={styles.pontoRota}>
                 <View style={styles.pontoIcon}>
-                  <Text style={styles.pontoIconText}>🎯</Text>
+                  <Icon name={IconNames.location} size="md" color={colors.accent.main} />
                 </View>
                 <View style={styles.pontoInfo}>
                   <Text style={styles.pontoLabel}>Destino</Text>
@@ -124,21 +150,27 @@ const DetalheViagemMotorista = ({navigation, route}) => {
             <Text style={styles.cardTitle}>Alunos Confirmados</Text>
             <View style={styles.alunosInfo}>
               <Text style={styles.alunosText}>
-                {viagem.alunosConfirmados} de {viagem.totalAlunos} alunos
+                {alunosInfo.alunosConfirmados} de {alunosInfo.totalAlunos} alunos
                 confirmados
               </Text>
-              <View style={styles.alunosBar}>
-                <View
-                  style={[
-                    styles.alunosBarFill,
-                    {
-                      width: `${
-                        (viagem.alunosConfirmados / viagem.totalAlunos) * 100
-                      }%`,
-                    },
-                  ]}
-                />
-              </View>
+              {alunosInfo.totalAlunos > 0 ? (
+                <View style={styles.alunosBar}>
+                  <View
+                    style={[
+                      styles.alunosBarFill,
+                      {
+                        width: `${
+                          (alunosInfo.alunosConfirmados / alunosInfo.totalAlunos) * 100
+                        }%`,
+                      },
+                    ]}
+                  />
+                </View>
+              ) : (
+                <Text style={styles.emptyAlunosText}>
+                  Nenhum aluno inscrito nesta rota
+                </Text>
+              )}
             </View>
 
             <TouchableOpacity
@@ -155,7 +187,10 @@ const DetalheViagemMotorista = ({navigation, route}) => {
           {/* Pontos da Rota */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Pontos da Rota</Text>
-            {pontosRota.map((ponto, index) => (
+            {pontosRota.length === 0 ? (
+              <Text style={styles.emptyText}>Nenhum ponto cadastrado</Text>
+            ) : (
+              pontosRota.map((ponto, index) => (
               <View key={ponto.id} style={styles.pontoItem}>
                 <View style={styles.pontoItemLeft}>
                   <View
@@ -164,20 +199,26 @@ const DetalheViagemMotorista = ({navigation, route}) => {
                       ponto.tipo === 'origem' && styles.pontoItemIconOrigem,
                       ponto.tipo === 'destino' && styles.pontoItemIconDestino,
                     ]}>
-                    <Text style={styles.pontoItemIconText}>
-                      {ponto.tipo === 'origem'
-                        ? '📍'
+                    <Icon 
+                      name={ponto.tipo === 'origem' 
+                        ? IconNames.location 
                         : ponto.tipo === 'destino'
-                        ? '🎯'
-                        : '•'}
-                    </Text>
+                        ? IconNames.location
+                        : IconNames.location} 
+                      size="sm" 
+                      color={ponto.tipo === 'origem' 
+                        ? colors.secondary.main 
+                        : ponto.tipo === 'destino'
+                        ? colors.accent.main
+                        : colors.text.secondary} 
+                    />
                   </View>
                   {index < pontosRota.length - 1 && (
                     <View style={styles.pontoItemLine} />
                   )}
                 </View>
                 <View style={styles.pontoItemRight}>
-                  <Text style={styles.pontoItemNome}>{ponto.nome}</Text>
+                  <Text style={styles.pontoItemNome}>{ponto.apelido}</Text>
                   <Text style={styles.pontoItemTipo}>
                     {ponto.tipo === 'origem'
                       ? 'Origem'
@@ -188,14 +229,15 @@ const DetalheViagemMotorista = ({navigation, route}) => {
                   </Text>
                 </View>
               </View>
-            ))}
+              ))
+            )}
           </View>
 
           {/* Mapa Simplificado */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Mapa da Rota</Text>
             <View style={styles.mapaPlaceholder}>
-              <Text style={styles.mapaPlaceholderText}>🗺️</Text>
+              <Icon name={IconNames.map} size="xl" color={colors.text.secondary} />
               <Text style={styles.mapaPlaceholderLabel}>
                 Mapa com pontos da rota
               </Text>
@@ -212,10 +254,15 @@ const DetalheViagemMotorista = ({navigation, route}) => {
               <TouchableOpacity
                 style={styles.definirPontosButton}
                 onPress={() =>
-                  navigation.navigate('DefinirPontosRota', {viagem})
+                  navigation.navigate('DefinirPontosRota', {
+                    viagem,
+                    rota: viagem?.rota_id ? {id: viagem.rota_id} : null,
+                    isNovaRota: false,
+                  })
                 }>
+                <Icon name={IconNames.location} size="sm" color={colors.text.inverse} />
                 <Text style={styles.definirPontosButtonText}>
-                  📍 Definir Pontos da Rota
+                  Definir Pontos da Rota
                 </Text>
               </TouchableOpacity>
             </View>
@@ -252,245 +299,291 @@ const DetalheViagemMotorista = ({navigation, route}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    backgroundColor: colors.secondary.main,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.xl,
+    borderBottomLeftRadius: borderRadius.xxl,
+    borderBottomRightRadius: borderRadius.xxl,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   backButton: {
-    marginBottom: 8,
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  backButtonText: {
-    fontSize: 16,
-    color: '#1a73e8',
+  headerTitleContainer: {
+    flex: 1,
+    marginLeft: spacing.md,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    ...textStyles.h3,
+    color: colors.secondary.contrast,
+  },
+  headerSubtitle: {
+    ...textStyles.bodySmall,
+    color: colors.secondary.light,
+    marginTop: spacing.xs,
+  },
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  emptyContainerText: {
+    ...textStyles.h4,
+    color: colors.text.secondary,
+    marginTop: spacing.md,
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: spacing.base,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.base,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
+    ...shadows.sm,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
+    ...textStyles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.base,
   },
   viagemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   viagemTipo: {
-    fontSize: 16,
-    color: '#1a73e8',
-    fontWeight: '600',
-    marginBottom: 4,
+    ...textStyles.body,
+    color: colors.secondary.main,
+    fontWeight: fontWeight.semiBold,
+    marginBottom: spacing.xs,
   },
   viagemHorario: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
+    ...textStyles.h1,
+    color: colors.text.primary,
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
   },
   statusText: {
-    fontSize: 12,
-    fontWeight: '600',
+    ...textStyles.caption,
+    fontWeight: fontWeight.semiBold,
   },
   rotaInfo: {
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   pontoRota: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   pontoIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background.default,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-  },
-  pontoIconText: {
-    fontSize: 20,
+    marginRight: spacing.md,
   },
   pontoInfo: {
     flex: 1,
   },
   pontoLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 2,
+    ...textStyles.caption,
+    color: colors.text.secondary,
+    marginBottom: spacing.xxs,
   },
   pontoNome: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    ...textStyles.body,
+    fontWeight: fontWeight.semiBold,
+    color: colors.text.primary,
   },
   linhaRota: {
     width: 2,
-    height: 20,
-    backgroundColor: '#e0e0e0',
-    marginLeft: 20,
-    marginBottom: 12,
+    height: spacing.lg,
+    backgroundColor: colors.border.light,
+    marginLeft: spacing.lg,
+    marginBottom: spacing.md,
   },
   alunosInfo: {
-    marginBottom: 16,
+    marginBottom: spacing.base,
   },
   alunosText: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
   },
   alunosBar: {
-    height: 8,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 4,
+    height: spacing.sm,
+    backgroundColor: colors.border.light,
+    borderRadius: borderRadius.xs,
     overflow: 'hidden',
   },
   alunosBarFill: {
     height: '100%',
-    backgroundColor: '#34a853',
-    borderRadius: 4,
+    backgroundColor: colors.success.main,
+    borderRadius: borderRadius.xs,
   },
   verAlunosButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: colors.secondary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    ...shadows.xs,
   },
   verAlunosButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    ...textStyles.buttonSmall,
+    color: colors.text.inverse,
   },
   pontoItem: {
     flexDirection: 'row',
-    marginBottom: 16,
+    marginBottom: spacing.base,
   },
   pontoItemLeft: {
     width: 40,
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   pontoItemIcon: {
     width: 32,
     height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f5f5f5',
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background.default,
     justifyContent: 'center',
     alignItems: 'center',
   },
   pontoItemIconOrigem: {
-    backgroundColor: '#e3f2fd',
+    backgroundColor: colors.info.light,
   },
   pontoItemIconDestino: {
-    backgroundColor: '#e8f5e9',
-  },
-  pontoItemIconText: {
-    fontSize: 16,
+    backgroundColor: colors.success.light,
   },
   pontoItemLine: {
     width: 2,
     flex: 1,
-    backgroundColor: '#e0e0e0',
-    marginTop: 4,
+    backgroundColor: colors.border.light,
+    marginTop: spacing.xs,
   },
   pontoItemRight: {
     flex: 1,
   },
   pontoItemNome: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 2,
+    ...textStyles.body,
+    fontWeight: fontWeight.medium,
+    color: colors.text.primary,
+    marginBottom: spacing.xxs,
   },
   pontoItemTipo: {
-    fontSize: 12,
-    color: '#666',
+    ...textStyles.caption,
+    color: colors.text.secondary,
   },
   mapaPlaceholder: {
     height: 200,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
+    backgroundColor: colors.background.default,
+    borderRadius: borderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
     borderStyle: 'dashed',
-  },
-  mapaPlaceholderText: {
-    fontSize: 48,
-    marginBottom: 8,
+    gap: spacing.sm,
   },
   mapaPlaceholderLabel: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 4,
+    ...textStyles.body,
+    color: colors.text.secondary,
+    marginBottom: spacing.xs,
   },
   mapaPlaceholderSubtext: {
-    fontSize: 12,
-    color: '#999',
+    ...textStyles.caption,
+    color: colors.text.hint,
   },
   iniciarButton: {
-    backgroundColor: '#34a853',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: colors.success.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.base,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
+    ...shadows.sm,
   },
   iniciarButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...textStyles.button,
+    color: colors.text.inverse,
   },
   verRotaOtimizadaButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: colors.secondary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.base,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
+    ...shadows.sm,
   },
   verRotaOtimizadaButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...textStyles.button,
+    color: colors.text.inverse,
   },
   definirPontosButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 14,
+    backgroundColor: colors.secondary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    ...shadows.xs,
   },
   definirPontosButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    ...textStyles.button,
+    color: colors.text.inverse,
+  },
+  emptyText: {
+    ...textStyles.body,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginTop: spacing.xl,
+  },
+  loadingContainer: {
+    padding: spacing.lg,
+    alignItems: 'center',
+  },
+  emptyAlunosText: {
+    ...textStyles.bodySmall,
+    color: colors.text.hint,
+    fontStyle: 'italic',
+    marginTop: spacing.sm,
   },
 });
 

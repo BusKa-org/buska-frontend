@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -6,175 +6,175 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
+import {motoristaService} from '../../services/motoristaService';
+import {useAuth} from '../../contexts/AuthContext';
+import {useToast} from '../../components/Toast';
+import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
+import Icon, { IconNames } from '../../components/Icon';
 
 const RotaMotorista = ({navigation, route}) => {
-  // Dados mockados - viagens do dia
-  const viagens = [
-    {
-      id: 1,
-      tipo: 'Manhã',
-      horario: '07:30',
-      origem: 'Centro',
-      destino: 'Escola Municipal',
-      status: 'A iniciar',
-      alunosConfirmados: 18,
-      totalAlunos: 25,
-    },
-    {
-      id: 2,
-      tipo: 'Tarde',
-      horario: '13:00',
-      origem: 'Centro',
-      destino: 'Escola Municipal',
-      status: 'A iniciar',
-      alunosConfirmados: 15,
-      totalAlunos: 25,
-    },
-    {
-      id: 3,
-      tipo: 'Noite',
-      horario: '17:30',
-      origem: 'Escola Municipal',
-      destino: 'Centro',
-      status: 'Finalizada',
-      alunosConfirmados: 22,
-      totalAlunos: 25,
-    },
-  ];
+  const { user } = useAuth();
+  const toast = useToast();
+  const isGestor = user?.role?.toLowerCase() === 'gestor';
+  const [rotas, setRotas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const getStatusColor = (status) => {
     switch (status) {
       case 'A iniciar':
-        return '#fbbc04';
+        return colors.warning.main;
       case 'Em andamento':
-        return '#1a73e8';
+        return colors.secondary.main;
       case 'Finalizada':
-        return '#34a853';
+        return colors.success.main;
       default:
-        return '#999';
+        return colors.text.hint;
     }
   };
 
-  const getStatusBgColor = (status) => {
-    switch (status) {
-      case 'A iniciar':
-        return '#fff3cd';
-      case 'Em andamento':
-        return '#e3f2fd';
-      case 'Finalizada':
-        return '#e8f5e9';
-      default:
-        return '#f5f5f5';
+  const loadRotas = async () => {
+    try {
+      const rotasData = await motoristaService.listarRotas();
+      setRotas(rotasData || []);
+    } catch (error) {
+      console.error('Error loading routes:', error);
+      Alert.alert(
+        'Erro',
+        'Não foi possível carregar as rotas. Tente novamente.',
+      );
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  useEffect(() => {
+    loadRotas();
+  }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadRotas();
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← Voltar</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Rotas do Dia</Text>
+        <View style={styles.headerTop}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
+            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.title}>Minhas Rotas</Text>
+            <Text style={styles.subtitle}>{rotas.length} rota{rotas.length !== 1 ? 's' : ''} cadastrada{rotas.length !== 1 ? 's' : ''}</Text>
+          </View>
+          <View style={styles.headerIcon}>
+            <Icon name={IconNames.bus} size="lg" color={colors.secondary.contrast} />
+          </View>
+        </View>
+        {isGestor && (
+          <TouchableOpacity
+            style={styles.criarRotaButton}
+            onPress={() => navigation.navigate('CriarRota')}>
+            <Icon name={IconNames.add} size="sm" color={colors.text.inverse} />
+            <Text style={styles.criarRotaButtonText}>Nova Rota</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.content}>
-          {viagens.map((viagem) => (
-            <View key={viagem.id} style={styles.viagemCard}>
-              <View style={styles.viagemHeader}>
-                <View style={styles.viagemInfo}>
-                  <View style={styles.viagemTipoContainer}>
-                    <Text style={styles.viagemTipo}>{viagem.tipo}</Text>
-                    <Text style={styles.viagemHorario}>{viagem.horario}</Text>
-                  </View>
-                  <View style={styles.rotaInfo}>
-                    <View style={styles.pontoRota}>
-                      <Text style={styles.pontoIcon}>📍</Text>
-                      <Text style={styles.pontoNome}>{viagem.origem}</Text>
-                    </View>
-                    <View style={styles.linhaRota} />
-                    <View style={styles.pontoRota}>
-                      <Text style={styles.pontoIcon}>🎯</Text>
-                      <Text style={styles.pontoNome}>{viagem.destino}</Text>
-                    </View>
-                  </View>
-                </View>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    {backgroundColor: getStatusBgColor(viagem.status)},
-                  ]}>
-                  <Text
-                    style={[
-                      styles.statusText,
-                      {color: getStatusColor(viagem.status)},
-                    ]}>
-                    {viagem.status}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.alunosInfo}>
-                <Text style={styles.alunosText}>
-                  {viagem.alunosConfirmados} de {viagem.totalAlunos} alunos
-                  confirmados
-                </Text>
-                <View style={styles.alunosBar}>
-                  <View
-                    style={[
-                      styles.alunosBarFill,
-                      {
-                        width: `${
-                          (viagem.alunosConfirmados / viagem.totalAlunos) * 100
-                        }%`,
-                      },
-                    ]}
-                  />
-                </View>
-              </View>
-
-              <TouchableOpacity
-                style={styles.detalhesButton}
-                onPress={() =>
-                  navigation.navigate('DetalheViagemMotorista', {viagem})
-                }>
-                <Text style={styles.detalhesButtonText}>Ver Detalhes →</Text>
-              </TouchableOpacity>
-
-              {viagem.status === 'A iniciar' && (
-                <TouchableOpacity
-                  style={styles.acaoButton}
-                  onPress={() =>
-                    navigation.navigate('InicioFimViagem', {viagem})
-                  }>
-                  <Text style={styles.acaoButtonText}>Iniciar Viagem</Text>
-                </TouchableOpacity>
-              )}
-
-              {viagem.status === 'Em andamento' && (
-                <TouchableOpacity
-                  style={styles.acaoButton}
-                  onPress={() =>
-                    navigation.navigate('ListaAlunosConfirmados', {viagem})
-                  }>
-                  <Text style={styles.acaoButtonText}>
-                    Ver Alunos Confirmados
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              {viagem.status === 'Finalizada' && (
-                <View style={styles.finalizadaInfo}>
-                  <Text style={styles.finalizadaText}>✓ Viagem finalizada</Text>
-                </View>
-              )}
-            </View>
-          ))}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.secondary.main} />
         </View>
-      </ScrollView>
+      ) : (
+        <ScrollView
+          style={styles.scrollView}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }>
+          <View style={styles.content}>
+            {rotas.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>
+                  Nenhuma rota cadastrada ainda
+                </Text>
+                <Text style={styles.emptySubtext}>
+                  Crie sua primeira rota para começar
+                </Text>
+                <TouchableOpacity
+                  style={styles.emptyButton}
+                  onPress={() => navigation.navigate('CriarRota')}>
+                  <Text style={styles.emptyButtonText}>Criar Primeira Rota</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                {rotas.map((rota) => (
+                  <View key={rota.id} style={styles.rotaCard}>
+                    <View style={styles.rotaHeader}>
+                      <View style={styles.rotaInfo}>
+                        <Text style={styles.rotaNome}>{rota.nome}</Text>
+                        <Text style={styles.rotaId}>ID: {rota.id}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.rotaActions}>
+                      <TouchableOpacity
+                        style={styles.acaoButton}
+                        onPress={() =>
+                          navigation.navigate('ListaViagens', {
+                            rota: rota,
+                          })
+                        }>
+                        <Icon name={IconNames.route} size="sm" color={colors.text.inverse} />
+                        <Text style={styles.acaoButtonText}>
+                          Ver Viagens
+                        </Text>
+                      </TouchableOpacity>
+                      
+                      {isGestor && (
+                        <>
+                          <TouchableOpacity
+                            style={[styles.acaoButton, styles.acaoButtonSecondary]}
+                            onPress={() =>
+                              navigation.navigate('DefinirPontosRota', {
+                                rota: rota,
+                                isNovaRota: false,
+                              })
+                            }>
+                            <Icon name={IconNames.location} size="sm" color={colors.text.inverse} />
+                            <Text style={styles.acaoButtonText}>
+                              Pontos
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.acaoButton, { backgroundColor: colors.success.main }]}
+                            onPress={() =>
+                              navigation.navigate('CriarViagem', {
+                                rota: rota,
+                              })
+                            }>
+                            <Icon name={IconNames.add} size="sm" color={colors.text.inverse} />
+                            <Text style={styles.acaoButtonText}>
+                              Nova Viagem
+                            </Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </>
+            )}
+          </View>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 };
@@ -182,152 +182,150 @@ const RotaMotorista = ({navigation, route}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    backgroundColor: colors.secondary.main,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.lg,
+    borderBottomLeftRadius: borderRadius.xxl,
+    borderBottomRightRadius: borderRadius.xxl,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   backButton: {
-    marginBottom: 8,
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  backButtonText: {
-    fontSize: 16,
-    color: '#1a73e8',
+  headerTitleContainer: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  subtitle: {
+    ...textStyles.bodySmall,
+    color: colors.secondary.light,
+    marginTop: spacing.xs,
+  },
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.secondary.dark,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    ...textStyles.h3,
+    color: colors.secondary.contrast,
+  },
+  criarRotaButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.success.main,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.md,
+    ...shadows.sm,
+  },
+  criarRotaButtonText: {
+    ...textStyles.button,
+    color: colors.text.inverse,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xxxl,
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: spacing.base,
   },
-  viagemCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+  rotaCard: {
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.base,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border.light,
+    ...shadows.sm,
   },
-  viagemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  viagemInfo: {
-    flex: 1,
-  },
-  viagemTipoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 12,
-  },
-  viagemTipo: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a73e8',
-  },
-  viagemHorario: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+  rotaHeader: {
+    marginBottom: spacing.base,
   },
   rotaInfo: {
-    marginTop: 8,
+    marginBottom: spacing.sm,
   },
-  pontoRota: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
+  rotaNome: {
+    ...textStyles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
-  pontoIcon: {
-    fontSize: 16,
-    marginRight: 8,
+  rotaId: {
+    ...textStyles.caption,
+    color: colors.text.hint,
   },
-  pontoNome: {
-    fontSize: 14,
-    color: '#666',
-  },
-  linhaRota: {
-    width: 2,
-    height: 16,
-    backgroundColor: '#e0e0e0',
-    marginLeft: 12,
-    marginBottom: 8,
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    alignSelf: 'flex-start',
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  alunosInfo: {
-    marginTop: 12,
-    paddingTop: 12,
+  rotaActions: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  alunosText: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  alunosBar: {
-    height: 8,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  alunosBarFill: {
-    height: '100%',
-    backgroundColor: '#34a853',
-    borderRadius: 4,
-  },
-  detalhesButton: {
-    padding: 8,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  detalhesButtonText: {
-    color: '#1a73e8',
-    fontSize: 14,
-    fontWeight: '500',
+    borderTopColor: colors.border.light,
+    gap: spacing.sm,
   },
   acaoButton: {
-    backgroundColor: '#1a73e8',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: colors.secondary.main,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
     alignItems: 'center',
-    marginTop: 8,
+    marginBottom: spacing.sm,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    ...shadows.xs,
+  },
+  acaoButtonSecondary: {
+    backgroundColor: colors.success.main,
   },
   acaoButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    ...textStyles.buttonSmall,
+    color: colors.text.inverse,
   },
-  finalizadaInfo: {
-    marginTop: 12,
-    padding: 12,
-    backgroundColor: '#e8f5e9',
-    borderRadius: 8,
+  emptyState: {
+    padding: spacing.xxxl,
     alignItems: 'center',
   },
-  finalizadaText: {
-    color: '#34a853',
-    fontSize: 14,
-    fontWeight: '600',
+  emptyText: {
+    ...textStyles.h4,
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
+  },
+  emptySubtext: {
+    ...textStyles.bodySmall,
+    color: colors.text.hint,
+    marginBottom: spacing.xl,
+  },
+  emptyButton: {
+    backgroundColor: colors.secondary.main,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    ...shadows.xs,
+  },
+  emptyButtonText: {
+    ...textStyles.button,
+    color: colors.text.inverse,
   },
 });
 
