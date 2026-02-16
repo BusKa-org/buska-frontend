@@ -37,6 +37,7 @@ local.properties
 # node.js
 #
 node_modules/
+.bundle/
 npm-debug.log
 yarn-error.log
 
@@ -65,4 +66,18 @@ yarn-error.log
 # testing
 /coverage
 
+# Android Secrets
+debug.keystore.properties
+keystore.properties
+*.keystore
+# Environment Configs
+.env
+.env.*
+!.env.example
 
+# Web artifacts
+dist/
+.cache/
+# react-native-config codegen
+ios/tmp.xcconfig
+bundle.js

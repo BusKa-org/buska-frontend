@@ -28,11 +28,7 @@ const createShadow = (elevation, iosShadow) => {
       elevation,
     },
     default: {
-      // Web shadow (box-shadow via react-native-web)
-      shadowColor: iosShadow.color || '#000',
-      shadowOffset: iosShadow.offset,
-      shadowOpacity: iosShadow.opacity,
-      shadowRadius: iosShadow.radius,
+      boxShadow: `${iosShadow.offset.width}px ${iosShadow.offset.height}px ${iosShadow.radius}px ${iosShadow.color || 'rgba(0,0,0,0.1)'}`,
     },
   });
 };

@@ -1,0 +1,223 @@
+name: Android Build APK
+
+on:
+  push:
+    branches: [ main, develop, chore/add-ci ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      GRADLE_PARAMS:
+        description: 'Gradle parameters for the build'
+        required: true
+        default: 'Release'
+        type: choice
+        options:
+          - Debug
+          - Release
+      VERSION_NAME:
+        description: 'Version name (Optional - ex: 1.0.0)'
+        required: false
+        default: ''
+
+jobs:
+  build:
+    name: ${{ inputs.GRADLE_PARAMS || 'Release' }} - ${{ github.run_number }}
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Setup Global Variables
+        id: vars
+        run: |
+          TYPE="${{ inputs.GRADLE_PARAMS }}"
+          if [[ "${{ github.ref }}" == refs/tags/* ]] || [ -z "$TYPE" ]; then TYPE="Release"; fi
+          
+          REF_NAME=$(echo "${{ github.ref_name }}" | sed 's|.*/||')
+          
+          if [[ "$TYPE" == "Release" ]]; then
+            VER="${{ inputs.VERSION_NAME }}"
+            if [ -z "$VER" ]; then VER="$REF_NAME"; fi
+            FINAL_VERSION="release-${VER}-${{ github.run_number }}"
+          else
+            FINAL_VERSION="debug-${REF_NAME}-${{ github.run_number }}"
+          fi
+
+          echo "BUILD_TYPE=$TYPE" >> $GITHUB_ENV
+          echo "VERSION=$FINAL_VERSION" >> $GITHUB_ENV
+          echo "BRANCH_NAME=$REF_NAME" >> $GITHUB_ENV
+          echo "RUN_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
+      
+      - name: Force the correct use of SDK
+        run: |
+          echo "ANDROID_SDK_ROOT=/home/ubuntu/.android/sdk" >> $GITHUB_ENV
+          echo "sdk.dir=/home/ubuntu/.android/sdk" > android/local.properties
+
+      - name: Configure Android SDK (Self-Hosted)
+        run: |          
+          if [ -z "$ANDROID_SDK_ROOT" ] && [ -n "$ANDROID_HOME" ]; then
+            echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          fi
+
+          if [ -z "$ANDROID_SDK_ROOT" ]; then
+            for d in /opt/android-sdk /usr/lib/android-sdk /usr/local/android-sdk $HOME/Android/Sdk; do
+              if [ -d "$d" ]; then
+                echo "ANDROID_SDK_ROOT=$d" >> "$GITHUB_ENV"
+                break
+              fi
+            done
+          fi
+
+          if [ -z "$ANDROID_SDK_ROOT" ]; then
+            echo "Android SDK not found. Will attempt to install via setup-android."
+          fi
+
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+      
+      - name: Setup Android SDK (if missing)
+        if: env.ANDROID_SDK_ROOT == ''
+        uses: android-actions/setup-android@v3
+      
+      - name: Ensure local.properties
+        run: |
+          if [ -z "$ANDROID_SDK_ROOT" ] && [ -n "$ANDROID_HOME" ]; then
+            ANDROID_SDK_ROOT="$ANDROID_HOME"
+          fi
+
+          if [ -z "$ANDROID_SDK_ROOT" ]; then
+            echo "Android SDK still not found after setup."
+            exit 1
+          fi
+
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+      
+      - name: Prepare Environment (.env)
+        run: |
+          if [[ "${{ env.BUILD_TYPE }}" == "Release" ]]; then
+            echo "API_URL=${{ secrets.API_URL_PRODUCTION }}" > .env
+            echo "APP_NAME=BusKá" >> .env
+          else
+            echo "API_URL=${{ secrets.API_URL_DEVELOPMENT || 'http://localhost:5000' }}" > .env
+            echo "APP_NAME=BusKá Development" >> .env
+          fi
+          echo "✅ Single .env generated for build of ${{ env.BUILD_TYPE }}."
+
+      - name: Configure Keystore (Conditional)
+        id: signing
+        run: |
+          cat > android/keystore.properties << EOF
+          debug.storeFile=debug.keystore
+          debug.storePassword=android
+          debug.keyAlias=androiddebugkey
+          debug.keyPassword=android
+          EOF
+          
+          if [[ "${{ env.BUILD_TYPE }}" == "Release" ]]; then
+            if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+              echo "🔐 Injecting Release Keys..."
+              echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/buska-release-key.keystore
+              
+              cat >> android/keystore.properties << EOF
+          release.storeFile=buska-release-key.keystore
+          release.storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          release.keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          release.keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          EOF
+            else
+              echo "❌ Release build selected but no secrets found!"
+              exit 1
+            fi
+          else
+            echo "ℹ️ Debug build selected. Skipping release keystore decoding."
+          fi
+
+      - name: Build Android App
+        run: |
+          cd android
+          chmod +x gradlew
+          
+          ./gradlew clean assemble${{ env.BUILD_TYPE }} --no-daemon
+      
+      - name: Rename and Prepare Artifact
+        id: prepare_artifact
+        run: |
+          ANDROID_BUILD_VARIANT=$(echo "${{ env.BUILD_TYPE }}" | tr '[:upper:]' '[:lower:]')
+          echo "Android build variant: $ANDROID_BUILD_VARIANT"
+          
+          cd android/app/build/outputs/apk/$ANDROID_BUILD_VARIANT
+          echo "Current directory: $(pwd)"
+          ORIGINAL_APK=$(find . -name "*.apk" -maxdepth 1 | head -n 1)
+          
+          if [ -f "$ORIGINAL_APK" ]; then
+            NEW_NAME="buska-${{ env.VERSION }}.apk"
+            mv "$ORIGINAL_APK" "$NEW_NAME"
+            
+            echo "APK_SIZE=$(du -sh "$NEW_NAME" | cut -f1)" >> $GITHUB_ENV
+            echo "ARTIFACT_PATH=$(pwd)/$NEW_NAME" >> $GITHUB_ENV
+          else
+            echo "❌ APK not found!"
+            exit 1
+          fi
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: buska-${{ env.VERSION }}
+          path: ${{ env.ARTIFACT_PATH }}
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.ARTIFACT_PATH }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notify Discord
+        if: always()
+        run: |
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          
+          if [ "${{ job.status }}" == "success" ]; then
+            COLOR=3066993
+            CONTENT="🚀 **New BusKá build available!**\n📦 **Download:** [Artifacts Page]($RUN_URL)"
+            PING="@here"
+          else
+            COLOR=15158332
+            CONTENT="❌ **The build failed!**\n🔍 **Logs:** [View on GitHub]($RUN_URL)"
+            PING="<@111425103445860352>"
+          fi
+
+          MSG="**File:** \`buska-${{ env.VERSION }}.apk\`\n**Type:** \`${{ env.BUILD_TYPE }}\`\n**Size:** \`${{ env.APK_SIZE }}\`\n**Change:** \`$COMMIT_MSG\`\n**Branch:** \`${{ env.BRANCH_NAME }}\`"
+
+          PAYLOAD='{
+            "content": "'"$PING"'",
+            "embeds": [{
+              "title": "BusKá Build Update",
+              "description": "'"$MSG"'\n\n'"$CONTENT"'",
+              "color": '$COLOR',
+              "footer": { "text": "Author: ${{ github.actor }} | Branch: ${{ env.BRANCH_NAME }} | Commit: ${{ github.sha }}" }
+            }]
+          }'
+
+          curl -X POST -H "Content-Type: application/json" -d "$PAYLOAD" ${{ secrets.DISCORD_WEBHOOK }}
