@@ -224,7 +224,7 @@ const DetalheViagem = ({navigation, route}) => {
                     {index < pontosRota.length - 1 && <View style={styles.pontoItemLine} />}
                   </View>
                   <View style={styles.pontoItemRight}>
-                    <Text style={styles.pontoItemNome}>{ponto.nome}</Text>
+                    <Text style={styles.pontoItemNome}>{ponto.apelido}</Text>
                     <Text style={styles.pontoItemTipo}>
                       {ponto.tipo === 'origem' ? 'Origem' : ponto.tipo === 'destino' ? 'Destino' : 'Parada'}
                     </Text>

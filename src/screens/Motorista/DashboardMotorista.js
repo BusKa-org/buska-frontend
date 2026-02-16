@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import {motoristaService} from '../../services/motoristaService';
+import pontoService from '../../services/pontoService';
 import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
 import { Icon, IconNames, LoadingSpinner } from '../../components';
 
@@ -49,7 +50,7 @@ const DashboardMotorista = ({navigation}) => {
         if (viagens && viagens.length > 0) {
           const now = new Date();
           now.setHours(0, 0, 0, 0);
-          
+
           const viagensFuturas = viagens
             .filter((v) => {
               // Exclude finished and cancelled trips
@@ -85,6 +86,8 @@ const DashboardMotorista = ({navigation}) => {
 
           if (viagensFuturas.length > 0) {
             const proxima = viagensFuturas[0];
+            const pontos = await pontoService.getPontosByRota(proxima.rota_id);
+            proxima.pontos = pontos;
             
             let origem = 'N/A';
             let destino = 'N/A';
