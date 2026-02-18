@@ -11,6 +11,7 @@ import {
 import {motoristaService} from '../../services/motoristaService';
 import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
+import MapaComponent from './MapaComponent';
 
 const DetalheViagemMotorista = ({navigation, route}) => {
   const {viagem} = route?.params || {};
@@ -236,15 +237,22 @@ const DetalheViagemMotorista = ({navigation, route}) => {
           {/* Mapa Simplificado */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Mapa da Rota</Text>
-            <View style={styles.mapaPlaceholder}>
-              <Icon name={IconNames.map} size="xl" color={colors.text.secondary} />
-              <Text style={styles.mapaPlaceholderLabel}>
-                Mapa com pontos da rota
-              </Text>
-              <Text style={styles.mapaPlaceholderSubtext}>
-                (Em implementação)
-              </Text>
-            </View>
+            <MapaComponent
+              pontosRota={pontosRota} 
+              onPontoChegado={() => {
+                setPontosRota((listaAtual) => {
+                // Verificamos se ainda há itens para evitar erros
+                if (listaAtual.length === 0) return listaAtual;
+
+                const novaLista = listaAtual.slice(1);
+                
+                console.log("Ponto removido com sucesso!");
+                console.log("Era:", listaAtual.length, "Agora é:", novaLista.length);
+                
+                return novaLista; // O React garante que 'listaAtual' é o valor mais recente
+              });
+              }} 
+            />
           </View>
 
           {/* Configurações da Rota */}
