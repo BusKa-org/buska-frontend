@@ -18,10 +18,8 @@ const MapaComponent = ({ pontosRota, onPontoChegado }) => {
   const userMarker = useRef(null);
   const [mapReady, setMapReady] = useState(false);
 
-  // Ajuste de coordenadas (movido para dentro do useEffect para evitar side-effects no render)
   const destinoAtual = pontosRota && pontosRota.length > 0 ? pontosRota[0] : null;
 
-  // --- 1. INICIALIZAÇÃO DO MAPA ---
   useEffect(() => {
     let isMounted = true;
     const initMap = async () => {
@@ -57,15 +55,12 @@ const MapaComponent = ({ pontosRota, onPontoChegado }) => {
     };
   }, []);
 
-  // --- 2. ROTA E GPS ---
   useEffect(() => {
     if (!mapReady || !mapInstance.current || !window.L || !destinoAtual) return;
 
     const map = mapInstance.current;
     const L = window.L;
 
-    // Hardcode temporário solicitado (idealmente remover depois)
-    // Usamos variáveis locais em vez de modificar o objeto original 'pontosRota'
     let latDest = parseFloat(destinoAtual.latitude);
     let lonDest = parseFloat(destinoAtual.longitude);
 
@@ -77,8 +72,6 @@ const MapaComponent = ({ pontosRota, onPontoChegado }) => {
     const destLatLng = L.latLng(latDest, lonDest);
     console.log("📍 Destino:", latDest, lonDest);
 
-    // --- LIMPEZA SEGURA ---
-    // Remove controle anterior se existir
     if (routingControl.current) {
       try {
         map.removeControl(routingControl.current);
@@ -86,16 +79,13 @@ const MapaComponent = ({ pontosRota, onPontoChegado }) => {
       routingControl.current = null;
     }
 
-    // Limpa layers antigos
     map.eachLayer(layer => {
       if (layer instanceof L.Marker && layer !== userMarker.current) map.removeLayer(layer);
       if (layer instanceof L.Polyline && !layer._url && layer !== userMarker.current) map.removeLayer(layer);
     });
 
-    // Marcador Destino
     L.marker(destLatLng).addTo(map);
 
-    // Cria nova rota
     routingControl.current = L.Routing.control({
       waypoints: [null, destLatLng],
       router: L.Routing.osrmv1({
@@ -110,7 +100,6 @@ const MapaComponent = ({ pontosRota, onPontoChegado }) => {
       show: false
     }).addTo(map);
 
-    // --- GPS ---
     if (watchId.current) navigator.geolocation.clearWatch(watchId.current);
 
     watchId.current = navigator.geolocation.watchPosition((pos) => {
@@ -118,7 +107,6 @@ const MapaComponent = ({ pontosRota, onPontoChegado }) => {
       const lonUser = pos.coords.longitude;
       const userLatLng = L.latLng(latUser, lonUser);
 
-      // Atualiza Motorista
       if (userMarker.current) {
         userMarker.current.setLatLng(userLatLng);
       } else {
@@ -129,36 +117,29 @@ const MapaComponent = ({ pontosRota, onPontoChegado }) => {
         userMarker.current = L.marker(userLatLng, { icon, zIndexOffset: 1000 }).addTo(map);
       }
 
-      // Calcula Distância
       const distReal = calcularDistancia(latUser, lonUser, destLatLng.lat, destLatLng.lng);
       console.log(`Distância: ${(distReal / 1000).toFixed(1)} km`);
 
-      // LÓGICA DE CHEGADA (CORRIGIDA)
       if (distReal < 50) {
         console.log("✅ Chegou! Encerrando rota...");
         
-        // 1. Para o GPS imediatamente para não rodar esse bloco de novo
         navigator.geolocation.clearWatch(watchId.current);
         watchId.current = null;
 
-        // 2. Remove a rota AGORA para evitar o erro 'removeLayer of null'
-        // quando o React tentar atualizar o componente pai.
         if (routingControl.current) {
             try {
-                routingControl.current.setWaypoints([]); // Esvazia pontos
-                map.removeControl(routingControl.current); // Remove do mapa
+                routingControl.current.setWaypoints([]);
+                map.removeControl(routingControl.current);
             } catch (e) {
                 console.log("Erro suprimido na limpeza final:", e);
             }
             routingControl.current = null;
         }
 
-        // 3. Só agora chama a função que muda o estado
         onPontoChegado();
         return; 
       }
 
-      // Se não chegou, atualiza a rota normalmente
       if (routingControl.current) {
         routingControl.current.setWaypoints([userLatLng, destLatLng]);
       }
@@ -169,7 +150,7 @@ const MapaComponent = ({ pontosRota, onPontoChegado }) => {
       if (watchId.current) navigator.geolocation.clearWatch(watchId.current);
     };
 
-  }, [pontosRota, mapReady]); // Atualiza ao mudar rota
+  }, [pontosRota, mapReady]);
 
   return <View ref={mapRef} style={{ height: 400, width: '100%', borderRadius: 10, overflow: 'hidden' }} />;
 };

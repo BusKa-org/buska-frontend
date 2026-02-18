@@ -241,7 +241,6 @@ const DetalheViagemMotorista = ({navigation, route}) => {
               pontosRota={pontosRota} 
               onPontoChegado={() => {
                 setPontosRota((listaAtual) => {
-                // Verificamos se ainda há itens para evitar erros
                 if (listaAtual.length === 0) return listaAtual;
 
                 const novaLista = listaAtual.slice(1);
@@ -249,7 +248,7 @@ const DetalheViagemMotorista = ({navigation, route}) => {
                 console.log("Ponto removido com sucesso!");
                 console.log("Era:", listaAtual.length, "Agora é:", novaLista.length);
                 
-                return novaLista; // O React garante que 'listaAtual' é o valor mais recente
+                return novaLista;
               });
               }} 
             />
