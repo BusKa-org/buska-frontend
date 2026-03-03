@@ -476,6 +476,29 @@ const mapStyles = StyleSheet.create({
   },
 });
 
+
+const buscarCoordenadas = async (endereco) => {
+  try {
+    const query = encodeURIComponent(endereco);
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`
+    );
+    const data = await response.json();
+
+    if (data && data.length > 0) {
+      return {
+        lat: data[0].lat,
+        lon: data[0].lon,
+        display_name: data[0].display_name
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error("Erro na busca de endereço:", error);
+    return null;
+  }
+};
+
 const DefinirPontosRota = ({navigation, route}) => {
   const params = route?.params || {};
   const {rota: rotaParam, viagem, isNovaRota} = params;
@@ -495,6 +518,38 @@ const DefinirPontosRota = ({navigation, route}) => {
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [adicionando, setAdicionando] = useState(null); // Track which point is being added
+  const [buscandoEndereco, setBuscandoEndereco] = useState(false);
+
+  const handleBuscarEndereco = async () => {
+    if (!novoPontoNome.trim()) {
+      toast.error('Digite o nome da rua ou local para buscar.');
+      return;
+    }
+
+    try {
+      setBuscandoEndereco(true);
+      
+      const query = encodeURIComponent(novoPontoNome);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`
+      );
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        setNovoPontoLat(data[0].lat);
+        setNovoPontoLon(data[0].lon);
+        console.log(data[0]);
+        toast.success('Coordenadas encontradas!');
+      } else {
+        toast.error('Local não encontrado. Tente ser mais específico (Ex: Nome da Rua, Cidade).');
+      }
+    } catch (error) {
+      console.error("Erro na busca:", error);
+      toast.error('Erro ao conectar com o serviço de mapas.');
+    } finally {
+      setBuscandoEndereco(false);
+    }
+  };
 
   // Load existing points
   useEffect(() => {
@@ -853,47 +908,75 @@ const DefinirPontosRota = ({navigation, route}) => {
             </TouchableOpacity>
             
             {mostrarFormNovoPonto && (
-              <View style={styles.formContainer}>
+            <View style={styles.formContainer}>
+              {/* 1. Nome e Busca */}
+              <View style={{ flexDirection: 'row', marginBottom: 10 }}>
                 <TextInput
-                  style={styles.input}
-                  placeholder="Nome do ponto (ex: Escola Municipal)"
-                  placeholderTextColor={colors.text.hint}
+                  style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                  placeholder="Nome do ponto ou endereço"
                   value={novoPontoNome}
                   onChangeText={setNovoPontoNome}
                 />
-                <View style={styles.coordRow}>
-                  <TextInput
-                    style={[styles.input, styles.inputHalf]}
-                    placeholder="Latitude"
-                    placeholderTextColor={colors.text.hint}
-                    value={novoPontoLat}
-                    onChangeText={setNovoPontoLat}
-                    keyboardType="numeric"
-                  />
-                  <TextInput
-                    style={[styles.input, styles.inputHalf]}
-                    placeholder="Longitude"
-                    placeholderTextColor={colors.text.hint}
-                    value={novoPontoLon}
-                    onChangeText={setNovoPontoLon}
-                    keyboardType="numeric"
-                  />
-                </View>
-                <TouchableOpacity
-                  style={[styles.createButton, salvando && styles.buttonDisabled]}
-                  onPress={handleCriarNovoPonto}
-                  disabled={salvando}>
-                  {salvando ? (
-                    <ActivityIndicator size="small" color={colors.text.inverse} />
+                <TouchableOpacity 
+                  onPress={handleBuscarEndereco}
+                  style={{ 
+                    backgroundColor: colors.secondary.main, 
+                    justifyContent: 'center', 
+                    paddingHorizontal: 15,
+                    borderRadius: 8,
+                    marginLeft: 8 
+                  }}
+                  disabled={buscandoEndereco}
+                >
+                  {buscandoEndereco ? (
+                    <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <>
-                      <Icon name={IconNames.add} size="sm" color={colors.text.inverse} />
-                      <Text style={styles.createButtonText}>Criar e Adicionar</Text>
-                    </>
+                    <Icon name={IconNames.search} size="sm" color="#fff" />
                   )}
                 </TouchableOpacity>
               </View>
-            )}
+
+              {/* 2. Coordenadas (Latitude e Longitude) */}
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 15 }}>
+                <TextInput
+                  style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                  placeholder="Latitude"
+                  value={String(novoPontoLat)}
+                  onChangeText={setNovoPontoLat}
+                  keyboardType="numeric"
+                />
+                <TextInput
+                  style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                  placeholder="Longitude"
+                  value={String(novoPontoLon)}
+                  onChangeText={setNovoPontoLon}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              {/* 3. Botão para ADICIONAR o ponto criado à lista de baixo */}
+              <TouchableOpacity 
+                style={[
+                  styles.saveButton, 
+                  { backgroundColor: colors.success.main, marginTop: 5, height: 45 },
+                  (!novoPontoLat || salvando) && { opacity: 0.6 }
+                ]}
+                onPress={handleCriarNovoPonto}
+                disabled={!novoPontoLat || salvando}
+              >
+                {salvando ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Icon name={IconNames.add} size="sm" color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: 'bold', marginLeft: 8 }}>
+                      Adicionar este ponto à rota
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
           </View>
         </View>
       </ScrollView>

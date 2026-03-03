@@ -26,7 +26,8 @@ const MapaComponent = ({ pontosRota, onPontoChegado }) => {
       if (mapInstance.current) return;
 
       try {
-        const L = await import('leaflet');
+        const leafletModule = await import('leaflet');
+        const L = leafletModule.default ? leafletModule.default : leafletModule;
         window.L = L;
         await import('leaflet-routing-machine');
 
@@ -61,13 +62,13 @@ const MapaComponent = ({ pontosRota, onPontoChegado }) => {
     const map = mapInstance.current;
     const L = window.L;
 
+    if (!L.Routing) {
+      console.warn("Leaflet Routing Machine ainda não está pronto.");
+      return;
+    }
+
     let latDest = parseFloat(destinoAtual.latitude);
     let lonDest = parseFloat(destinoAtual.longitude);
-
-    if (pontosRota.length >= 3) {
-       latDest = -7.107608;
-       lonDest = -34.841817;
-    }
 
     const destLatLng = L.latLng(latDest, lonDest);
     console.log("📍 Destino:", latDest, lonDest);

@@ -18,6 +18,7 @@ const InicioFimViagem = ({navigation, route}) => {
   
   const [viagem, setViagem] = useState(viagemParam);
   const [viagemIniciada, setViagemIniciada] = useState(viagemParam?.status === 'EM_ANDAMENTO');
+  const [viagemPausada, setViagemPausada] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [tempoDecorrido, setTempoDecorrido] = useState(0);
@@ -61,10 +62,20 @@ const InicioFimViagem = ({navigation, route}) => {
     loadTripStatus();
   }, [viagemParam?.id]);
 
+  const handlePausarRetomar = () => {
+    const novoStatusPausado = !viagemPausada;
+    setViagemPausada(novoStatusPausado);
+    
+    if (novoStatusPausado) {
+      toast.success('Viagem pausada!');
+    } else {
+      toast.success('Viagem retomada!');
+    }
+  };
   // Timer effect for trip duration
   useEffect(() => {
     let id = null;
-    if (viagemIniciada) {
+    if (viagemIniciada && !viagemPausada) {
       id = setInterval(() => {
         setTempoDecorrido((prev) => prev + 1);
       }, 1000);
@@ -81,7 +92,7 @@ const InicioFimViagem = ({navigation, route}) => {
         clearInterval(id);
       }
     };
-  }, [viagemIniciada]);
+  }, [viagemIniciada, viagemPausada]);
 
   // Helper functions
   const formatarTempo = (segundos) => {
@@ -223,7 +234,7 @@ const InicioFimViagem = ({navigation, route}) => {
           </View>
         )}
 
-        {/* Botão Principal */}
+        {/* Botões de Controle */}
         {!viagemIniciada ? (
           <TouchableOpacity
             style={[styles.iniciarButton, loading && styles.buttonDisabled]}
@@ -239,19 +250,37 @@ const InicioFimViagem = ({navigation, route}) => {
             )}
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity
-            style={[styles.finalizarButton, loading && styles.buttonDisabled]}
-            onPress={handleFinalizarViagem}
-            disabled={loading}>
-            {loading ? (
-              <ActivityIndicator size="large" color={colors.text.inverse} />
-            ) : (
-              <>
-                <Icon name={IconNames.stop} size="xl" color={colors.text.inverse} />
-                <Text style={styles.finalizarButtonText}>Finalizar Viagem</Text>
-              </>
-            )}
-          </TouchableOpacity>
+          <View style={styles.controleViagemContainer}>
+            {/* Botão Pausar / Retomar */}
+            <TouchableOpacity
+              style={[styles.pausarButton, viagemPausada && styles.retomarButton]}
+              onPress={handlePausarRetomar}
+              disabled={loading}>
+              <Icon 
+                name={viagemPausada ? IconNames.play : IconNames.pause}
+                size="xl" 
+                color={colors.text.inverse} 
+              />
+              <Text style={styles.pausarButtonText}>
+                {viagemPausada ? 'Retomar Viagem' : 'Pausar Viagem'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Botão Finalizar */}
+            <TouchableOpacity
+              style={[styles.finalizarButton, loading && styles.buttonDisabled]}
+              onPress={handleFinalizarViagem}
+              disabled={loading}>
+              {loading ? (
+                <ActivityIndicator size="large" color={colors.text.inverse} />
+              ) : (
+                <>
+                  <Icon name={IconNames.stop} size="xl" color={colors.text.inverse} />
+                  <Text style={styles.finalizarButtonText}>Finalizar Viagem</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         )}
 
         {/* Ações Adicionais */}
@@ -456,6 +485,31 @@ const styles = StyleSheet.create({
     ...textStyles.body,
     color: colors.text.secondary,
     textAlign: 'center',
+  },
+
+
+  controleViagemContainer: {
+    gap: spacing.md,
+    marginBottom: spacing.xl,
+  },
+  pausarButton: {
+    backgroundColor: colors.warning.main,
+    borderRadius: borderRadius.xl,
+    padding: spacing.xxl,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    ...shadows.xl,
+  },
+  retomarButton: {
+    backgroundColor: colors.success.main,
+  },
+  pausarButtonText: {
+    ...textStyles.button,
+    color: colors.text.inverse,
+    fontSize: fontSize.h3,
+    fontWeight: fontWeight.bold,
   },
 });
 
