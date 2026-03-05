@@ -12,9 +12,35 @@ import {motoristaService} from '../../services/motoristaService';
 import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
 import MapaComponent from './MapaComponent';
+import pontoService from '../../services/pontoService';
 
 const DetalheViagemMotorista = ({navigation, route}) => {
   const {viagem} = route?.params || {};
+  
+  const [situacaoViagem, setSituacaoViagem] = useState(viagem?.status);
+  const [pontosRota, setPontosRota] = useState(viagem?.pontos || []);
+  const [carregando, setCarregando] = useState(false);
+
+  useEffect(() => {
+    const buscarPontos = async () => {
+      if (viagem && viagem.rota_id) {
+        try {
+          setCarregando(true);
+          const pontos = await pontoService.getPontosByRota(viagem.rota_id);
+          
+          if (pontos && pontos.length > 0) {
+            setPontosRota(pontos);
+          }
+        } catch (error) {
+          console.error("Erro ao buscar os pontos da rota:", error);
+        } finally {
+          setCarregando(false);
+        }
+      }
+    };
+
+    buscarPontos();
+  }, [viagem]);
 
   if (!viagem) {
     return (
@@ -39,8 +65,6 @@ const DetalheViagemMotorista = ({navigation, route}) => {
     );
   }
 
-  const [situacaoViagem, setSituacaoViagem] = useState(viagem.status);
-  const [pontosRota, setPontosRota] = useState([]);
   useEffect(() => {
     if (viagem.pontos) {
       setPontosRota(viagem.pontos);

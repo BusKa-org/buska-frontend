@@ -254,6 +254,14 @@ export const motoristaService = {
       throw this.handleError(error);
     }
   },
+  async listarMotoristas() {
+    try {
+      const response = await api.get('/users/motoristas'); 
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
 
   /**
    * List route schedules

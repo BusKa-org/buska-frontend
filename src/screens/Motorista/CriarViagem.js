@@ -31,6 +31,33 @@ const CriarViagem = ({navigation, route}) => {
   const [loading, setLoading] = useState(false);
   const [loadingRotas, setLoadingRotas] = useState(true);
   const [loadingHorarios, setLoadingHorarios] = useState(false);
+  const [motoristas, setMotoristas] = useState([]);
+  const [motoristaSelecionado, setMotoristaSelecionado] = useState(null);
+  const [loadingMotoristas, setLoadingMotoristas] = useState(true);
+
+  useEffect(() => {
+    const loadDadosIniciais = async () => {
+      try {
+        setLoadingMotoristas(true);
+
+        const [rotasData, motoristasData] = await Promise.all([
+          motoristaService.listarRotas(),
+          motoristaService.listarMotoristas()
+        ]);
+        
+        setRotas(rotasData || []);
+        setMotoristas(motoristasData || []);
+        
+      } catch (error) {
+        toast.error('Não foi possível carregar os dados.');
+      } finally {
+        setLoadingRotas(false);
+        setLoadingMotoristas(false);
+      }
+    };
+
+    loadDadosIniciais();
+  }, []);
 
   // Helper to get date string in YYYY-MM-DD format
   const formatDateToString = (date) => {
@@ -99,6 +126,10 @@ const CriarViagem = ({navigation, route}) => {
       toast.error('Selecione uma rota');
       return;
     }
+    if (!motoristaSelecionado) {
+      toast.error('Selecione um motorista');
+      return;
+    }
 
     if (!data.trim()) {
       toast.error('Informe a data da viagem');
@@ -122,6 +153,7 @@ const CriarViagem = ({navigation, route}) => {
 
       const viagemData = {
         rota_id: rotaSelecionada,
+        motorista_id: motoristaSelecionado,
         data: data.trim(),
         horario_id: horarioSelecionado || undefined,
       };
@@ -338,6 +370,40 @@ const CriarViagem = ({navigation, route}) => {
               )}
             </View>
 
+
+            {/* Seleção de Motorista */}
+            <View style={styles.section}>
+              <Text style={styles.label}>Motorista *</Text>
+              {loadingMotoristas ? (
+                <ActivityIndicator size="small" color={colors.secondary.main} />
+              ) : (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.rotasScroll}>
+                  {motoristas.map((mot) => (
+                    <TouchableOpacity
+                      key={mot.id}
+                      style={[
+                        styles.rotaOption,
+                        motoristaSelecionado === mot.id && styles.rotaOptionSelected,
+                      ]}
+                      onPress={() => setMotoristaSelecionado(mot.id)}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Icon name={IconNames.person} size="sm" color={motoristaSelecionado === mot.id ? colors.secondary.main : colors.text.secondary} />
+                        <Text
+                          style={[
+                            styles.rotaOptionText,
+                            motoristaSelecionado === mot.id && styles.rotaOptionTextSelected,
+                          ]}>
+                          {mot.nome}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
             {/* Botão Criar */}
             <TouchableOpacity
               style={[styles.button, (loading || !rotaSelecionada || rotas.length === 0) && styles.buttonDisabled]}

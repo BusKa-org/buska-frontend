@@ -70,6 +70,7 @@ const MapaComponent = ({ pontosRota, onPontoChegado }) => {
     let latDest = parseFloat(destinoAtual.latitude);
     let lonDest = parseFloat(destinoAtual.longitude);
 
+    if(!latDest) return;
     const destLatLng = L.latLng(latDest, lonDest);
     console.log("📍 Destino:", latDest, lonDest);
 

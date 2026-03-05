@@ -908,69 +908,69 @@ const DefinirPontosRota = ({navigation, route}) => {
             </TouchableOpacity>
             
             {mostrarFormNovoPonto && (
-  <View style={styles.formContainer}>
-    {/* Campo de Busca */}
-    <View style={{ flexDirection: 'row', marginBottom: 10 }}>
-      <TextInput
-        style={[styles.input, { flex: 1, marginBottom: 0 }]}
-        placeholder="Nome do ponto ou endereço"
-        value={novoPontoNome}
-        onChangeText={setNovoPontoNome}
-      />
-      <TouchableOpacity 
-        onPress={handleBuscarEndereco}
-        style={{ 
-          backgroundColor: colors.secondary.main, 
-          justifyContent: 'center', 
-          paddingHorizontal: 15,
-          borderRadius: 8,
-          marginLeft: 8 
-        }}
-        disabled={buscandoEndereco}
-      >
-        {buscandoEndereco ? (
-          <ActivityIndicator size="small" color="#fff" />
-        ) : (
-          <Icon name={IconNames.search} size="sm" color="#fff" />
-        )}
-      </TouchableOpacity>
-    </View>
+              <View style={styles.formContainer}>
+                {/* Campo de Busca */}
+                <View style={{ flexDirection: 'row', marginBottom: 10 }}>
+                  <TextInput
+                    style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                    placeholder="Nome do ponto ou endereço"
+                    value={novoPontoNome}
+                    onChangeText={setNovoPontoNome}
+                  />
+                  <TouchableOpacity 
+                    onPress={handleBuscarEndereco}
+                    style={{ 
+                      backgroundColor: colors.secondary.main, 
+                      justifyContent: 'center', 
+                      paddingHorizontal: 15,
+                      borderRadius: 8,
+                      marginLeft: 8 
+                    }}
+                    disabled={buscandoEndereco}
+                  >
+                    {buscandoEndereco ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Icon name={IconNames.search} size="sm" color="#fff" />
+                    )}
+                  </TouchableOpacity>
+                </View>
 
-    {/* O botão só aparece se as coordenadas já tiverem sido capturadas pela busca */}
-    {novoPontoLat && novoPontoLon ? (
-      <TouchableOpacity 
-        style={[
-          styles.saveButton, 
-          { backgroundColor: colors.success.main, marginTop: 5, height: 45 },
-          salvando && { opacity: 0.6 }
-        ]}
-        onPress={handleCriarNovoPonto}
-        disabled={salvando}
-      >
-        {salvando ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Icon name={IconNames.add} size="sm" color="#fff" />
-            <Text style={{ color: '#fff', fontWeight: 'bold', marginLeft: 8 }}>
-              Confirmar e Adicionar à Rota
-            </Text>
-          </View>
-        )}
-      </TouchableOpacity>
-    ) : (
-      <Text style={{ 
-        fontSize: 12, 
-        color: colors.text.secondary, 
-        textAlign: 'center', 
-        marginTop: 5,
-        fontStyle: 'italic' 
-      }}>
-        Busque um endereço para liberar a adição
-      </Text>
-    )}
-  </View>
-)}
+                {/* O botão só aparece se as coordenadas já tiverem sido capturadas pela busca */}
+                {novoPontoLat && novoPontoLon ? (
+                  <TouchableOpacity 
+                    style={[
+                      styles.saveButton, 
+                      { backgroundColor: colors.success.main, marginTop: 5, height: 45 },
+                      salvando && { opacity: 0.6 }
+                    ]}
+                    onPress={handleCriarNovoPonto}
+                    disabled={salvando}
+                  >
+                    {salvando ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Icon name={IconNames.add} size="sm" color="#fff" />
+                        <Text style={{ color: '#fff', fontWeight: 'bold', marginLeft: 8 }}>
+                          Confirmar e Adicionar à Rota
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={{ 
+                    fontSize: 12, 
+                    color: colors.text.secondary, 
+                    textAlign: 'center', 
+                    marginTop: 5,
+                    fontStyle: 'italic' 
+                  }}>
+                    Busque um endereço para liberar a adição
+                  </Text>
+                )}
+              </View>
+            )}
           </View>
         </View>
       </ScrollView>
