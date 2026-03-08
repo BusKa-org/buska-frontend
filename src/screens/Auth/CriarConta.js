@@ -22,7 +22,11 @@ import {
   errorLogger,
 } from '../../utils/errors';
 
+const STEPS = { BASIC: 1, PERSONAL: 2, ADDRESS: 3 };
+const TOTAL_STEPS = 3;
+
 const CriarConta = ({navigation}) => {
+  const [step, setStep] = useState(STEPS.BASIC);
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [cpf, setCpf] = useState('');
@@ -89,80 +93,78 @@ const CriarConta = ({navigation}) => {
     }
   };
 
-  const validateForm = () => {
+  const validateStep1 = () => {
     const newErrors = {};
-    
-    // Nome
-    if (!nome.trim()) {
-      newErrors.nome = getFieldValidationMessage('nome', 'required');
-    } else if (nome.trim().length < 3) {
-      newErrors.nome = getFieldValidationMessage('nome', 'minLength');
-    }
-    
-    // Email
     if (!email.trim()) {
       newErrors.email = getFieldValidationMessage('email', 'required');
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       newErrors.email = getFieldValidationMessage('email', 'invalid');
     }
-    
-    // CPF
+    if (!senha) {
+      newErrors.senha = getFieldValidationMessage('password', 'required');
+    } else if (senha.length < 6) {
+      newErrors.senha = getFieldValidationMessage('password', 'minLength');
+    }
+    if (senha !== confirmarSenha) {
+      newErrors.confirmarSenha = getFieldValidationMessage('password', 'mismatch');
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateStep2 = () => {
+    const newErrors = {};
+    if (!nome.trim()) {
+      newErrors.nome = getFieldValidationMessage('nome', 'required');
+    } else if (nome.trim().length < 3) {
+      newErrors.nome = getFieldValidationMessage('nome', 'minLength');
+    }
     const cpfDigits = cpf.replace(/\D/g, '');
     if (!cpfDigits) {
       newErrors.cpf = getFieldValidationMessage('cpf', 'required');
     } else if (cpfDigits.length !== 11) {
       newErrors.cpf = getFieldValidationMessage('cpf', 'invalid');
     }
-    
-    // Matrícula
     if (!matricula.trim()) {
       newErrors.matricula = getFieldValidationMessage('matricula', 'required');
     }
-    
-    // Senha
-    if (!senha) {
-      newErrors.senha = getFieldValidationMessage('password', 'required');
-    } else if (senha.length < 6) {
-      newErrors.senha = getFieldValidationMessage('password', 'minLength');
-    }
-    
-    // Confirmar senha
-    if (senha !== confirmarSenha) {
-      newErrors.confirmarSenha = getFieldValidationMessage('password', 'mismatch');
-    }
-    
-    // Instituição
     if (!instituicaoId) {
       newErrors.instituicaoId = 'Selecione uma instituição de ensino.';
     }
-    
-    // Endereço
-    if (!cep.trim()) {
-      newErrors.cep = 'CEP é obrigatório.';
-    }
-    if (!logradouro.trim()) {
-      newErrors.logradouro = 'Logradouro é obrigatório.';
-    }
-    if (!numero.trim()) {
-      newErrors.numero = 'Número é obrigatório.';
-    }
-    if (!bairro.trim()) {
-      newErrors.bairro = 'Bairro é obrigatório.';
-    }
-    if (!cidade.trim()) {
-      newErrors.cidade = 'Cidade é obrigatória.';
-    }
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  const validateStep3 = () => {
+    const newErrors = {};
+    if (!cep.trim()) newErrors.cep = 'CEP é obrigatório.';
+    if (!logradouro.trim()) newErrors.logradouro = 'Logradouro é obrigatório.';
+    if (!numero.trim()) newErrors.numero = 'Número é obrigatório.';
+    if (!bairro.trim()) newErrors.bairro = 'Bairro é obrigatório.';
+    if (!cidade.trim()) newErrors.cidade = 'Cidade é obrigatória.';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const goNextStep = () => {
+    setGeneralError('');
+    if (step === STEPS.BASIC && validateStep1()) {
+      setStep(STEPS.PERSONAL);
+    } else if (step === STEPS.PERSONAL && validateStep2()) {
+      setStep(STEPS.ADDRESS);
+    }
+  };
+
+  const goPrevStep = () => {
+    setGeneralError('');
+    setErrors({});
+    if (step === STEPS.PERSONAL) setStep(STEPS.BASIC);
+    else if (step === STEPS.ADDRESS) setStep(STEPS.PERSONAL);
+  };
+
   const handleCriarConta = async () => {
     setGeneralError('');
-    
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateStep3()) return;
 
     setLoading(true);
     try {
@@ -345,248 +347,224 @@ const CriarConta = ({navigation}) => {
             {/* Back Button */}
             <TouchableOpacity
               style={styles.backButton}
-              onPress={() => navigation.goBack()}>
+              onPress={step > STEPS.BASIC ? goPrevStep : () => navigation.goBack()}>
               <Icon name={IconNames.back} size="base" color={colors.text.secondary} />
             </TouchableOpacity>
 
-            {/* Header */}
+            {/* Header + Progress */}
             <View style={styles.header}>
               <Text style={styles.brandName}>BusKá</Text>
               <Text style={styles.title}>Cadastro de Aluno</Text>
-              <Text style={styles.subtitle}>Preencha seus dados para se cadastrar</Text>
+              <Text style={styles.subtitle}>
+                {step === STEPS.BASIC && 'Informações básicas'}
+                {step === STEPS.PERSONAL && 'Informações pessoais'}
+                {step === STEPS.ADDRESS && 'Endereço'}
+              </Text>
+              <View style={styles.progressContainer}>
+                {[1, 2, 3].map((s) => (
+                  <View
+                    key={s}
+                    style={[
+                      styles.progressDot,
+                      s === step && styles.progressDotActive,
+                      s < step && styles.progressDotDone,
+                    ]}
+                  />
+                ))}
+                <Text style={styles.progressText}>{step} de {TOTAL_STEPS}</Text>
+              </View>
             </View>
 
             {/* Form */}
             <View style={styles.form}>
-              {/* Nome */}
-              <Text style={styles.label}>Nome Completo *</Text>
-              <TextInput
-                style={[styles.input, errors.nome && styles.inputError]}
-                placeholder="Seu nome completo"
-                placeholderTextColor={colors.text.hint}
-                value={nome}
-                onChangeText={(text) => {
-                  setNome(text);
-                  clearFieldError('nome');
-                }}
-                autoCapitalize="words"
-              />
-              {renderFieldError('nome')}
-
-              {/* Email */}
-              <Text style={styles.label}>E-mail *</Text>
-              <TextInput
-                style={[styles.input, errors.email && styles.inputError]}
-                placeholder="seu@email.com"
-                placeholderTextColor={colors.text.hint}
-                value={email}
-                onChangeText={(text) => {
-                  setEmail(text);
-                  clearFieldError('email');
-                }}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              {renderFieldError('email')}
-
-              {/* CPF */}
-              <Text style={styles.label}>CPF *</Text>
-              <TextInput
-                style={[styles.input, errors.cpf && styles.inputError]}
-                placeholder="000.000.000-00"
-                placeholderTextColor={colors.text.hint}
-                value={cpf}
-                onChangeText={(text) => {
-                  setCpf(formatCPF(text));
-                  clearFieldError('cpf');
-                }}
-                keyboardType="numeric"
-                maxLength={14}
-              />
-              {renderFieldError('cpf')}
-
-              {/* Matrícula */}
-              <Text style={styles.label}>Matrícula *</Text>
-              <TextInput
-                style={[styles.input, errors.matricula && styles.inputError]}
-                placeholder="Número da matrícula escolar"
-                placeholderTextColor={colors.text.hint}
-                value={matricula}
-                onChangeText={(text) => {
-                  setMatricula(text);
-                  clearFieldError('matricula');
-                }}
-              />
-              {renderFieldError('matricula')}
-
-              {/* Institution selection - moved before telefone for better UX */}
-              <Text style={styles.label}>Instituição de Ensino *</Text>
-              {loadingInstituicoes ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color={colors.primary.main} />
-                  <Text style={styles.loadingText}>Carregando instituições...</Text>
-                </View>
-              ) : instituicoes.length > 0 ? (
+              {/* Step 1: Básico (email, senha, confirmar senha) */}
+              {step === STEPS.BASIC && (
                 <>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.instituicoesScroll, errors.instituicaoId && styles.instituicoesScrollError]}>
-                    <View style={styles.instituicoesContainer}>
-                      {instituicoes.map((inst) => (
-                        <TouchableOpacity
-                          key={inst.id}
-                          style={[
-                            styles.instituicaoButton,
-                            instituicaoId === inst.id && styles.instituicaoButtonActive,
-                            errors.instituicaoId && !instituicaoId && styles.instituicaoButtonError,
-                          ]}
-                          onPress={() => {
-                            setInstituicaoId(inst.id);
-                            clearFieldError('instituicaoId');
-                          }}>
-                          <Text style={[
-                            styles.instituicaoText,
-                            instituicaoId === inst.id && styles.instituicaoTextActive,
-                          ]}>
-                            {inst.nome}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </ScrollView>
-                  {renderFieldError('instituicaoId')}
+                  <Text style={styles.label}>E-mail *</Text>
+                  <TextInput
+                    style={[styles.input, errors.email && styles.inputError]}
+                    placeholder="seu@email.com"
+                    placeholderTextColor={colors.text.hint}
+                    value={email}
+                    onChangeText={(text) => { setEmail(text); clearFieldError('email'); }}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  {renderFieldError('email')}
+
+                  <Text style={styles.label}>Senha *</Text>
+                  <TextInput
+                    style={[styles.input, errors.senha && styles.inputError]}
+                    placeholder="Mínimo 6 caracteres"
+                    placeholderTextColor={colors.text.hint}
+                    value={senha}
+                    onChangeText={(text) => { setSenha(text); clearFieldError('senha'); }}
+                    secureTextEntry
+                    autoCapitalize="none"
+                  />
+                  {renderFieldError('senha')}
+
+                  <Text style={styles.label}>Confirmar Senha *</Text>
+                  <TextInput
+                    style={[styles.input, errors.confirmarSenha && styles.inputError]}
+                    placeholder="Digite a senha novamente"
+                    placeholderTextColor={colors.text.hint}
+                    value={confirmarSenha}
+                    onChangeText={(text) => { setConfirmarSenha(text); clearFieldError('confirmarSenha'); }}
+                    secureTextEntry
+                    autoCapitalize="none"
+                  />
+                  {renderFieldError('confirmarSenha')}
                 </>
-              ) : (
-                <View style={styles.noInstituicoesContainer}>
-                  <Icon name={IconNames.warning} size="sm" color={colors.warning.main} />
-                  <Text style={styles.noInstituicoesText}>Nenhuma instituição disponível. Contate o suporte.</Text>
-                </View>
               )}
 
-              {/* Telefone */}
-              <Text style={styles.label}>Telefone</Text>
-              <TextInput
-                style={[styles.input, errors.telefone && styles.inputError]}
-                placeholder="(00) 00000-0000"
-                placeholderTextColor={colors.text.hint}
-                value={telefone}
-                onChangeText={(text) => {
-                  setTelefone(text);
-                  clearFieldError('telefone');
-                }}
-                keyboardType="phone-pad"
-              />
-              {renderFieldError('telefone')}
-
-              {/* Address Section */}
-              <Text style={styles.sectionTitle}>Endereço Residencial</Text>
-              
-              {/* CEP */}
-              <Text style={styles.label}>CEP *</Text>
-              <TextInput
-                style={[styles.input, errors.cep && styles.inputError]}
-                placeholder="00000-000"
-                placeholderTextColor={colors.text.hint}
-                value={cep}
-                onChangeText={(text) => {
-                  setCep(text);
-                  clearFieldError('cep');
-                }}
-                keyboardType="numeric"
-                maxLength={9}
-              />
-              {renderFieldError('cep')}
-
-              {/* Logradouro */}
-              <Text style={styles.label}>Logradouro *</Text>
-              <TextInput
-                style={[styles.input, errors.logradouro && styles.inputError]}
-                placeholder="Rua, Avenida, etc."
-                placeholderTextColor={colors.text.hint}
-                value={logradouro}
-                onChangeText={(text) => {
-                  setLogradouro(text);
-                  clearFieldError('logradouro');
-                }}
-              />
-              {renderFieldError('logradouro')}
-
-              {/* Número e Bairro (row) */}
-              <View style={styles.row}>
-                <View style={styles.halfField}>
-                  <Text style={styles.label}>Número *</Text>
+              {/* Step 2: Informações pessoais */}
+              {step === STEPS.PERSONAL && (
+                <>
+                  <Text style={styles.label}>Nome Completo *</Text>
                   <TextInput
-                    style={[styles.input, errors.numero && styles.inputError]}
-                    placeholder="123"
+                    style={[styles.input, errors.nome && styles.inputError]}
+                    placeholder="Seu nome completo"
                     placeholderTextColor={colors.text.hint}
-                    value={numero}
-                    onChangeText={(text) => {
-                      setNumero(text);
-                      clearFieldError('numero');
-                    }}
+                    value={nome}
+                    onChangeText={(text) => { setNome(text); clearFieldError('nome'); }}
+                    autoCapitalize="words"
                   />
-                  {renderFieldError('numero')}
-                </View>
-                <View style={styles.halfField}>
-                  <Text style={styles.label}>Bairro *</Text>
+                  {renderFieldError('nome')}
+
+                  <Text style={styles.label}>CPF *</Text>
                   <TextInput
-                    style={[styles.input, errors.bairro && styles.inputError]}
-                    placeholder="Centro"
+                    style={[styles.input, errors.cpf && styles.inputError]}
+                    placeholder="000.000.000-00"
                     placeholderTextColor={colors.text.hint}
-                    value={bairro}
-                    onChangeText={(text) => {
-                      setBairro(text);
-                      clearFieldError('bairro');
-                    }}
+                    value={cpf}
+                    onChangeText={(text) => { setCpf(formatCPF(text)); clearFieldError('cpf'); }}
+                    keyboardType="numeric"
+                    maxLength={14}
                   />
-                  {renderFieldError('bairro')}
-                </View>
-              </View>
+                  {renderFieldError('cpf')}
 
-              {/* Cidade */}
-              <Text style={styles.label}>Cidade *</Text>
-              <TextInput
-                style={[styles.input, errors.cidade && styles.inputError]}
-                placeholder="São Paulo"
-                placeholderTextColor={colors.text.hint}
-                value={cidade}
-                onChangeText={(text) => {
-                  setCidade(text);
-                  clearFieldError('cidade');
-                }}
-              />
-              {renderFieldError('cidade')}
+                  <Text style={styles.label}>Matrícula *</Text>
+                  <TextInput
+                    style={[styles.input, errors.matricula && styles.inputError]}
+                    placeholder="Número da matrícula escolar"
+                    placeholderTextColor={colors.text.hint}
+                    value={matricula}
+                    onChangeText={(text) => { setMatricula(text); clearFieldError('matricula'); }}
+                  />
+                  {renderFieldError('matricula')}
 
-              {/* Senha */}
-              <Text style={styles.label}>Senha *</Text>
-              <TextInput
-                style={[styles.input, errors.senha && styles.inputError]}
-                placeholder="Mínimo 6 caracteres"
-                placeholderTextColor={colors.text.hint}
-                value={senha}
-                onChangeText={(text) => {
-                  setSenha(text);
-                  clearFieldError('senha');
-                }}
-                secureTextEntry
-                autoCapitalize="none"
-              />
-              {renderFieldError('senha')}
+                  <Text style={styles.label}>Instituição de Ensino *</Text>
+                  {loadingInstituicoes ? (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size="small" color={colors.primary.main} />
+                      <Text style={styles.loadingText}>Carregando instituições...</Text>
+                    </View>
+                  ) : instituicoes.length > 0 ? (
+                    <>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.instituicoesScroll, errors.instituicaoId && styles.instituicoesScrollError]}>
+                        <View style={styles.instituicoesContainer}>
+                          {instituicoes.map((inst) => (
+                            <TouchableOpacity
+                              key={inst.id}
+                              style={[
+                                styles.instituicaoButton,
+                                instituicaoId === inst.id && styles.instituicaoButtonActive,
+                                errors.instituicaoId && !instituicaoId && styles.instituicaoButtonError,
+                              ]}
+                              onPress={() => { setInstituicaoId(inst.id); clearFieldError('instituicaoId'); }}>
+                              <Text style={[styles.instituicaoText, instituicaoId === inst.id && styles.instituicaoTextActive]}>
+                                {inst.nome}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </ScrollView>
+                      {renderFieldError('instituicaoId')}
+                    </>
+                  ) : (
+                    <View style={styles.noInstituicoesContainer}>
+                      <Icon name={IconNames.warning} size="sm" color={colors.warning.main} />
+                      <Text style={styles.noInstituicoesText}>Nenhuma instituição disponível. Contate o suporte.</Text>
+                    </View>
+                  )}
 
-              {/* Confirmar Senha */}
-              <Text style={styles.label}>Confirmar Senha *</Text>
-              <TextInput
-                style={[styles.input, errors.confirmarSenha && styles.inputError]}
-                placeholder="Digite a senha novamente"
-                placeholderTextColor={colors.text.hint}
-                value={confirmarSenha}
-                onChangeText={(text) => {
-                  setConfirmarSenha(text);
-                  clearFieldError('confirmarSenha');
-                }}
-                secureTextEntry
-                autoCapitalize="none"
-              />
-              {renderFieldError('confirmarSenha')}
+                  <Text style={styles.label}>Telefone</Text>
+                  <TextInput
+                    style={[styles.input, errors.telefone && styles.inputError]}
+                    placeholder="(00) 00000-0000"
+                    placeholderTextColor={colors.text.hint}
+                    value={telefone}
+                    onChangeText={(text) => { setTelefone(text); clearFieldError('telefone'); }}
+                    keyboardType="phone-pad"
+                  />
+                  {renderFieldError('telefone')}
+                </>
+              )}
+
+              {/* Step 3: Endereço */}
+              {step === STEPS.ADDRESS && (
+                <>
+                  <Text style={styles.sectionTitle}>Endereço Residencial</Text>
+                  <Text style={styles.label}>CEP *</Text>
+                  <TextInput
+                    style={[styles.input, errors.cep && styles.inputError]}
+                    placeholder="00000-000"
+                    placeholderTextColor={colors.text.hint}
+                    value={cep}
+                    onChangeText={(text) => { setCep(text); clearFieldError('cep'); }}
+                    keyboardType="numeric"
+                    maxLength={9}
+                  />
+                  {renderFieldError('cep')}
+
+                  <Text style={styles.label}>Logradouro *</Text>
+                  <TextInput
+                    style={[styles.input, errors.logradouro && styles.inputError]}
+                    placeholder="Rua, Avenida, etc."
+                    placeholderTextColor={colors.text.hint}
+                    value={logradouro}
+                    onChangeText={(text) => { setLogradouro(text); clearFieldError('logradouro'); }}
+                  />
+                  {renderFieldError('logradouro')}
+
+                  <View style={styles.row}>
+                    <View style={styles.halfField}>
+                      <Text style={styles.label}>Número *</Text>
+                      <TextInput
+                        style={[styles.input, errors.numero && styles.inputError]}
+                        placeholder="123"
+                        placeholderTextColor={colors.text.hint}
+                        value={numero}
+                        onChangeText={(text) => { setNumero(text); clearFieldError('numero'); }}
+                      />
+                      {renderFieldError('numero')}
+                    </View>
+                    <View style={styles.halfField}>
+                      <Text style={styles.label}>Bairro *</Text>
+                      <TextInput
+                        style={[styles.input, errors.bairro && styles.inputError]}
+                        placeholder="Centro"
+                        placeholderTextColor={colors.text.hint}
+                        value={bairro}
+                        onChangeText={(text) => { setBairro(text); clearFieldError('bairro'); }}
+                      />
+                      {renderFieldError('bairro')}
+                    </View>
+                  </View>
+
+                  <Text style={styles.label}>Cidade *</Text>
+                  <TextInput
+                    style={[styles.input, errors.cidade && styles.inputError]}
+                    placeholder="São Paulo"
+                    placeholderTextColor={colors.text.hint}
+                    value={cidade}
+                    onChangeText={(text) => { setCidade(text); clearFieldError('cidade'); }}
+                  />
+                  {renderFieldError('cidade')}
+                </>
+              )}
 
               {/* General Error */}
               {generalError ? (
@@ -596,20 +574,27 @@ const CriarConta = ({navigation}) => {
                 </View>
               ) : null}
 
-              {/* Submit Button */}
-              <TouchableOpacity
-                style={[styles.criarContaButton, loading && styles.criarContaButtonDisabled]}
-                onPress={handleCriarConta}
-                disabled={loading}>
-                {loading ? (
-                  <ActivityIndicator color={colors.primary.contrast} />
-                ) : (
-                  <>
-                    <Icon name={IconNames.add} size="md" color={colors.primary.contrast} />
-                    <Text style={styles.criarContaButtonText}>Criar Conta</Text>
-                  </>
-                )}
-              </TouchableOpacity>
+              {/* Primary action: Continuar or Criar Conta */}
+              {step < STEPS.ADDRESS ? (
+                <TouchableOpacity style={styles.criarContaButton} onPress={goNextStep}>
+                  <Text style={styles.criarContaButtonText}>Continuar</Text>
+                  <Icon name={IconNames.forward} size="md" color={colors.primary.contrast} />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.criarContaButton, loading && styles.criarContaButtonDisabled]}
+                  onPress={handleCriarConta}
+                  disabled={loading}>
+                  {loading ? (
+                    <ActivityIndicator color={colors.primary.contrast} />
+                  ) : (
+                    <>
+                      <Icon name={IconNames.add} size="md" color={colors.primary.contrast} />
+                      <Text style={styles.criarContaButtonText}>Criar Conta</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
 
               {/* Login Link */}
               <View style={styles.loginContainer}>
@@ -619,9 +604,7 @@ const CriarConta = ({navigation}) => {
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.noteText}>
-                * Campos obrigatórios
-              </Text>
+              <Text style={styles.noteText}>* Campos obrigatórios</Text>
             </View>
           </View>
         </ScrollView>
@@ -673,6 +656,33 @@ const styles = StyleSheet.create({
     ...textStyles.bodySmall,
     color: colors.text.secondary,
     textAlign: 'center',
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  progressDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.border.light,
+  },
+  progressDotActive: {
+    backgroundColor: colors.primary.main,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  progressDotDone: {
+    backgroundColor: colors.primary.main,
+  },
+  progressText: {
+    ...textStyles.caption,
+    color: colors.text.secondary,
+    marginLeft: spacing.xs,
   },
   form: {
     width: '100%',
