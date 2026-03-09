@@ -29,6 +29,27 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Show disk space before cleanup
+        run: |
+          echo "=== Disk space before cleanup ==="
+          df -h
+          echo
+          echo "=== Largest directories in /home/ubuntu ==="
+          du -h /home/ubuntu 2>/dev/null | sort -hr | head -30 || true
+
+      - name: Cleanup safe disk usage
+        run: |
+          echo "Cleaning old build outputs and safe caches..."
+
+          # Front/build outputs in workspace
+          rm -rf android/app/build || true
+          rm -rf android/build || true
+          rm -rf .gradle || true
+          rm -rf /tmp/* || true
+
+          echo "=== Disk space after cleanup ==="
+          df -h
 
       - name: Setup Environment
         uses: actions/setup-node@v4
@@ -149,13 +170,26 @@ jobs:
           else
             echo "ℹ️ Debug build selected. Skipping release keystore decoding."
           fi
+      
+      - name: Show disk space before Gradle build
+        run: |
+          echo "=== Disk space before Gradle build ==="
+          df -h
+          echo
+          du -sh node_modules 2>/dev/null || true
+          du -sh android 2>/dev/null || true
+          du -sh $HOME/.gradle 2>/dev/null || true
+          du -sh $HOME/.android 2>/dev/null || true
 
       - name: Build Android App
         run: |
           cd android
           chmod +x gradlew
           
-          ./gradlew clean assemble${{ env.BUILD_TYPE }} --no-daemon
+          ./gradlew clean assemble${{ env.BUILD_TYPE }} --no-daemon \
+            --max-workers=2 \
+            -Dorg.gradle.caching=false \
+            -Dorg.gradle.jvmargs="-Xmx2g -XX:MaxMetaspaceSize=512m"
       
       - name: Rename and Prepare Artifact
         id: prepare_artifact
@@ -205,7 +239,7 @@ jobs:
           else
             COLOR=15158332
             CONTENT="❌ **The build failed!**\n🔍 **Logs:** [View on GitHub]($RUN_URL)"
-            PING="<@111425103445860352>"
+            PING="@here"
           fi
 
           MSG="**File:** \`buska-${{ env.VERSION }}.apk\`\n**Type:** \`${{ env.BUILD_TYPE }}\`\n**Size:** \`${{ env.APK_SIZE }}\`\n**Change:** \`$COMMIT_MSG\`\n**Branch:** \`${{ env.BRANCH_NAME }}\`"
@@ -221,3 +255,15 @@ jobs:
           }'
 
           curl -X POST -H "Content-Type: application/json" -d "$PAYLOAD" ${{ secrets.DISCORD_WEBHOOK }}
+      
+      - name: Final cleanup
+        if: always()
+        run: |
+          echo "Cleaning build leftovers..."
+          rm -rf android/app/build || true
+          rm -rf android/build || true
+          rm -rf .gradle || true
+          rm -rf /tmp/* || true
+
+          echo "=== Disk space after workflow ==="
+          df -h
