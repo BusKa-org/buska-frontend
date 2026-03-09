@@ -1,4 +1,5 @@
-const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
+const { getDefaultConfig } = require('expo/metro-config');
+const { mergeConfig } = require('@react-native/metro-config');
 
 /**
  * Metro configuration
@@ -8,6 +9,8 @@ const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
  */
 const defaultConfig = getDefaultConfig(__dirname);
 const exclusionList = require('metro-config/src/defaults/exclusionList');
+defaultConfig.resolver.unstable_enablePackageExports = false;
+
 
 module.exports = mergeConfig(defaultConfig, {
   resolver: {

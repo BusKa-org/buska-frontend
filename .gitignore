@@ -81,3 +81,7 @@ dist/
 # react-native-config codegen
 ios/tmp.xcconfig
 bundle.js
+# Expo
+.expo
+dist/
+web-build/
