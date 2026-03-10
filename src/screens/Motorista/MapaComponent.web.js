@@ -20,6 +20,24 @@ const MapaComponent = ({ pontosRota, onPontoChegado }) => {
 
   const destinoAtual = pontosRota && pontosRota.length > 0 ? pontosRota[0] : null;
 
+  const eraseMap = (mapa) => {
+    if (!routingControl.current) return;
+
+    try {
+      routingControl.current._clearLines = () => {};
+      routingControl.current._routeDone = () => {};
+      routingControl.current._updateLines = () => {};
+
+      if (mapa) {
+        mapa.removeControl(routingControl.current);
+      }
+    } catch (e) {
+
+    }
+    
+    routingControl.current = null;
+  };
+
   useEffect(() => {
     let isMounted = true;
     const initMap = async () => {
@@ -72,14 +90,7 @@ const MapaComponent = ({ pontosRota, onPontoChegado }) => {
 
     if(!latDest) return;
     const destLatLng = L.latLng(latDest, lonDest);
-    console.log("📍 Destino:", latDest, lonDest);
-
-    if (routingControl.current) {
-      try {
-        map.removeControl(routingControl.current);
-      } catch (e) { console.warn("Erro limpeza rota", e); }
-      routingControl.current = null;
-    }
+    eraseMap(map);
 
     map.eachLayer(layer => {
       if (layer instanceof L.Marker && layer !== userMarker.current) map.removeLayer(layer);
@@ -120,7 +131,6 @@ const MapaComponent = ({ pontosRota, onPontoChegado }) => {
       }
 
       const distReal = calcularDistancia(latUser, lonUser, destLatLng.lat, destLatLng.lng);
-      console.log(`Distância: ${(distReal / 1000).toFixed(1)} km`);
 
       if (distReal < 50) {
         console.log("✅ Chegou! Encerrando rota...");
@@ -128,15 +138,7 @@ const MapaComponent = ({ pontosRota, onPontoChegado }) => {
         navigator.geolocation.clearWatch(watchId.current);
         watchId.current = null;
 
-        if (routingControl.current) {
-            try {
-                routingControl.current.setWaypoints([]);
-                map.removeControl(routingControl.current);
-            } catch (e) {
-                console.log("Erro suprimido na limpeza final:", e);
-            }
-            routingControl.current = null;
-        }
+        eraseMap(map);
 
         onPontoChegado();
         return; 
@@ -149,7 +151,11 @@ const MapaComponent = ({ pontosRota, onPontoChegado }) => {
     }, (err) => console.error(err), { enableHighAccuracy: true });
 
     return () => {
-      if (watchId.current) navigator.geolocation.clearWatch(watchId.current);
+      if (watchId.current) {
+        navigator.geolocation.clearWatch(watchId.current);
+        watchId.current = null;
+      }
+      eraseMap(mapInstance.current);
     };
 
   }, [pontosRota, mapReady]);
