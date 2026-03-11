@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext, useMemo } from '
 import { authService } from '../services/authService';
 import { userService } from '../services/userService';
 import { parseApiError, requiresReauth, errorLogger } from '../utils/errors';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 const AuthContext = createContext(null);
 
@@ -9,6 +10,8 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  usePushNotifications(isAuthenticated);
 
   useEffect(() => {
     checkAuthStatus();
