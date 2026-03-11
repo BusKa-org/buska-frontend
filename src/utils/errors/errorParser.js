@@ -44,6 +44,7 @@ const backendErrorPatterns = [
   { pattern: /credenciais?.*(inválid|invalid|incorrect)/i, code: ErrorCode.INVALID_CREDENTIALS, field: null, message: 'E-mail ou senha incorretos.' },
   { pattern: /(invalid|incorrect).*credentials/i, code: ErrorCode.INVALID_CREDENTIALS, field: null, message: 'E-mail ou senha incorretos.' },
   { pattern: /email.*ou.*senha.*incorre/i, code: ErrorCode.INVALID_CREDENTIALS, field: null, message: 'E-mail ou senha incorretos.' },
+  { pattern: /^unauthorized$/i, code: ErrorCode.INVALID_CREDENTIALS, field: null, message: 'E-mail ou senha incorretos.' },
   
   // Token errors
   { pattern: /token.*(expirado|expired)/i, code: ErrorCode.TOKEN_EXPIRED, field: null, message: 'Sua sessão expirou. Faça login novamente.' },

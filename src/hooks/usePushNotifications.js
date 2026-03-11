@@ -5,30 +5,38 @@ import { errorLogger } from '../utils/errors';
 
 let messaging = null;
 
-// Only import Firebase on native platforms - it's not available on web
 if (Platform.OS !== 'web') {
   try {
     messaging = require('@react-native-firebase/messaging').default;
   } catch {
-    // Firebase not installed yet
+    // Firebase not installed
   }
 }
 
 /**
- * Registers this device for FCM push notifications and syncs the token
- * with the backend. Also sets up a foreground message listener.
+ * Full push notification lifecycle:
+ *   - Registers the device FCM token with the backend
+ *   - Foreground: calls onForegroundMessage so the UI can show a Toast
+ *   - Background: system notification shown automatically by the OS;
+ *     onNotificationTap is called when the user taps it
+ *   - Quit state: system notification shown automatically;
+ *     onNotificationTap is called on the first render after cold start
  *
- * Must be called after the user is authenticated.
- *
- * @param {boolean} isAuthenticated - Whether a user session is active
- * @param {function} [onForegroundMessage] - Optional callback for foreground notifications
+ * @param {boolean} isAuthenticated
+ * @param {function} [onForegroundMessage]  ({ title, body }) => void
+ * @param {function} [onNotificationTap]    (remoteMessage) => void  — optional navigation
  */
-export const usePushNotifications = (isAuthenticated, onForegroundMessage) => {
+export const usePushNotifications = (
+  isAuthenticated,
+  onForegroundMessage,
+  onNotificationTap,
+) => {
   const unsubscribeRef = useRef(null);
 
   useEffect(() => {
     if (!isAuthenticated || !messaging) return;
 
+    // ── Token registration ──────────────────────────────────────────────────
     const registerToken = async () => {
       try {
         const authStatus = await messaging().requestPermission();
@@ -45,16 +53,16 @@ export const usePushNotifications = (isAuthenticated, onForegroundMessage) => {
         if (token) {
           await userService.updateFcmToken(token);
           errorLogger.info('FCM token registered');
+          console.log('[FCM TOKEN]', token); // remove after testing
         }
       } catch (error) {
-        // Non-fatal: push notifications are a best-effort feature
         errorLogger.error(error, { context: 'usePushNotifications:registerToken' });
       }
     };
 
     registerToken();
 
-    // Listen for token refreshes so the backend always has a valid token
+    // ── Token refresh ───────────────────────────────────────────────────────
     const unsubscribeTokenRefresh = messaging().onTokenRefresh(async (newToken) => {
       try {
         await userService.updateFcmToken(newToken);
@@ -64,17 +72,47 @@ export const usePushNotifications = (isAuthenticated, onForegroundMessage) => {
       }
     });
 
-    // Handle notifications received while the app is in the foreground
+    // ── Foreground messages ─────────────────────────────────────────────────
+    // FCM does NOT show a system notification while the app is open.
+    // We surface it via Toast so the user still sees it.
     const unsubscribeForeground = messaging().onMessage(async (remoteMessage) => {
-      errorLogger.debug('Foreground push received', { title: remoteMessage.notification?.title });
+      const title = remoteMessage.notification?.title ?? '';
+      const body  = remoteMessage.notification?.body  ?? '';
+      errorLogger.debug('FCM foreground', { title });
       if (onForegroundMessage) {
-        onForegroundMessage(remoteMessage);
+        onForegroundMessage({ title, body, remoteMessage });
       }
     });
+
+    // ── Background notification tap ─────────────────────────────────────────
+    // Fires when the user taps a system notification while the app is in background.
+    const unsubscribeBackgroundTap = messaging().onNotificationOpenedApp((remoteMessage) => {
+      errorLogger.debug('FCM background tap', { messageId: remoteMessage.messageId });
+      if (onNotificationTap) {
+        onNotificationTap(remoteMessage);
+      }
+    });
+
+    // ── Quit-state notification tap ─────────────────────────────────────────
+    // getInitialNotification resolves once; if null the app was opened normally.
+    messaging()
+      .getInitialNotification()
+      .then((remoteMessage) => {
+        if (remoteMessage) {
+          errorLogger.debug('FCM quit-state tap', { messageId: remoteMessage.messageId });
+          if (onNotificationTap) {
+            onNotificationTap(remoteMessage);
+          }
+        }
+      })
+      .catch((error) => {
+        errorLogger.error(error, { context: 'usePushNotifications:getInitialNotification' });
+      });
 
     unsubscribeRef.current = () => {
       unsubscribeTokenRefresh();
       unsubscribeForeground();
+      unsubscribeBackgroundTap();
     };
 
     return () => {
@@ -82,5 +120,5 @@ export const usePushNotifications = (isAuthenticated, onForegroundMessage) => {
         unsubscribeRef.current();
       }
     };
-  }, [isAuthenticated, onForegroundMessage]);
+  }, [isAuthenticated, onForegroundMessage, onNotificationTap]);
 };

@@ -4,6 +4,7 @@ import DashboardAluno from '../screens/Aluno/DashboardAluno';
 import SelecaoRotas from '../screens/Aluno/SelecaoRotas';
 import RotaAluno from '../screens/Aluno/RotaAluno';
 import ConfigNotificacoesAluno from '../screens/Aluno/ConfigNotificacoesAluno';
+import NotificacoesAluno from '../screens/Aluno/NotificacoesAluno';
 import DetalheViagem from '../screens/Aluno/DetalheViagem';
 import LocalizacaoOnibus from '../screens/Aluno/LocalizacaoOnibus';
 import {
@@ -38,11 +39,12 @@ const AlunoNavigator = () => {
           <Screen name="SelecaoRotas" component={SelecaoRotas} />
           <Screen name="RotaAluno" component={RotaAluno} />
           <Screen name="ConfigNotificacoesAluno" component={ConfigNotificacoesAluno} />
+          <Screen name="NotificacoesAluno" component={NotificacoesAluno} />
           <Screen name="DetalheViagem" component={DetalheViagem} />
           <Screen name="LocalizacaoOnibus" component={LocalizacaoOnibus} />
           {/* Telas auxiliares */}
           <Screen name="MinhasRotas" component={RotaAluno} />
-          <Screen name="Notificacoes" component={ConfigNotificacoesAluno} />
+          <Screen name="Notificacoes" component={NotificacoesAluno} />
         </Navigator>
       </NavigationProvider>
     );
@@ -65,15 +67,13 @@ const AlunoNavigator = () => {
       <Stack.Screen name="DashboardAluno" component={DashboardAluno} />
       <Stack.Screen name="SelecaoRotas" component={SelecaoRotas} />
       <Stack.Screen name="RotaAluno" component={RotaAluno} />
-      <Stack.Screen
-        name="ConfigNotificacoesAluno"
-        component={ConfigNotificacoesAluno}
-      />
+      <Stack.Screen name="ConfigNotificacoesAluno" component={ConfigNotificacoesAluno} />
+      <Stack.Screen name="NotificacoesAluno" component={NotificacoesAluno} />
       <Stack.Screen name="DetalheViagem" component={DetalheViagem} />
       <Stack.Screen name="LocalizacaoOnibus" component={LocalizacaoOnibus} />
       {/* Telas auxiliares */}
       <Stack.Screen name="MinhasRotas" component={RotaAluno} />
-      <Stack.Screen name="Notificacoes" component={ConfigNotificacoesAluno} />
+      <Stack.Screen name="Notificacoes" component={NotificacoesAluno} />
     </Stack.Navigator>
   );
 };
