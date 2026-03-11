@@ -219,8 +219,11 @@ function buildHtml() {
           if (!this.mapInstance || !this.routingControl) return;
 
           try {
-            this.routingControl.setWaypoints([]);
             this.mapInstance.removeControl(this.routingControl);
+            
+            if (this.routingControl._map) {
+              this.routingControl._map = null;
+            }
           } catch (error) {}
 
           this.routingControl = null;

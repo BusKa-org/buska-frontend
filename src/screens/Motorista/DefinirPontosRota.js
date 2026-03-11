@@ -15,17 +15,11 @@ import { colors, spacing, borderRadius, shadows, textStyles, fontWeight } from '
 import Icon, { IconNames } from '../../components/Icon';
 import { useToast } from '../../components/Toast';
 import Svg, { Polyline } from 'react-native-svg';
+import MapaComponent from './MapaComponent'; 
 
-// Google Maps-style Route Map Component
-const RotaMapaSimples = ({ pontos }) => {
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [selectedPoint, setSelectedPoint] = useState(null);
-
-  const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.3, 2.5));
-  const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.3, 0.5));
-
-  const { positions, hasValidPoints } = useMemo(() => {
-    const validPontos = (pontos || []).filter(
+const RotaMapaSimples = ({ pontos, onPontoChegado }) => {
+  const { validPontos, hasValidPoints } = useMemo(() => {
+    const valid = (pontos || []).filter(
       p =>
         p.latitude != null &&
         p.longitude != null &&
@@ -33,41 +27,9 @@ const RotaMapaSimples = ({ pontos }) => {
         !isNaN(Number(p.longitude)),
     );
 
-    if (validPontos.length === 0) {
-      return { positions: [], hasValidPoints: false };
-    }
-
-    const lats = validPontos.map(p => Number(p.latitude));
-    const lngs = validPontos.map(p => Number(p.longitude));
-
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
-    const minLng = Math.min(...lngs);
-    const maxLng = Math.max(...lngs);
-
-    const latRange = maxLat - minLat || 0.01;
-    const lngRange = maxLng - minLng || 0.01;
-
-    const mappedPositions = validPontos.map((ponto, index) => {
-      const lat = Number(ponto.latitude);
-      const lng = Number(ponto.longitude);
-
-      const xPercent = 10 + ((lng - minLng) / lngRange) * 80;
-      const yPercent = 10 + ((maxLat - lat) / latRange) * 80;
-
-      return {
-        ...ponto,
-        xPercent,
-        yPercent,
-        index: index + 1,
-        isFirst: index === 0,
-        isLast: index === validPontos.length - 1,
-      };
-    });
-
     return {
-      positions: mappedPositions,
-      hasValidPoints: true,
+      validPontos: valid,
+      hasValidPoints: valid.length > 0,
     };
   }, [pontos]);
 
@@ -93,131 +55,28 @@ const RotaMapaSimples = ({ pontos }) => {
     <View style={mapStyles.container}>
       <View style={mapStyles.header}>
         <Text style={mapStyles.title}>Mapa da Rota</Text>
-        <Text style={mapStyles.subtitle}>{positions.length} pontos</Text>
+        <Text style={mapStyles.subtitle}>{validPontos.length} pontos</Text>
       </View>
 
-      <View style={[mapStyles.mapWrapper, { height: 220 }]}>
-        <View
-          style={[
-            mapStyles.zoomContainer,
-            {
-              transform: [{ scale: zoomLevel }],
-            },
-          ]}
-        >
-          <View style={mapStyles.mapArea}>
-            <View style={mapStyles.terrainBase} />
-            <View style={mapStyles.terrainOverlay} />
-
-            <View style={mapStyles.roadsPattern}>
-              <View style={[mapStyles.road, { top: '30%', width: '100%' }]} />
-              <View style={[mapStyles.road, { top: '60%', width: '100%' }]} />
-              <View style={[mapStyles.roadVertical, { left: '25%', height: '100%' }]} />
-              <View style={[mapStyles.roadVertical, { left: '75%', height: '100%' }]} />
-            </View>
-
-            {positions.length > 1 && (
-              <Svg
-                width="100%"
-                height="100%"
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
-                style={mapStyles.routeSvg}
-              >
-                <Polyline
-                  points={polylinePoints}
-                  fill="none"
-                  stroke="rgba(66, 133, 244, 0.3)"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <Polyline
-                  points={polylinePoints}
-                  fill="none"
-                  stroke="#4285F4"
-                  strokeWidth="0.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-            )}
-
-            {positions.map(pos => (
-              <TouchableOpacity
-                key={pos.id}
-                style={[
-                  mapStyles.pinContainer,
-                  { left: `${pos.xPercent}%`, top: `${pos.yPercent}%` },
-                ]}
-                onPress={() =>
-                  setSelectedPoint(selectedPoint === pos.id ? null : pos.id)
-                }
-                activeOpacity={0.8}
-              >
-                <View style={mapStyles.pinShadow} />
-
-                <View
-                  style={[
-                    mapStyles.pin,
-                    pos.isFirst && mapStyles.pinStart,
-                    pos.isLast && mapStyles.pinEnd,
-                    !pos.isFirst && !pos.isLast && mapStyles.pinMiddle,
-                  ]}
-                >
-                  <Text style={mapStyles.pinText}>{pos.index}</Text>
-                </View>
-
-                <View
-                  style={[
-                    mapStyles.pinPointer,
-                    pos.isFirst && mapStyles.pinPointerStart,
-                    pos.isLast && mapStyles.pinPointerEnd,
-                    !pos.isFirst && !pos.isLast && mapStyles.pinPointerMiddle,
-                  ]}
-                />
-
-                {selectedPoint === pos.id && (
-                  <View style={mapStyles.tooltip}>
-                    <Text style={mapStyles.tooltipText} numberOfLines={1}>
-                      {pos.nome || pos.apelido}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={mapStyles.mapControls}>
-          <TouchableOpacity style={mapStyles.controlButton} onPress={handleZoomIn}>
-            <Text style={mapStyles.controlText}>+</Text>
-          </TouchableOpacity>
-          <View style={mapStyles.controlDivider} />
-          <TouchableOpacity style={mapStyles.controlButton} onPress={handleZoomOut}>
-            <Text style={mapStyles.controlText}>−</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={mapStyles.attribution}>
-          <Text style={mapStyles.attributionText}>
-            Rota Escolar • Zoom: {zoomLevel.toFixed(1)}x
-          </Text>
-        </View>
+      <View style={[mapStyles.mapWrapper, { height: 400, overflow: 'hidden' }]}>
+        <MapaComponent 
+          pontosRota={validPontos} 
+          onPontoChegado={onPontoChegado} 
+        />
       </View>
 
       <View style={mapStyles.routeInfo}>
         <View style={mapStyles.routeInfoItem}>
           <View style={[mapStyles.infoDot, { backgroundColor: '#34A853' }]} />
           <Text style={mapStyles.infoLabel}>
-            {positions[0]?.nome || positions[0]?.apelido || 'Início'}
+            {validPontos[0]?.nome || validPontos[0]?.apelido || 'Destino Atual'}
           </Text>
         </View>
 
         <View style={mapStyles.routeInfoDivider}>
           <View style={mapStyles.routeInfoLine} />
           <Text style={mapStyles.routeInfoPoints}>
-            {positions.length - 2 > 0 ? `+${positions.length - 2}` : ''}
+            {validPontos.length - 2 > 0 ? `+${validPontos.length - 2}` : ''}
           </Text>
           <View style={mapStyles.routeInfoLine} />
         </View>
@@ -225,9 +84,9 @@ const RotaMapaSimples = ({ pontos }) => {
         <View style={mapStyles.routeInfoItem}>
           <View style={[mapStyles.infoDot, { backgroundColor: '#EA4335' }]} />
           <Text style={mapStyles.infoLabel}>
-            {positions[positions.length - 1]?.nome ||
-              positions[positions.length - 1]?.apelido ||
-              'Fim'}
+            {validPontos[validPontos.length - 1]?.nome ||
+              validPontos[validPontos.length - 1]?.apelido ||
+              'Fim da Rota'}
           </Text>
         </View>
       </View>
