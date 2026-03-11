@@ -135,6 +135,20 @@ function extractErrorDetails(responseData) {
     return { message, field, details, fieldErrors };
   }
   
+  // Handle BusKá backend envelope: { "error": { "code", "message", "details", "request_id" } }
+  if (responseData.error && typeof responseData.error === 'object') {
+    const envelope = responseData.error;
+    message = envelope.message || null;
+    const envelopeDetails = envelope.details;
+    if (envelopeDetails && typeof envelopeDetails === 'object') {
+      details = envelopeDetails;
+      for (const [k, v] of Object.entries(envelopeDetails)) {
+        fieldErrors[k] = typeof v === 'string' ? v : JSON.stringify(v);
+      }
+    }
+    return { message, field: null, details, fieldErrors };
+  }
+
   // Extract main message
   message = responseData.message || responseData.error || responseData.msg || responseData.detail;
   

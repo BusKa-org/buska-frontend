@@ -7,6 +7,12 @@ buildscript {
         compileSdkVersion = 34
         targetSdkVersion = 34
         ndkVersion = "23.1.7779620"
+        // Force react-native-geolocation-service to compile against the same
+        // play-services-location version that Firebase pulls in at runtime (21.x).
+        // Without this, the library is compiled against 18.0.0 (where
+        // FusedLocationProviderClient was a class), but at runtime it gets 21.x
+        // (where it's an interface), causing IncompatibleClassChangeError.
+        playServicesLocationVersion = "21.0.1"
     }
     repositories {
         google()

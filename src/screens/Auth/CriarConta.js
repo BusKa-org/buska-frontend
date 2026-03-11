@@ -102,7 +102,7 @@ const CriarConta = ({navigation}) => {
     }
     if (!senha) {
       newErrors.senha = getFieldValidationMessage('password', 'required');
-    } else if (senha.length < 6) {
+    } else if (senha.length < 8) {
       newErrors.senha = getFieldValidationMessage('password', 'minLength');
     }
     if (senha !== confirmarSenha) {
@@ -259,37 +259,48 @@ const CriarConta = ({navigation}) => {
     }
   };
 
+  // Which step each form field belongs to — used to navigate back when
+  // the backend returns errors for fields on a previous step.
+  const fieldStepMap = {
+    email: STEPS.BASIC, senha: STEPS.BASIC, confirmarSenha: STEPS.BASIC,
+    nome: STEPS.PERSONAL, cpf: STEPS.PERSONAL, matricula: STEPS.PERSONAL,
+    instituicaoId: STEPS.PERSONAL, telefone: STEPS.PERSONAL,
+    cep: STEPS.ADDRESS, logradouro: STEPS.ADDRESS, numero: STEPS.ADDRESS,
+    bairro: STEPS.ADDRESS, cidade: STEPS.ADDRESS,
+  };
+
+  // Navigate to the earliest step that has at least one error.
+  const navigateToEarliestErrorStep = (errorFields) => {
+    const steps = errorFields.map(f => fieldStepMap[f]).filter(Boolean);
+    if (steps.length > 0) {
+      setStep(Math.min(...steps));
+    }
+  };
+
   const handleRegistrationError = (result) => {
     const { error, errorCode, field, fieldErrors } = result;
-    
-    // Handle multiple field errors from backend
+
+    const backendFieldMapping = {
+      'password': 'senha',
+      'instituicao_id': 'instituicaoId',
+    };
+    const validFormFields = ['nome', 'email', 'cpf', 'matricula', 'telefone', 'senha', 'confirmarSenha', 'instituicaoId', 'cep', 'logradouro', 'numero', 'bairro', 'cidade'];
+
+    const extractMessage = (errorMsg) => {
+      if (typeof errorMsg === 'string') return errorMsg;
+      if (Array.isArray(errorMsg) && errorMsg.length > 0) {
+        return typeof errorMsg[0] === 'string' ? errorMsg[0] : 'Campo inválido';
+      }
+      return 'Campo inválido';
+    };
+
+    // Multiple field errors from backend (400 validation)
     if (fieldErrors && Object.keys(fieldErrors).length > 0) {
-      
-      // Map backend field names to form field names
-      const fieldMapping = {
-        'password': 'senha',
-        'instituicao_id': 'instituicaoId',
-      };
-      
-      // Valid form fields that exist in the UI (including address fields)
-      const validFormFields = ['nome', 'email', 'cpf', 'matricula', 'telefone', 'senha', 'confirmarSenha', 'instituicaoId', 'cep', 'logradouro', 'numero', 'bairro', 'cidade'];
-      
       const mappedErrors = {};
       const unmappedFields = [];
-      
-      // Helper to extract error message
-      const extractMessage = (errorMsg) => {
-        if (typeof errorMsg === 'string') return errorMsg;
-        if (Array.isArray(errorMsg) && errorMsg.length > 0) {
-          return typeof errorMsg[0] === 'string' ? errorMsg[0] : 'Campo inválido';
-        }
-        return 'Campo inválido';
-      };
-      
+
       for (const [fieldName, errorMsg] of Object.entries(fieldErrors)) {
-        // Handle nested endereco_casa errors
         if (fieldName === 'endereco_casa' && typeof errorMsg === 'object' && !Array.isArray(errorMsg)) {
-          // Flatten nested address errors
           for (const [nestedField, nestedError] of Object.entries(errorMsg)) {
             if (validFormFields.includes(nestedField)) {
               mappedErrors[nestedField] = extractMessage(nestedError);
@@ -297,29 +308,21 @@ const CriarConta = ({navigation}) => {
           }
           continue;
         }
-        
-        const mappedField = fieldMapping[fieldName] || fieldName;
-        
-        // Only set error if field exists in the form
+        const mappedField = backendFieldMapping[fieldName] || fieldName;
         if (validFormFields.includes(mappedField)) {
           mappedErrors[mappedField] = extractMessage(errorMsg);
         } else {
-          // Track unmapped fields for general error
           unmappedFields.push(fieldName);
         }
       }
-      
-      // Set field errors
+
       if (Object.keys(mappedErrors).length > 0) {
         setErrors(prev => ({ ...prev, ...mappedErrors }));
+        navigateToEarliestErrorStep(Object.keys(mappedErrors));
       }
-      
-      // Show general error for unmapped fields or when multiple errors exist
+
       if (unmappedFields.length > 0) {
-        // Build a user-friendly message for unmapped fields
-        const fieldLabels = {
-          'endereco_casa': 'Endereço',
-        };
+        const fieldLabels = { 'endereco_casa': 'Endereço' };
         const unmappedLabels = unmappedFields.map(f => fieldLabels[f] || f).join(', ');
         setGeneralError(`Erro em: ${unmappedLabels}. Verifique os dados e tente novamente.`);
       } else if (Object.keys(mappedErrors).length > 1) {
@@ -327,39 +330,38 @@ const CriarConta = ({navigation}) => {
       }
       return;
     }
-    
-    // Handle single field-specific error
+
+    // Single field error
     if (field) {
-      const fieldMapping = { 'password': 'senha', 'instituicao_id': 'instituicaoId' };
-      const mappedField = fieldMapping[field] || field;
+      const mappedField = backendFieldMapping[field] || field;
       setErrors(prev => ({ ...prev, [mappedField]: error }));
+      navigateToEarliestErrorStep([mappedField]);
       return;
     }
-    
-    // Handle known error codes
+
+    // Known error codes that map to a specific field
+    const fieldErrorMap = {
+      [ErrorCode.EMAIL_ALREADY_EXISTS]: { field: 'email', message: 'Este e-mail já está cadastrado.' },
+      [ErrorCode.CPF_ALREADY_EXISTS]:   { field: 'cpf',   message: 'Este CPF já está cadastrado.' },
+      [ErrorCode.INVALID_EMAIL]:        { field: 'email', message: 'E-mail inválido.' },
+      [ErrorCode.INVALID_CPF]:          { field: 'cpf',   message: 'CPF inválido.' },
+      [ErrorCode.INVALID_PASSWORD]:     { field: 'senha', message: error || 'Senha inválida.' },
+      [ErrorCode.PASSWORD_TOO_WEAK]:    { field: 'senha', message: error || 'Senha muito fraca.' },
+    };
+
+    if (fieldErrorMap[errorCode]) {
+      const { field: errField, message: errMsg } = fieldErrorMap[errorCode];
+      setErrors(prev => ({ ...prev, [errField]: errMsg }));
+      navigateToEarliestErrorStep([errField]);
+      return;
+    }
+
     switch (errorCode) {
-      case ErrorCode.EMAIL_ALREADY_EXISTS:
-        setErrors(prev => ({ ...prev, email: 'Este e-mail já está cadastrado.' }));
-        break;
-      case ErrorCode.CPF_ALREADY_EXISTS:
-        setErrors(prev => ({ ...prev, cpf: 'Este CPF já está cadastrado.' }));
-        break;
-      case ErrorCode.INVALID_EMAIL:
-        setErrors(prev => ({ ...prev, email: 'E-mail inválido.' }));
-        break;
-      case ErrorCode.INVALID_CPF:
-        setErrors(prev => ({ ...prev, cpf: 'CPF inválido.' }));
-        break;
-      case ErrorCode.INVALID_PASSWORD:
-      case ErrorCode.PASSWORD_TOO_WEAK:
-        setErrors(prev => ({ ...prev, senha: error || 'Senha inválida.' }));
-        break;
       case ErrorCode.REQUIRED_FIELD:
-        // Field should be set by the parser
         if (field) {
-          const fieldMapping = { 'password': 'senha' };
-          const mappedField = fieldMapping[field] || field;
+          const mappedField = backendFieldMapping[field] || field;
           setErrors(prev => ({ ...prev, [mappedField]: error }));
+          navigateToEarliestErrorStep([mappedField]);
         } else {
           setGeneralError(error || 'Preencha todos os campos obrigatórios.');
         }
@@ -446,7 +448,7 @@ const CriarConta = ({navigation}) => {
                   <Text style={styles.label}>Senha *</Text>
                   <TextInput
                     style={[styles.input, errors.senha && styles.inputError]}
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder="Mínimo 8 caracteres"
                     placeholderTextColor={colors.text.hint}
                     value={senha}
                     onChangeText={(text) => { setSenha(text); clearFieldError('senha'); }}

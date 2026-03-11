@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 function buildHtml() {
@@ -22,23 +22,57 @@ function buildHtml() {
       padding: 0;
       background: #ffffff;
     }
-    body {
-      overflow: visible;
-    }
-    .leaflet-container {
-      width: 100%;
-      height: 100%;
+    body { overflow: visible; }
+    .leaflet-container { width: 100%; height: 100%; background: #f5f5f5; }
+    #error-msg {
+      display: none;
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
       background: #f5f5f5;
+      font-family: sans-serif;
+      color: #64748B;
+      font-size: 14px;
+      text-align: center;
+      padding: 16px;
     }
+    #error-msg.visible { display: flex; }
   </style>
 </head>
 <body>
   <div id="map"></div>
+  <div id="error-msg">
+    <span style="font-size:32px">🗺️</span>
+    <p style="margin:8px 0 4px">Mapa indisponível</p>
+    <small>Verifique sua conexão com a internet</small>
+  </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    function showError() {
+      document.getElementById('map').style.display = 'none';
+      document.getElementById('error-msg').classList.add('visible');
+      window.ReactNativeWebView &&
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'mapError' }));
+    }
+
+    // Timeout: se Leaflet não carregar em 8s, mostra erro
+    var loadTimeout = setTimeout(function() {
+      if (typeof L === 'undefined') showError();
+    }, 8000);
+  </script>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    onerror="clearTimeout(loadTimeout); showError();"
+  ></script>
 
   <script>
     (function () {
+      if (typeof L === 'undefined') return;
+      clearTimeout(loadTimeout);
+
       const BuskaMap = {
         mapInstance: null,
         destMarker: null,
@@ -47,7 +81,7 @@ function buildHtml() {
           try {
             window.ReactNativeWebView &&
               window.ReactNativeWebView.postMessage(JSON.stringify(payload));
-          } catch (error) {}
+          } catch (e) {}
         },
 
         init() {
@@ -56,7 +90,7 @@ function buildHtml() {
           this.mapInstance = L.map('map', {
             zoomControl: true,
             preferCanvas: false,
-          }).setView([-23.55, -46.63], 13); // Posição inicial padrão
+          }).setView([-23.55, -46.63], 13);
 
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors',
@@ -68,17 +102,12 @@ function buildHtml() {
 
         setPoint(lat, lng) {
           if (!this.mapInstance) return;
-
           const latLng = L.latLng(lat, lng);
-
-          // Atualiza o marcador ou cria um novo se não existir
           if (this.destMarker) {
             this.destMarker.setLatLng(latLng);
           } else {
             this.destMarker = L.marker(latLng).addTo(this.mapInstance);
           }
-
-          // Centraliza o mapa no ponto com um zoom adequado (ex: 15)
           this.mapInstance.setView(latLng, 15);
         },
 
@@ -87,7 +116,7 @@ function buildHtml() {
             this.mapInstance.removeLayer(this.destMarker);
             this.destMarker = null;
           }
-        }
+        },
       };
 
       window.BuskaMap = BuskaMap;
@@ -102,69 +131,54 @@ function buildHtml() {
   `;
 }
 
-// Mantive o nome e a prop 'pontosRota' para não quebrar a importação no seu componente pai
 export default function MapaLocalizacaoMotorista({ pontosRota }) {
   const webViewRef = useRef(null);
-
   const [mapReady, setMapReady] = useState(false);
   const [loadingMap, setLoadingMap] = useState(true);
+  const [mapError, setMapError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  // Pega o primeiro ponto, já que agora queremos mostrar apenas um
   const destinoAtual = pontosRota && pontosRota.length > 0 ? pontosRota[0] : null;
-
-  const initialHtml = useMemo(() => buildHtml(), []);
+  const initialHtml = useMemo(() => buildHtml(), [reloadKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const inject = useCallback(
     (script) => {
       if (!webViewRef.current || !mapReady) return;
-      webViewRef.current.injectJavaScript(`
-        try {
-          ${script}
-        } catch (e) {}
-        true;
-      `);
+      webViewRef.current.injectJavaScript(`try { ${script} } catch (e) {} true;`);
     },
     [mapReady]
   );
 
-  // Efeito único para lidar com a atualização do ponto no mapa
   useEffect(() => {
     if (!mapReady) return;
-
-    if (!destinoAtual) {
-      inject(`window.BuskaMap.clearPoint();`);
-      return;
-    }
-
+    if (!destinoAtual) { inject('window.BuskaMap.clearPoint();'); return; }
     const latDest = parseFloat(destinoAtual.latitude);
     const lonDest = parseFloat(destinoAtual.longitude);
-
     if (Number.isNaN(latDest) || Number.isNaN(lonDest)) return;
-
-    // Injeta o comando para setar o ponto e centralizar o mapa
-    inject(`
-      window.BuskaMap.setPoint(${latDest}, ${lonDest});
-    `);
+    inject(`window.BuskaMap.setPoint(${latDest}, ${lonDest});`);
   }, [mapReady, destinoAtual, inject]);
 
   const handleWebViewMessage = useCallback((event) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
-
-      if (data.type === 'mapReady') {
-        setMapReady(true);
-        setLoadingMap(false);
-      }
-    } catch (error) {
-      console.log('Mensagem inválida do WebView:', error);
-    }
+      if (data.type === 'mapReady') { setMapReady(true); setLoadingMap(false); }
+      if (data.type === 'mapError') { setLoadingMap(false); setMapError(true); }
+    } catch (e) {}
   }, []);
+
+  const handleReload = () => {
+    setMapError(false);
+    setMapReady(false);
+    setLoadingMap(true);
+    setReloadKey(k => k + 1);
+  };
 
   return (
     <View style={styles.container}>
       <WebView
+        key={reloadKey}
         ref={webViewRef}
-        style={styles.webview}
+        style={[styles.webview, mapError && styles.hidden]}
         originWhitelist={['*']}
         source={{ html: initialHtml }}
         javaScriptEnabled
@@ -176,9 +190,20 @@ export default function MapaLocalizacaoMotorista({ pontosRota }) {
         androidLayerType="software"
       />
 
-      {loadingMap && (
+      {loadingMap && !mapError && (
         <View pointerEvents="none" style={styles.loadingOverlay}>
-          <ActivityIndicator size="small" />
+          <ActivityIndicator size="small" color="#00B4D8" />
+        </View>
+      )}
+
+      {mapError && (
+        <View style={styles.errorOverlay}>
+          <Text style={styles.errorIcon}>🗺️</Text>
+          <Text style={styles.errorTitle}>Mapa indisponível</Text>
+          <Text style={styles.errorSubtitle}>Verifique sua conexão com a internet</Text>
+          <TouchableOpacity style={styles.reloadButton} onPress={handleReload}>
+            <Text style={styles.reloadText}>Tentar novamente</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -191,16 +216,55 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 10,
     backgroundColor: '#fff',
-    overflow: 'visible',
+    overflow: 'hidden',
   },
   webview: {
     flex: 1,
     opacity: 0.99,
     backgroundColor: 'transparent',
   },
+  hidden: {
+    opacity: 0,
+    height: 0,
+  },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  errorOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f5f5f5',
+    padding: 24,
+  },
+  errorIcon: {
+    fontSize: 40,
+    marginBottom: 8,
+  },
+  errorTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#334155',
+    marginBottom: 4,
+  },
+  errorSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  reloadButton: {
+    backgroundColor: '#00B4D8',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  reloadText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });

@@ -3,15 +3,23 @@ import { Platform } from 'react-native';
 import { userService } from '../services/userService';
 import { errorLogger } from '../utils/errors';
 
-let messaging = null;
+let messagingModule = null;
 
 if (Platform.OS !== 'web') {
   try {
-    messaging = require('@react-native-firebase/messaging').default;
+    messagingModule = require('@react-native-firebase/messaging').default;
   } catch {
     // Firebase not installed
   }
 }
+
+// Cache the singleton instance to avoid concurrent initialisation (IOConcurrency)
+let messagingInstance = null;
+const getMessaging = () => {
+  if (!messagingModule) return null;
+  if (!messagingInstance) messagingInstance = messagingModule();
+  return messagingInstance;
+};
 
 /**
  * Full push notification lifecycle:
@@ -34,26 +42,26 @@ export const usePushNotifications = (
   const unsubscribeRef = useRef(null);
 
   useEffect(() => {
-    if (!isAuthenticated || !messaging) return;
+    const m = getMessaging();
+    if (!isAuthenticated || !m) return;
 
     // ── Token registration ──────────────────────────────────────────────────
     const registerToken = async () => {
       try {
-        const authStatus = await messaging().requestPermission();
+        const authStatus = await m.requestPermission();
         const granted =
-          authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-          authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+          authStatus === messagingModule.AuthorizationStatus.AUTHORIZED ||
+          authStatus === messagingModule.AuthorizationStatus.PROVISIONAL;
 
         if (!granted) {
           errorLogger.debug('Push notification permission denied');
           return;
         }
 
-        const token = await messaging().getToken();
+        const token = await m.getToken();
         if (token) {
           await userService.updateFcmToken(token);
           errorLogger.info('FCM token registered');
-          console.log('[FCM TOKEN]', token); // remove after testing
         }
       } catch (error) {
         errorLogger.error(error, { context: 'usePushNotifications:registerToken' });
@@ -63,7 +71,7 @@ export const usePushNotifications = (
     registerToken();
 
     // ── Token refresh ───────────────────────────────────────────────────────
-    const unsubscribeTokenRefresh = messaging().onTokenRefresh(async (newToken) => {
+    const unsubscribeTokenRefresh = m.onTokenRefresh(async (newToken) => {
       try {
         await userService.updateFcmToken(newToken);
         errorLogger.info('FCM token refreshed');
@@ -75,7 +83,7 @@ export const usePushNotifications = (
     // ── Foreground messages ─────────────────────────────────────────────────
     // FCM does NOT show a system notification while the app is open.
     // We surface it via Toast so the user still sees it.
-    const unsubscribeForeground = messaging().onMessage(async (remoteMessage) => {
+    const unsubscribeForeground = m.onMessage(async (remoteMessage) => {
       const title = remoteMessage.notification?.title ?? '';
       const body  = remoteMessage.notification?.body  ?? '';
       errorLogger.debug('FCM foreground', { title });
@@ -86,7 +94,7 @@ export const usePushNotifications = (
 
     // ── Background notification tap ─────────────────────────────────────────
     // Fires when the user taps a system notification while the app is in background.
-    const unsubscribeBackgroundTap = messaging().onNotificationOpenedApp((remoteMessage) => {
+    const unsubscribeBackgroundTap = m.onNotificationOpenedApp((remoteMessage) => {
       errorLogger.debug('FCM background tap', { messageId: remoteMessage.messageId });
       if (onNotificationTap) {
         onNotificationTap(remoteMessage);
@@ -95,8 +103,7 @@ export const usePushNotifications = (
 
     // ── Quit-state notification tap ─────────────────────────────────────────
     // getInitialNotification resolves once; if null the app was opened normally.
-    messaging()
-      .getInitialNotification()
+    m.getInitialNotification()
       .then((remoteMessage) => {
         if (remoteMessage) {
           errorLogger.debug('FCM quit-state tap', { messageId: remoteMessage.messageId });
