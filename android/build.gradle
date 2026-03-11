@@ -39,6 +39,17 @@ allprojects {
         mavenCentral()
         maven { url 'https://www.jitpack.io' }
     }
+
+    // Firebase 25.x pulls in kotlinx-coroutines 1.9.0 which requires kotlin-stdlib 2.0.x.
+    // AGP < 8.x ships a D8 that cannot dex Kotlin 2.0 metadata (ERROR:D8: r8.kotlin.H).
+    // Even with AGP 8.x, pin coroutines to 1.8.1 to avoid any remaining compatibility gaps.
+    configurations.all {
+        resolutionStrategy {
+            force 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1'
+            force 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
+            force 'org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1'
+        }
+    }
 }
 
 
