@@ -5,13 +5,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
-  Dimensions,
   ActivityIndicator,
 } from 'react-native';
 import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
-
-const {width, height} = Dimensions.get('window');
+import motoristaService from '../../services/motoristaService';
+import MapaLocalizacaoMotorista from './MapaLocalizacaoMotorista';
 
 const LocalizacaoOnibus = ({ navigation, route }) => {
   const { rota, viagem } = route?.params || {};
@@ -79,18 +78,10 @@ const LocalizacaoOnibus = ({ navigation, route }) => {
     );
   }
 
-  const [posicaoOnibus, setPosicaoOnibus] = useState({x: width / 2 - 20, y: height / 3});
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPosicaoOnibus((prev) => ({
-        x: Math.max(50, Math.min(width - 80, prev.x + (Math.random() - 0.5) * 10)),
-        y: Math.max(50, Math.min(height / 2, prev.y + (Math.random() - 0.5) * 10)),
-      }));
-      setDistanciaAluno((prev) => Math.max(0, prev - Math.random() * 50));
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
+  // pontosRota para o mapa: array com a posição do motorista (latitude/longitude)
+  const pontosRotaMapa = posicaoMotorista
+    ? [{ latitude: posicaoMotorista.latitude, longitude: posicaoMotorista.longitude }]
+    : [];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -110,29 +101,16 @@ const LocalizacaoOnibus = ({ navigation, route }) => {
         </View>
       </View>
 
-      {/* Map Container */}
+      {/* Map Container - mapa com localização do motorista em tempo real */}
       <View style={styles.mapaContainer}>
-        {/* Bus Marker */}
-        <View style={[styles.onibusMarker, { left: posicaoOnibus.x, top: posicaoOnibus.y }]}>
-          <View style={styles.onibusPulse} />
-          <View style={styles.onibusIconContainer}>
-            <Icon name={IconNames.bus} size="xl" color={colors.primary.contrast} />
+        {loading ? (
+          <View style={styles.mapLoading}>
+            <ActivityIndicator size="large" color={colors.primary.main} />
+            <Text style={styles.mapLoadingText}>Buscando localização do ônibus...</Text>
           </View>
-        </View>
-
-        {/* Student Marker */}
-        <View style={styles.alunoMarker}>
-          <View style={styles.alunoIconContainer}>
-            <Icon name={IconNames.person} size="lg" color={colors.secondary.main} />
-          </View>
-          <Text style={styles.alunoLabel}>Você</Text>
-        </View>
-
-        {/* Map Placeholder */}
-        <View style={styles.mapPlaceholder}>
-          <Icon name={IconNames.map} size="huge" color={colors.neutral[200]} />
-          <Text style={styles.mapPlaceholderText}>Mapa em tempo real</Text>
-        </View>
+        ) : (
+          <MapaLocalizacaoMotorista pontosRota={pontosRotaMapa} />
+        )}
       </View>
 
       {/* Info Panel */}
@@ -212,56 +190,13 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
-  mapPlaceholder: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
+  mapLoading: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
-  mapPlaceholderText: { ...textStyles.body, color: colors.neutral[400] },
-  onibusMarker: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
-  onibusIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary.main,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...shadows.lg,
-  },
-  onibusPulse: {
-    position: 'absolute',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primary.main,
-    opacity: 0.2,
-  },
-  alunoMarker: {
-    position: 'absolute',
-    bottom: 100,
-    right: 40,
-    alignItems: 'center',
-    zIndex: 5,
-  },
-  alunoIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.lighter,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: colors.background.paper,
-    ...shadows.md,
-  },
-  alunoLabel: { ...textStyles.caption, color: colors.text.primary, marginTop: spacing.xs, fontWeight: '600' },
+  mapLoadingText: { ...textStyles.body, color: colors.text.secondary },
   infoPanel: {
     backgroundColor: colors.background.paper,
     padding: spacing.lg,
