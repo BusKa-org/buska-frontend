@@ -10,8 +10,6 @@ import {
   RefreshControl,
 } from 'react-native';
 import { alunoService } from '../../services';
-import * as rotaService from '../../services/rotaService';
-import * as veiculoService from '../../services/veiculoService';
 import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
 import { useToast } from '../../components/Toast';
@@ -24,14 +22,6 @@ const RotaAluno = ({navigation, route}) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [updatingPresenca, setUpdatingPresenca] = useState(null);
-  const [capacidadesRotas, setCapacidadesRotas] = useState({});
-  const [alunosInfo, setAlunosInfo] = useState({
-    totalAlunos: 0,
-    alunosConfirmados: 0,
-    capacidadeTotal: 0,
-    vagasDisponiveis: 0,
-    temEspaco: true,
-  });
   const isMountedRef = useRef(true);
 
   const isAllTrips = !rota; // Show all trips mode
@@ -128,72 +118,14 @@ const RotaAluno = ({navigation, route}) => {
     }
   };
 
-  const viagem = viagens && viagens.length > 0 ? viagens[0] : null;
-
-  useEffect(() => {
-    const calcularLotacaoDoVeiculo = async () => {
-      if (!viagem) {
-        setAlunosInfo({
-          totalAlunos: 0,
-          alunosConfirmados: 0,
-          capacidadeTotal: 0,
-          vagasDisponiveis: 0,
-          temEspaco: true,
-        });
-        return;
-      }
-      
-      const confirmados = viagem.alunos_confirmados_count || 0;
-      const inscritos = viagem.total_alunos || 0;
-      let capacidadeDoVeiculo = inscritos; 
-
-      try {
-        console.log(viagem);
-        if (viagem.rota_id) {
-          const rota = await rotaService.getRota(viagem.rota_id);
-          console.log(rota);
-          if (rota && rota.veiculo_id) {
-            const veiculo = await veiculoService.getVeiculo(rota.veiculo_id);
-            
-            console.log(veiculo);
-            if (veiculo && veiculo.capacidade) {
-              capacidadeDoVeiculo = veiculo.capacidade;
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Erro ao calcular lotação", error);
-      }
-
-      const vagasRestantes = capacidadeDoVeiculo - confirmados;
-      const aindaTemEspaco = confirmados < capacidadeDoVeiculo;
-
-      setAlunosInfo({
-        totalAlunos: inscritos,
-        alunosConfirmados: confirmados,
-        capacidadeTotal: capacidadeDoVeiculo,
-        vagasDisponiveis: vagasRestantes > 0 ? vagasRestantes : 0,
-        temEspaco: aindaTemEspaco,
-      });
-    };
-
-    calcularLotacaoDoVeiculo();
-  }, [viagem]);
-
   const podeConfirmar = (viagem) => {
-    const isConfirmed = presencasStatus[viagem.id] ?? viagem.status_confirmacao;
-
-    if (viagens && viagens.length > 0 && viagem.id === viagens[0].id) {
-      if (!isConfirmed && !alunosInfo.temEspaco) {
-        return false; 
-      }
-    }
-
-    if (capacidadesRotas[viagem.rota_id] === false) return false;
+    // Can confirm if trip date is today or future
     if (!viagem.data) return true;
-
+    
+    // Parse date as local time (not UTC) to avoid timezone issues
+    // '2026-01-28' -> new Date(2026, 0, 28) in local timezone
     const [year, month, day] = viagem.data.split('-').map(Number);
-    const tripDate = new Date(year, month - 1, day); 
+    const tripDate = new Date(year, month - 1, day); // month is 0-indexed
     
     if (isNaN(tripDate.getTime())) return true;
     

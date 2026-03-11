@@ -1,37 +1,48 @@
 import React from 'react';
-import { Platform } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import {Platform} from 'react-native';
 import MainNavigator from './src/navigation/MainNavigator';
-import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import { AuthProvider } from './src/contexts/AuthContext';
 import { ToastProvider } from './src/components';
-import SplashScreen from './src/screens/SplashScreen';
 
-const Root = () => {
-  const { loading } = useAuth();
+// Detecta se está na web
+const isWeb = Platform.OS === 'web' || typeof window !== 'undefined';
 
-  if (loading) {
-    return <SplashScreen />;
+// Para mobile, usa NavigationContainer do React Navigation
+let NavigationContainer = null;
+
+if (!isWeb) {
+  try {
+    const ReactNavigation = require('@react-navigation/native');
+    NavigationContainer = ReactNavigation.NavigationContainer;
+  } catch (e) {
+    // React Navigation not available
   }
-
-  return <MainNavigator />;
-};
+}
 
 function App() {
-  const isWeb = Platform.OS === 'web';
+  // Se estiver na web ou NavigationContainer não estiver disponível, renderiza diretamente
+  if (isWeb || !NavigationContainer) {
+    return (
+      <AuthProvider>
+        <ToastProvider>
+          <MainNavigator />
+        </ToastProvider>
+      </AuthProvider>
+    );
+  }
 
+  // Para mobile, usa NavigationContainer
   return (
     <AuthProvider>
       <ToastProvider>
-        {isWeb ? (
-          <Root />
-        ) : (
-          <NavigationContainer>
-            <Root />
-          </NavigationContainer>
-        )}
+        <NavigationContainer>
+          <MainNavigator />
+        </NavigationContainer>
       </ToastProvider>
     </AuthProvider>
   );
 }
 
 export default App;
+
+

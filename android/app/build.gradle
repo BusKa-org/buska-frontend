@@ -1,85 +1,49 @@
 apply plugin: "com.android.application"
 apply plugin: "com.facebook.react"
 
-import java.util.Properties
-
-def keystorePropertiesFile = rootProject.file("keystore.properties")
-def keystoreProperties = new Properties()
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-}
-
-apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
-
-// Vector Icons
+// Vector Icons - copy font files
 project.ext.vectoricons = [
     iconFontNames: [ 'MaterialIcons.ttf' ]
 ]
 apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
+
+react {
+    /* Autolinking */
+    autolinkLibrariesWithApp()
+}
 
 def enableProguardInReleaseBuilds = false
 def jscFlavor = 'org.webkit:android-jsc:+'
 
 android {
     ndkVersion rootProject.ext.ndkVersion
+
     compileSdkVersion rootProject.ext.compileSdkVersion
 
-    namespace "br.edu.ufcg.projeto1.buska"
-
-    buildFeatures {
-        buildConfig true
-    }
-    
+    namespace "com.projeto1"
     defaultConfig {
-        applicationId "br.edu.ufcg.projeto1.buska"
+        applicationId "com.projeto1"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode System.getenv("GITHUB_RUN_NUMBER") ? System.getenv("GITHUB_RUN_NUMBER").toInteger() : 1
+        versionCode 1
         versionName "1.0"
-        resValue "string", "build_config_package", "br.edu.ufcg.projeto1.buska"
     }
-
     signingConfigs {
         debug {
-            def dFile = project.hasProperty('BUSKA_DEBUG_STORE_FILE') ? project.getProperty('BUSKA_DEBUG_STORE_FILE') : keystoreProperties["debug.storeFile"]
-            def dPass = project.hasProperty('BUSKA_DEBUG_STORE_PASSWORD') ? project.getProperty('BUSKA_DEBUG_STORE_PASSWORD') : keystoreProperties["debug.storePassword"]
-            def dAlias = project.hasProperty('BUSKA_DEBUG_KEY_ALIAS') ? project.getProperty('BUSKA_DEBUG_KEY_ALIAS') : keystoreProperties["debug.keyAlias"]
-            def dKeyPass = project.hasProperty('BUSKA_DEBUG_KEY_PASSWORD') ? project.getProperty('BUSKA_DEBUG_KEY_PASSWORD') : keystoreProperties["debug.keyPassword"]
-
-            storeFile file(dFile)
-            storePassword dPass
-            keyAlias dAlias
-            keyPassword dKeyPass
-        }
-
-        release {
-            def rFile = project.hasProperty('BUSKA_RELEASE_STORE_FILE') ? project.getProperty('BUSKA_RELEASE_STORE_FILE') : keystoreProperties["release.storeFile"]
-            def rPass = project.hasProperty('BUSKA_RELEASE_STORE_PASSWORD') ? project.getProperty('BUSKA_RELEASE_STORE_PASSWORD') : keystoreProperties["release.storePassword"]
-            def rAlias = project.hasProperty('BUSKA_RELEASE_KEY_ALIAS') ? project.getProperty('BUSKA_RELEASE_KEY_ALIAS') : keystoreProperties["release.keyAlias"]
-            def rKeyPass = project.hasProperty('BUSKA_RELEASE_KEY_PASSWORD') ? project.getProperty('BUSKA_RELEASE_KEY_PASSWORD') : keystoreProperties["release.keyPassword"]
-
-            if (rFile != null) {
-                storeFile file(rFile)
-                storePassword rPass
-                keyAlias rAlias
-                keyPassword rKeyPass
-            }
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
         }
     }
-
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
-            // Use a suffix so both Dev and Prod can be installed at once
-            applicationIdSuffix ".debug"
-            resValue "string", "app_name", project.env.get("APP_NAME")
         }
         release {
-            signingConfig signingConfigs.release
-
+            signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
-            resValue "string", "app_name", project.env.get("APP_NAME")
         }
     }
 }
@@ -92,9 +56,5 @@ dependencies {
     } else {
         implementation jscFlavor
     }
-    
-    implementation project(':react-native-config')
 }
 
-apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle");
-applyNativeModulesAppBuildGradle(project)

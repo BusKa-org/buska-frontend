@@ -35,10 +35,21 @@ const CriarRota = ({navigation}) => {
 
     try {
       setLoading(true);
+      const response = await motoristaService.criarRota({ nome: nomeRota.trim() });
+      const rotaId = response?.id;
       
+      if (!rotaId) {
+        toast.error('Rota criada mas ID não disponível. Tente novamente.');
+        return;
+      }
+      
+      // Create rota object with the info we have
       const rotaData = {
+        id: rotaId,
         nome: nomeRota.trim(),
       };
+      
+      toast.success('Rota criada com sucesso!');
       
       // Navigate directly after success
       navigation.navigate('DefinirPontosRota', {
@@ -75,9 +86,7 @@ const CriarRota = ({navigation}) => {
       <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
           <View style={styles.infoBox}>
-            <View style={styles.infoIcon}>
-              <Icon name={IconNames.location} size="md" color={colors.info.main} />
-            </View>
+            <Icon name={IconNames.location} size="md" color={colors.info.main} />
             <Text style={styles.infoText}>
               Crie uma nova rota para seu município. Após criar, você poderá
               adicionar os pontos de parada.
@@ -188,9 +197,7 @@ const styles = StyleSheet.create({
     borderLeftColor: colors.info.main,
     flexDirection: 'row',
     alignItems: 'flex-start',
-  },
-  infoIcon: {
-    marginRight: spacing.sm,
+    gap: spacing.sm,
   },
   infoText: {
     ...textStyles.bodySmall,

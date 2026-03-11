@@ -9,5 +9,4 @@
 
 # Add any project specific keep options here:
 
--keep class com.lugg.RNCConfig.** { *; }
--keep class com.mypackage.BuildConfig { *; }
+

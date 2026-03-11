@@ -1,25 +1,24 @@
 // API Configuration
 // Update these values according to your backend setup
 
-import Config from "react-native-config";
-import { Platform } from 'react-native';
-
-// __DEV__ is a global constant in React Native that is 
-// true during development and false in release builds.
-const isDevelopment = __DEV__;
-const isWeb = Platform.OS === 'web';
-
-// Na Web, o Config vira um objeto vazio, por isso o undefined.
-// Usamos o process.env (padrão Web) ou uma string fixa como fallback.
-export const API_BASE_URL = isWeb 
-  ? process.env.API_URL
-  : Config.API_URL;
-
-console.log(`[${Platform.OS.toUpperCase()}] API URL:`, API_BASE_URL);
+// Detect environment - works for both React Native and Web
+const isDevelopment = process.env.NODE_ENV !== 'production';
 
 const API_CONFIG = {
+  // Development - adjust port if your Flask backend runs on a different port
+  DEVELOPMENT: 'http://localhost:5000',
+  
+  // Production - update with your production API URL
+  PRODUCTION: 'https://your-production-api.com',
+  
+  // Use this to switch between environments
   ENV: isDevelopment ? 'development' : 'production',
-  BASE_URL: API_BASE_URL,
 };
 
+export const API_BASE_URL = 
+  API_CONFIG.ENV === 'production' 
+    ? API_CONFIG.PRODUCTION 
+    : API_CONFIG.DEVELOPMENT;
+
 export default API_CONFIG;
+

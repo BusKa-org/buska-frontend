@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, {useState, useEffect, useMemo} from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,6 @@ import {
 import { alunoService } from '../../services';
 import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
-
-import MapaComponent from '../Motorista/MapaComponent'; 
 
 const DetalheViagem = ({navigation, route}) => {
   const {rota, viagem} = route?.params || {};
@@ -241,24 +239,11 @@ const DetalheViagem = ({navigation, route}) => {
           {/* Map Placeholder */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Mapa da Rota</Text>
-            
-            {carregandoPontos ? (
-              <View style={styles.mapaPlaceholder}>
-                <Text style={styles.mapaPlaceholderLabel}>Carregando mapa...</Text>
-              </View>
-            ) : pontosRota.length > 0 ? (
-              <MapaComponent 
-                pontosRota={pontosRota} 
-                onPontoChegado={() => {
-                  Alert.alert('Chegou!', 'Você se aproximou do ponto de embarque.');
-                }} 
-              />
-            ) : (
-              <View style={styles.mapaPlaceholder}>
-                <Icon name={IconNames.map} size="huge" color={colors.neutral[300]} />
-                <Text style={styles.mapaPlaceholderLabel}>Sem rota definida</Text>
-              </View>
-            )}
+            <View style={styles.mapaPlaceholder}>
+              <Icon name={IconNames.map} size="huge" color={colors.neutral[300]} />
+              <Text style={styles.mapaPlaceholderLabel}>Mapa com pontos da rota</Text>
+              <Text style={styles.mapaPlaceholderSubtext}>(Em implementação)</Text>
+            </View>
           </View>
 
           {/* Actions */}
