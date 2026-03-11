@@ -183,7 +183,7 @@ const LocalizacaoOnibus = ({ navigation, route }) => {
             <View style={styles.infoIconContainer}>
               <Icon name={IconNames.schedule} size="md" color={colors.secondary.main} />
             </View>
-            <Text style={styles.infoLabel}>Tempo estimado (25 km/h)</Text>
+            <Text style={styles.infoLabel}>Tempo estimado</Text>
             <Text style={styles.infoValue}>
               {distanciaMetros == null ? '—' : `${tempoEstimadoMinutos(distanciaMetros)} min`}
             </Text>
