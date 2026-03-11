@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,18 @@ import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeigh
 import Icon, { IconNames } from '../../components/Icon';
 import { motoristaService } from '../../services/motoristaService';
 import { useToast } from '../../components/Toast';
+
+// Geolocation: use community package on native; fallback to global on web
+let Geolocation = null;
+try {
+  Geolocation = require('@react-native-community/geolocation').default;
+} catch (_) {
+  if (typeof navigator !== 'undefined' && navigator.geolocation) {
+    Geolocation = navigator.geolocation;
+  }
+}
+
+const GPS_SEND_INTERVAL_MS = 20000; // send position every 20 seconds
 
 const InicioFimViagem = ({navigation, route}) => {
   const viagemParam = route?.params?.viagem;
@@ -81,6 +93,36 @@ const InicioFimViagem = ({navigation, route}) => {
         clearInterval(id);
       }
     };
+  }, [viagemIniciada]);
+
+  // Send motorista GPS position to backend while trip is active
+  const viagemIdRef = useRef(viagem?.id || viagemParam?.id);
+  viagemIdRef.current = viagem?.id || viagemParam?.id;
+
+  useEffect(() => {
+    if (!viagemIniciada || !viagemIdRef.current || !Geolocation) return;
+
+    const sendPosition = () => {
+      Geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          motoristaService
+            .enviarLocalizacao(viagemIdRef.current, { latitude, longitude })
+            .catch((err) => {
+              console.warn('Erro ao enviar localização:', err?.message || err);
+            });
+        },
+        (err) => {
+          console.warn('Erro ao obter localização:', err?.message || err);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+      );
+    };
+
+    sendPosition(); // send immediately when trip starts
+    const gpsIntervalId = setInterval(sendPosition, GPS_SEND_INTERVAL_MS);
+
+    return () => clearInterval(gpsIntervalId);
   }, [viagemIniciada]);
 
   // Helper functions
