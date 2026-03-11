@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,15 +6,58 @@ import {
   StyleSheet,
   SafeAreaView,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
 
 const {width, height} = Dimensions.get('window');
 
-const LocalizacaoOnibus = ({navigation, route}) => {
-  const {rota, viagem} = route?.params || {};
+const LocalizacaoOnibus = ({ navigation, route }) => {
+  const { rota, viagem } = route?.params || {};
 
+  // 1. Criamos um estado para guardar a posição real do motorista
+  const [posicaoMotorista, setPosicaoMotorista] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [distanciaAluno, setDistanciaAluno] = useState(1500); // Mantenha se ainda for usar a lógica de distância
+
+  // 2. Movemos o fetch da API para dentro de um useEffect
+  useEffect(() => {
+    // Função assíncrona interna para poder usar o await
+    const buscarLocalizacao = async () => {
+      if (!viagem?.viagem_id) return;
+      
+      try {
+        // Pega as coordenadas na API
+        const dadosLocalizacao = await motoristaService.obterLocalizacao(viagem.viagem_id);
+        
+        // Atualiza o estado com a latitude e longitude recebidas
+        // (Ajuste caso o formato de retorno da sua API seja diferente)
+        setPosicaoMotorista({
+          latitude: dadosLocalizacao.latitude,
+          longitude: dadosLocalizacao.longitude,
+        });
+      } catch (error) {
+        console.log('Erro ao buscar localização do motorista:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Busca a primeira vez imediatamente
+    buscarLocalizacao();
+
+    // Configura o polling: busca a posição real a cada 5 segundos (5000ms)
+    const interval = setInterval(() => {
+      buscarLocalizacao();
+      // Simulação da distância diminuindo (substitua pela lógica real depois)
+      setDistanciaAluno((prev) => Math.max(0, prev - Math.random() * 50));
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [viagem?.viagem_id]);
+
+  // Validação inicial (Se não houver rota ou viagem)
   if (!rota || !viagem) {
     return (
       <SafeAreaView style={styles.container}>
@@ -36,7 +79,6 @@ const LocalizacaoOnibus = ({navigation, route}) => {
     );
   }
 
-  const [distanciaAluno, setDistanciaAluno] = useState(1500);
   const [posicaoOnibus, setPosicaoOnibus] = useState({x: width / 2 - 20, y: height / 3});
 
   useEffect(() => {
