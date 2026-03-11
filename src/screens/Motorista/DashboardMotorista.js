@@ -358,14 +358,7 @@ const DashboardMotorista = ({navigation}) => {
           )}
 
           <View style={styles.botoesRow}>
-            <TouchableOpacity
-              style={styles.botaoRapido}
-              onPress={() => navigation.navigate('ChatGestor')}>
-              <View style={styles.botaoIconContainer}>
-                <Icon name={IconNames.chat} size="lg" color={colors.secondary.main} />
-              </View>
-              <Text style={styles.botaoRapidoText}>Chat</Text>
-            </TouchableOpacity>
+            
 
             <TouchableOpacity
               style={styles.botaoRapido}

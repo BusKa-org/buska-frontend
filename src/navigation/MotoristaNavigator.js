@@ -58,7 +58,6 @@ const MotoristaNavigator = () => {
           <Screen name="DefinirHorariosRota" component={DefinirHorariosRota} />
           <Screen name="RotaOtimizada" component={RotaOtimizada} />
           <Screen name="InicioFimViagem" component={InicioFimViagem} />
-          <Screen name="ChatGestor" component={ChatGestor} />
           <Screen
             name="ConfigNotificacoesMotorista"
             component={ConfigNotificacoesMotorista}
@@ -99,7 +98,6 @@ const MotoristaNavigator = () => {
       <Stack.Screen name="DefinirHorariosRota" component={DefinirHorariosRota} />
       <Stack.Screen name="RotaOtimizada" component={RotaOtimizada} />
       <Stack.Screen name="InicioFimViagem" component={InicioFimViagem} />
-      <Stack.Screen name="ChatGestor" component={ChatGestor} />
       <Stack.Screen
         name="ConfigNotificacoesMotorista"
         component={ConfigNotificacoesMotorista}
