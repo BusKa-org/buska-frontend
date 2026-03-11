@@ -20,8 +20,8 @@ function App() {
   const isWeb = Platform.OS === 'web';
 
   return (
-    <AuthProvider>
-      <ToastProvider>
+    <ToastProvider>
+      <AuthProvider>
         {isWeb ? (
           <Root />
         ) : (
@@ -29,8 +29,8 @@ function App() {
             <Root />
           </NavigationContainer>
         )}
-      </ToastProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </ToastProvider>
   );
 }
 

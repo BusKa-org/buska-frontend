@@ -1,7 +1,10 @@
-import React, { createContext, useState, useEffect, useContext, useMemo } from 'react';
+import React, { createContext, useState, useEffect, useContext, useMemo, useCallback } from 'react';
 import { authService } from '../services/authService';
 import { userService } from '../services/userService';
 import { parseApiError, requiresReauth, errorLogger } from '../utils/errors';
+import { ErrorCode } from '../utils/errors/errorTypes';
+import { usePushNotifications } from '../hooks/usePushNotifications';
+import { useToast } from '../components/Toast';
 
 const AuthContext = createContext(null);
 
@@ -9,6 +12,14 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const toast = useToast();
+
+  const handleForegroundMessage = useCallback(({ title, body }) => {
+    toast.info(`${title}${body ? `\n${body}` : ''}`, 5000);
+  }, [toast]);
+
+  usePushNotifications(isAuthenticated, handleForegroundMessage);
 
   useEffect(() => {
     checkAuthStatus();
@@ -57,10 +68,15 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       const parsedError = parseApiError(error);
       errorLogger.userError('login', parsedError, { email });
-      
+
+      // On the login screen a 401 always means wrong credentials, not "not logged in"
+      const message = parsedError.code === ErrorCode.UNAUTHORIZED
+        ? 'E-mail ou senha incorretos.'
+        : parsedError.message;
+
       return {
         success: false,
-        error: parsedError.message,
+        error: message,
         errorCode: parsedError.code,
         errorCategory: parsedError.category,
       };

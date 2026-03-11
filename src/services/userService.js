@@ -41,6 +41,19 @@ export const userService = {
   },
 
   /**
+   * Register or refresh the FCM push token for this device
+   * Backend: PATCH /v1/users/fcm-token
+   */
+  async updateFcmToken(fcmToken) {
+    try {
+      const response = await api.patch('/users/fcm-token', { fcm_token: fcmToken });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
    * Change password
    * Backend: POST /v1/users/change-password
    */

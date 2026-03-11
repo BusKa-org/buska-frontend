@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "253030859174",
+    "project_id": "buska-ufcg",
+    "storage_bucket": "buska-ufcg.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:253030859174:android:fd572ad2d85b292b5c4f67",
+        "android_client_info": {
+          "package_name": "br.edu.ufcg.projeto1.buska"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAsiXiDMYbaIZIs3Zq3wjHD8fWCPOPCWUQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

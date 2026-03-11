@@ -50,7 +50,7 @@ export const createNotificacao = async (notificacaoData) => {
  * @returns {Promise<Object>} Updated notification
  */
 export const markNotificacaoAsSent = async (notificacaoId) => {
-  const response = await api.patch(`/notificacoes/${notificacaoId}`, { enviada: true });
+  const response = await api.patch(`/notificacoes/${notificacaoId}/lida`);
   return response.data;
 };
 
