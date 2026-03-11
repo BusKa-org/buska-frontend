@@ -17,8 +17,8 @@
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
     "@react-native-async-storage/async-storage": "^2.2.0",
-    "@react-native-firebase/app": "21.13.0",
-    "@react-native-firebase/messaging": "21.13.0",
+    "@react-native-firebase/app": "20.5.0",
+    "@react-native-firebase/messaging": "20.5.0",
     "@react-native-community/geolocation": "^3.2.1",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/native-stack": "^6.10.4",
