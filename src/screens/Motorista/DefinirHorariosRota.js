@@ -35,6 +35,7 @@ const DefinirHorariosRota = ({ navigation, route }) => {
   const { rota, isNovaRota } = params;
   const rotaId = rota?.id;
   const rotaNome = rota?.nome || 'Rota';
+  const pontosRota = rota?.pontos || [];
 
   const toast = useToast();
 
@@ -94,19 +95,12 @@ const DefinirHorariosRota = ({ navigation, route }) => {
     }
 
     try {
-      setSalvando(true);
-      await motoristaService.adicionarHorarioRota(rotaId, {
+      setHorarios([...horarios, {
         horario_saida: novoHorario,
         sentido: novoSentido,
         dias: novosDias,
-      });
-
-      toast.success('Horário adicionado!');
+      }]);
       
-      // Reload schedules
-      const data = await motoristaService.listarHorariosRota(rotaId);
-      setHorarios(data || []);
-
       // Reset form
       setNovoHorario('');
       setNovoSentido('IDA');
@@ -119,12 +113,24 @@ const DefinirHorariosRota = ({ navigation, route }) => {
     }
   };
 
-  const handleConcluir = () => {
+  const handleConcluir = async () => {
     if (horarios.length === 0) {
       toast.warning('Adicione pelo menos um horário antes de concluir');
       return;
     }
     toast.success('Rota configurada com sucesso!');
+    if(isNovaRota) {
+      await motoristaService.criarRota({
+        nome: rotaNome,
+        pontos: pontosRota.map(p => ({
+          ponto_id: p.id,
+          ordem: p.ordem,
+        })),
+        horarios: horarios,
+      });
+    } else {
+      await motoristaService.adicionarHorarioRota(rotaId, horarios);
+    }
     navigation.navigate('DashboardMotorista');
   };
 
@@ -136,27 +142,6 @@ const DefinirHorariosRota = ({ navigation, route }) => {
     }
     return dias.join(', ');
   };
-
-  if (!rotaId) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-              <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
-            </TouchableOpacity>
-            <View style={styles.headerTitleContainer}>
-              <Text style={styles.title}>Definir Horários</Text>
-            </View>
-          </View>
-        </View>
-        <View style={styles.emptyContainer}>
-          <Icon name={IconNames.warning} size="xxl" color={colors.warning.main} />
-          <Text style={styles.emptyContainerText}>Rota não encontrada</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.container}>

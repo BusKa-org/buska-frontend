@@ -44,6 +44,8 @@ export const motoristaService = {
       if (rotaData.horarios) {
         payload.horarios = rotaData.horarios;
       }
+
+      console.log(payload)
       
       const response = await api.post('/rotas/', payload);
       return response.data;
@@ -249,6 +251,14 @@ export const motoristaService = {
     }
     try {
       const response = await api.get(`/viagens/${viagemId}/pontos-embarque`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+  async listarMotoristas() {
+    try {
+      const response = await api.get('/users/motoristas'); 
       return response.data;
     } catch (error) {
       throw this.handleError(error);

@@ -17,35 +17,23 @@ export const AuthProvider = ({ children }) => {
   const checkAuthStatus = async () => {
     try {
       const hasToken = await authService.isAuthenticated();
-
+  
       if (hasToken) {
         try {
           const fullUserData = await userService.getCurrentUser();
-          await authService.updateStoredUser(fullUserData);
           setUser(fullUserData);
           setIsAuthenticated(true);
-          errorLogger.info('Auth restored from token', { userId: fullUserData.id });
         } catch (error) {
           const parsedError = parseApiError(error);
-          errorLogger.warn('Failed to restore auth', { error: parsedError.message });
-          
-          // If auth error, clear tokens
           if (requiresReauth(parsedError)) {
             await authService.logout();
-          } else {
-            // Try using stored user as fallback
-            const storedUser = await authService.getCurrentUser();
-            if (storedUser) {
-              setUser(storedUser);
-              setIsAuthenticated(true);
-            }
           }
         }
       }
     } catch (error) {
       errorLogger.error(error, { context: 'checkAuthStatus' });
     } finally {
-      setLoading(false);
+      setLoading(false); 
     }
   };
 
