@@ -15,6 +15,7 @@ const envUrl = isWeb ? process.env.API_URL : Config.API_URL;
 const DEFAULT_API_URL = 'http://localhost:5000';
 export const API_BASE_URL = (envUrl && envUrl !== 'undefined') ? envUrl : DEFAULT_API_URL;
 
+
 console.log(`[${Platform.OS.toUpperCase()}] API URL:`, API_BASE_URL);
 
 const API_CONFIG = {
