@@ -45,7 +45,7 @@ jobs:
           # Front/build outputs in workspace
           rm -rf android/app/build || true
           rm -rf android/build || true
-          rm -rf .gradle || true
+          #rm -rf .gradle || true
           rm -rf /tmp/* || true
 
           echo "=== Disk space after cleanup ==="
@@ -262,7 +262,7 @@ jobs:
           echo "Cleaning build leftovers..."
           rm -rf android/app/build || true
           rm -rf android/build || true
-          rm -rf .gradle || true
+          #rm -rf .gradle || true
           rm -rf /tmp/* || true
 
           echo "=== Disk space after workflow ==="
