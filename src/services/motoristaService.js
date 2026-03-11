@@ -44,6 +44,8 @@ export const motoristaService = {
       if (rotaData.horarios) {
         payload.horarios = rotaData.horarios;
       }
+
+      console.log(payload)
       
       const response = await api.post('/rotas/', payload);
       return response.data;

@@ -157,6 +157,8 @@ const CriarViagem = ({navigation, route}) => {
         data: data.trim(),
         horario_id: horarioSelecionado || undefined,
       };
+
+      console.log(viagemData)
       
       await motoristaService.criarViagem(viagemData);
 

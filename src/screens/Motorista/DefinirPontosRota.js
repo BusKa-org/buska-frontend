@@ -47,10 +47,6 @@ const RotaMapaSimples = ({ pontos, onPontoChegado }) => {
     );
   }
 
-  const polylinePoints = positions
-    .map(p => `${p.xPercent},${p.yPercent}`)
-    .join(' ');
-
   return (
     <View style={mapStyles.container}>
       <View style={mapStyles.header}>
@@ -591,31 +587,28 @@ const DefinirPontosRota = ({navigation, route}) => {
   };
 
   const handleSalvarPontos = async () => {
-    if (!rotaId) {
-      toast.error('Rota não encontrada.');
-      return;
-    }
-
     if (pontosRota.length === 0) {
       toast.error('Adicione pelo menos um ponto.');
       return;
     }
 
     try {
-      setSalvando(true);
-      
-      // Send all points in a single batch request
-      await motoristaService.adicionarPontosRota(rotaId, pontosRota);
-      
-      toast.success('Pontos salvos com sucesso!');
-      
       // For new routes, go to schedule configuration
       if (isNovaRota) {
         navigation.navigate('DefinirHorariosRota', {
-          rota: { id: rotaId, nome: rotaNome },
+          rota: { nome: rotaNome, pontos: pontosRota },
           isNovaRota: true,
         });
       } else {
+        if (!rotaId) {
+          toast.error('Rota não encontrada.');
+          return;
+        }
+        
+        setSalvando(true);
+        await motoristaService.adicionarPontosRota(rotaId, pontosRota);
+      
+        toast.success('Pontos salvos com sucesso!');
         navigation.goBack();
       }
     } catch (error) {
