@@ -14,61 +14,22 @@ import {motoristaService} from '../../services/motoristaService';
 import { colors, spacing, borderRadius, shadows, textStyles, fontWeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
 import { useToast } from '../../components/Toast';
+import Svg, { Polyline } from 'react-native-svg';
+import MapaComponent from './MapaComponent'; 
 
-// Google Maps-style Route Map Component
-const RotaMapaSimples = ({ pontos }) => {
-  const MAP_HEIGHT = 280;
-  const PADDING = 40;
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [selectedPoint, setSelectedPoint] = useState(null);
-  
-  const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.3, 2.5));
-  const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.3, 0.5));
-
-  // Calculate bounds and positions
-  const { positions, hasValidPoints, bounds } = useMemo(() => {
-    const validPontos = pontos.filter(p => 
-      p.latitude != null && p.longitude != null &&
-      !isNaN(Number(p.latitude)) && !isNaN(Number(p.longitude))
+const RotaMapaSimples = ({ pontos, onPontoChegado }) => {
+  const { validPontos, hasValidPoints } = useMemo(() => {
+    const valid = (pontos || []).filter(
+      p =>
+        p.latitude != null &&
+        p.longitude != null &&
+        !isNaN(Number(p.latitude)) &&
+        !isNaN(Number(p.longitude)),
     );
 
-    if (validPontos.length === 0) {
-      return { positions: [], hasValidPoints: false, bounds: null };
-    }
-
-    const lats = validPontos.map(p => Number(p.latitude));
-    const lngs = validPontos.map(p => Number(p.longitude));
-    
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
-    const minLng = Math.min(...lngs);
-    const maxLng = Math.max(...lngs);
-    
-    const latRange = maxLat - minLat || 0.01;
-    const lngRange = maxLng - minLng || 0.01;
-    
-    // Use percentage-based positioning for responsiveness
-    const positions = validPontos.map((ponto, index) => {
-      const lat = Number(ponto.latitude);
-      const lng = Number(ponto.longitude);
-      
-      const xPercent = 10 + ((lng - minLng) / lngRange) * 80;
-      const yPercent = 10 + ((maxLat - lat) / latRange) * 80;
-      
-      return { 
-        ...ponto, 
-        xPercent, 
-        yPercent, 
-        index: index + 1,
-        isFirst: index === 0,
-        isLast: index === validPontos.length - 1,
-      };
-    });
-
-    return { 
-      positions, 
-      hasValidPoints: true,
-      bounds: { minLat, maxLat, minLng, maxLng }
+    return {
+      validPontos: valid,
+      hasValidPoints: valid.length > 0,
     };
   }, [pontos]);
 
@@ -90,144 +51,38 @@ const RotaMapaSimples = ({ pontos }) => {
     <View style={mapStyles.container}>
       <View style={mapStyles.header}>
         <Text style={mapStyles.title}>Mapa da Rota</Text>
-        <Text style={mapStyles.subtitle}>{positions.length} pontos</Text>
-      </View>
-      
-      <View style={[mapStyles.mapWrapper, { overflow: 'hidden', height: 220 }]}>
-        <div style={{ 
-          transform: `scale(${zoomLevel})`,
-          transformOrigin: 'center center',
-          width: '100%',
-          height: '100%',
-          position: 'relative',
-        }}>
-        <View style={[mapStyles.mapArea, { height: '100%' }]}>
-          {/* Terrain-like background */}
-          <View style={mapStyles.terrainBase} />
-          <View style={mapStyles.terrainOverlay} />
-          
-          {/* Subtle roads pattern */}
-          <View style={mapStyles.roadsPattern}>
-            <View style={[mapStyles.road, { top: '30%', width: '100%' }]} />
-            <View style={[mapStyles.road, { top: '60%', width: '100%' }]} />
-            <View style={[mapStyles.roadVertical, { left: '25%', height: '100%' }]} />
-            <View style={[mapStyles.roadVertical, { left: '75%', height: '100%' }]} />
-          </View>
-
-          {/* Route path with glow effect */}
-          {positions.length > 1 && (
-            <svg 
-              style={{ position: 'absolute', width: '100%', height: '100%', zIndex: 5 }}
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
-            >
-              {/* Glow/shadow line */}
-              <polyline
-                points={positions.map(p => `${p.xPercent},${p.yPercent}`).join(' ')}
-                fill="none"
-                stroke="rgba(66, 133, 244, 0.3)"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              {/* Main route line */}
-              <polyline
-                points={positions.map(p => `${p.xPercent},${p.yPercent}`).join(' ')}
-                fill="none"
-                stroke="#4285F4"
-                strokeWidth="0.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          )}
-
-          {/* Google Maps style pin markers */}
-          {positions.map((pos) => (
-            <TouchableOpacity
-              key={pos.id}
-              style={[
-                mapStyles.pinContainer,
-                { left: `${pos.xPercent}%`, top: `${pos.yPercent}%` },
-              ]}
-              onPress={() => setSelectedPoint(selectedPoint === pos.id ? null : pos.id)}
-              activeOpacity={0.8}
-            >
-              {/* Pin shadow */}
-              <View style={mapStyles.pinShadow} />
-              
-              {/* Pin body */}
-              <View style={[
-                mapStyles.pin,
-                pos.isFirst && mapStyles.pinStart,
-                pos.isLast && mapStyles.pinEnd,
-                !pos.isFirst && !pos.isLast && mapStyles.pinMiddle,
-              ]}>
-                <Text style={mapStyles.pinText}>{pos.index}</Text>
-              </View>
-              
-              {/* Pin pointer */}
-              <View style={[
-                mapStyles.pinPointer,
-                pos.isFirst && mapStyles.pinPointerStart,
-                pos.isLast && mapStyles.pinPointerEnd,
-                !pos.isFirst && !pos.isLast && mapStyles.pinPointerMiddle,
-              ]} />
-              
-              {/* Tooltip on selection */}
-              {selectedPoint === pos.id && (
-                <View style={mapStyles.tooltip}>
-                  <Text style={mapStyles.tooltipText} numberOfLines={1}>
-                    {pos.nome || pos.apelido}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
-
-        </View>
-        </div>
-        
-        {/* Map controls (functional) - outside zoom container */}
-        <View style={mapStyles.mapControls}>
-          <TouchableOpacity 
-            style={mapStyles.controlButton}
-            onPress={handleZoomIn}
-          >
-            <Text style={mapStyles.controlText}>+</Text>
-          </TouchableOpacity>
-          <View style={mapStyles.controlDivider} />
-          <TouchableOpacity 
-            style={mapStyles.controlButton}
-            onPress={handleZoomOut}
-          >
-            <Text style={mapStyles.controlText}>−</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Attribution - outside zoom container */}
-        <View style={mapStyles.attribution}>
-          <Text style={mapStyles.attributionText}>Rota Escolar • Zoom: {zoomLevel.toFixed(1)}x</Text>
-        </View>
+        <Text style={mapStyles.subtitle}>{validPontos.length} pontos</Text>
       </View>
 
-      {/* Route info */}
+      <View style={[mapStyles.mapWrapper, { height: 400, overflow: 'hidden' }]}>
+        <MapaComponent 
+          pontosRota={validPontos} 
+          onPontoChegado={onPontoChegado} 
+        />
+      </View>
+
       <View style={mapStyles.routeInfo}>
         <View style={mapStyles.routeInfoItem}>
           <View style={[mapStyles.infoDot, { backgroundColor: '#34A853' }]} />
           <Text style={mapStyles.infoLabel}>
-            {positions[0]?.nome || positions[0]?.apelido || 'Início'}
+            {validPontos[0]?.nome || validPontos[0]?.apelido || 'Destino Atual'}
           </Text>
         </View>
+
         <View style={mapStyles.routeInfoDivider}>
           <View style={mapStyles.routeInfoLine} />
-          <Text style={mapStyles.routeInfoPoints}>{positions.length - 2 > 0 ? `+${positions.length - 2}` : ''}</Text>
+          <Text style={mapStyles.routeInfoPoints}>
+            {validPontos.length - 2 > 0 ? `+${validPontos.length - 2}` : ''}
+          </Text>
           <View style={mapStyles.routeInfoLine} />
         </View>
+
         <View style={mapStyles.routeInfoItem}>
           <View style={[mapStyles.infoDot, { backgroundColor: '#EA4335' }]} />
           <Text style={mapStyles.infoLabel}>
-            {positions[positions.length - 1]?.nome || positions[positions.length - 1]?.apelido || 'Fim'}
+            {validPontos[validPontos.length - 1]?.nome ||
+              validPontos[validPontos.length - 1]?.apelido ||
+              'Fim da Rota'}
           </Text>
         </View>
       </View>
@@ -262,6 +117,11 @@ const mapStyles = StyleSheet.create({
   mapWrapper: {
     padding: spacing.sm,
     position: 'relative',
+    overflow: 'hidden',
+  },
+  zoomContainer: {
+    width: '100%',
+    height: '100%',
   },
   mapArea: {
     width: '100%',
@@ -269,6 +129,7 @@ const mapStyles = StyleSheet.create({
     borderRadius: borderRadius.md,
     position: 'relative',
     overflow: 'hidden',
+    backgroundColor: '#E8F0E8',
   },
   terrainBase: {
     position: 'absolute',
@@ -280,7 +141,14 @@ const mapStyles = StyleSheet.create({
     position: 'absolute',
     width: '100%',
     height: '100%',
-    backgroundColor: 'linear-gradient(135deg, #F0F4E8 0%, #E8F0E8 50%, #E0E8E0 100%)',
+    backgroundColor: '#EEF4EA',
+    opacity: 0.9,
+  },
+  routeSvg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    zIndex: 5,
   },
   roadsPattern: {
     position: 'absolute',
@@ -476,6 +344,29 @@ const mapStyles = StyleSheet.create({
   },
 });
 
+
+const buscarCoordenadas = async (endereco) => {
+  try {
+    const query = encodeURIComponent(endereco);
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`
+    );
+    const data = await response.json();
+
+    if (data && data.length > 0) {
+      return {
+        lat: data[0].lat,
+        lon: data[0].lon,
+        display_name: data[0].display_name
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error("Erro na busca de endereço:", error);
+    return null;
+  }
+};
+
 const DefinirPontosRota = ({navigation, route}) => {
   const params = route?.params || {};
   const {rota: rotaParam, viagem, isNovaRota} = params;
@@ -495,6 +386,38 @@ const DefinirPontosRota = ({navigation, route}) => {
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [adicionando, setAdicionando] = useState(null); // Track which point is being added
+  const [buscandoEndereco, setBuscandoEndereco] = useState(false);
+
+  const handleBuscarEndereco = async () => {
+    if (!novoPontoNome.trim()) {
+      toast.error('Digite o nome da rua ou local para buscar.');
+      return;
+    }
+
+    try {
+      setBuscandoEndereco(true);
+      
+      const query = encodeURIComponent(novoPontoNome);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`
+      );
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        setNovoPontoLat(data[0].lat);
+        setNovoPontoLon(data[0].lon);
+        console.log(data[0]);
+        toast.success('Coordenadas encontradas!');
+      } else {
+        toast.error('Local não encontrado. Tente ser mais específico (Ex: Nome da Rua, Cidade).');
+      }
+    } catch (error) {
+      console.error("Erro na busca:", error);
+      toast.error('Erro ao conectar com o serviço de mapas.');
+    } finally {
+      setBuscandoEndereco(false);
+    }
+  };
 
   // Load existing points
   useEffect(() => {
@@ -664,31 +587,28 @@ const DefinirPontosRota = ({navigation, route}) => {
   };
 
   const handleSalvarPontos = async () => {
-    if (!rotaId) {
-      toast.error('Rota não encontrada.');
-      return;
-    }
-
     if (pontosRota.length === 0) {
       toast.error('Adicione pelo menos um ponto.');
       return;
     }
 
     try {
-      setSalvando(true);
-      
-      // Send all points in a single batch request
-      await motoristaService.adicionarPontosRota(rotaId, pontosRota);
-      
-      toast.success('Pontos salvos com sucesso!');
-      
       // For new routes, go to schedule configuration
       if (isNovaRota) {
         navigation.navigate('DefinirHorariosRota', {
-          rota: { id: rotaId, nome: rotaNome },
+          rota: { nome: rotaNome, pontos: pontosRota },
           isNovaRota: true,
         });
       } else {
+        if (!rotaId) {
+          toast.error('Rota não encontrada.');
+          return;
+        }
+        
+        setSalvando(true);
+        await motoristaService.adicionarPontosRota(rotaId, pontosRota);
+      
+        toast.success('Pontos salvos com sucesso!');
         navigation.goBack();
       }
     } catch (error) {
@@ -854,44 +774,66 @@ const DefinirPontosRota = ({navigation, route}) => {
             
             {mostrarFormNovoPonto && (
               <View style={styles.formContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Nome do ponto (ex: Escola Municipal)"
-                  placeholderTextColor={colors.text.hint}
-                  value={novoPontoNome}
-                  onChangeText={setNovoPontoNome}
-                />
-                <View style={styles.coordRow}>
+                {/* Campo de Busca */}
+                <View style={{ flexDirection: 'row', marginBottom: 10 }}>
                   <TextInput
-                    style={[styles.input, styles.inputHalf]}
-                    placeholder="Latitude"
-                    placeholderTextColor={colors.text.hint}
-                    value={novoPontoLat}
-                    onChangeText={setNovoPontoLat}
-                    keyboardType="numeric"
+                    style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                    placeholder="Nome do ponto ou endereço"
+                    value={novoPontoNome}
+                    onChangeText={setNovoPontoNome}
                   />
-                  <TextInput
-                    style={[styles.input, styles.inputHalf]}
-                    placeholder="Longitude"
-                    placeholderTextColor={colors.text.hint}
-                    value={novoPontoLon}
-                    onChangeText={setNovoPontoLon}
-                    keyboardType="numeric"
-                  />
+                  <TouchableOpacity 
+                    onPress={handleBuscarEndereco}
+                    style={{ 
+                      backgroundColor: colors.secondary.main, 
+                      justifyContent: 'center', 
+                      paddingHorizontal: 15,
+                      borderRadius: 8,
+                      marginLeft: 8 
+                    }}
+                    disabled={buscandoEndereco}
+                  >
+                    {buscandoEndereco ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Icon name={IconNames.search} size="sm" color="#fff" />
+                    )}
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                  style={[styles.createButton, salvando && styles.buttonDisabled]}
-                  onPress={handleCriarNovoPonto}
-                  disabled={salvando}>
-                  {salvando ? (
-                    <ActivityIndicator size="small" color={colors.text.inverse} />
-                  ) : (
-                    <>
-                      <Icon name={IconNames.add} size="sm" color={colors.text.inverse} />
-                      <Text style={styles.createButtonText}>Criar e Adicionar</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
+
+                {/* O botão só aparece se as coordenadas já tiverem sido capturadas pela busca */}
+                {novoPontoLat && novoPontoLon ? (
+                  <TouchableOpacity 
+                    style={[
+                      styles.saveButton, 
+                      { backgroundColor: colors.success.main, marginTop: 5, height: 45 },
+                      salvando && { opacity: 0.6 }
+                    ]}
+                    onPress={handleCriarNovoPonto}
+                    disabled={salvando}
+                  >
+                    {salvando ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Icon name={IconNames.add} size="sm" color="#fff" />
+                        <Text style={{ color: '#fff', fontWeight: 'bold', marginLeft: 8 }}>
+                          Confirmar e Adicionar à Rota
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={{ 
+                    fontSize: 12, 
+                    color: colors.text.secondary, 
+                    textAlign: 'center', 
+                    marginTop: 5,
+                    fontStyle: 'italic' 
+                  }}>
+                    Busque um endereço para liberar a adição
+                  </Text>
+                )}
               </View>
             )}
           </View>
