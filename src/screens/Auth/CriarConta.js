@@ -112,6 +112,56 @@ const CriarConta = ({navigation}) => {
     return Object.keys(newErrors).length === 0;
   };
 
+
+  const [loadingCep, setLoadingCep] = useState(false);
+  const buscarCep = async (valorCep) => {
+  const cepSomenteNumeros = valorCep.replace(/\D/g, '');
+
+  if (cepSomenteNumeros.length === 8) {
+    try {
+      setLoadingCep(true);
+
+      const response = await fetch(`https://viacep.com.br/ws/${cepSomenteNumeros}/json/`);
+      const data = await response.json();
+      
+      console.log("Resposta do ViaCEP:", data); 
+      if (!data.erro) {
+        setLogradouro(data.logradouro || '');
+        setBairro(data.bairro || '');
+        setCidade(data.localidade || '');
+        
+        clearFieldError('logradouro');
+        clearFieldError('bairro');
+        clearFieldError('cidade');
+        
+        if (!data.logradouro) {
+           Alert.alert("Aviso", "Este CEP é geral. Por favor, preencha o logradouro e o bairro manualmente.");
+        }
+      } else {
+        Alert.alert("Erro", "CEP não encontrado na base de dados.");
+        setErrors(prev => ({ ...prev, cep: 'CEP não encontrado' }));
+      }
+    } catch (error) {
+      console.error("Erro na requisição do CEP:", error);
+      Alert.alert("Erro", "Não foi possível buscar o CEP. Verifique sua conexão.");
+    } finally {
+      setLoadingCep(false);
+    }
+  }
+};
+
+  const handleCepChange = (texto) => {
+    let cepFormatado = texto.replace(/\D/g, '');
+    if (cepFormatado.length > 5) {
+      cepFormatado = cepFormatado.replace(/^(\d{5})(\d)/, '$1-$2');
+    }
+    
+    setCep(cepFormatado);
+    clearFieldError('cep');
+
+    buscarCep(cepFormatado);
+  };
+
   const validateStep2 = () => {
     const newErrors = {};
     if (!nome.trim()) {
@@ -506,16 +556,20 @@ const CriarConta = ({navigation}) => {
               {/* Step 3: Endereço */}
               {step === STEPS.ADDRESS && (
                 <>
-                  <Text style={styles.sectionTitle}>Endereço Residencial</Text>
-                  <Text style={styles.label}>CEP *</Text>
+                  {/* CEP */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Text style={styles.label}>CEP *</Text>
+                    {loadingCep && <ActivityIndicator size="small" color={colors.primary.main} />}
+                  </View>
                   <TextInput
                     style={[styles.input, errors.cep && styles.inputError]}
                     placeholder="00000-000"
                     placeholderTextColor={colors.text.hint}
                     value={cep}
-                    onChangeText={(text) => { setCep(text); clearFieldError('cep'); }}
+                    onChangeText={handleCepChange}
                     keyboardType="numeric"
                     maxLength={9}
+                    editable={!loadingCep}
                   />
                   {renderFieldError('cep')}
 
