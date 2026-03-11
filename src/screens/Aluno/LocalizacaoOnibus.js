@@ -12,32 +12,75 @@ import Icon, { IconNames } from '../../components/Icon';
 import { motoristaService } from '../../services/motoristaService';
 import MapaLocalizacaoMotorista from './MapaLocalizacaoMotorista';
 
+// Geolocation: same as InicioFimViagem (native vs web)
+let Geolocation = null;
+try {
+  Geolocation = require('@react-native-community/geolocation').default;
+} catch (_) {
+  if (typeof navigator !== 'undefined' && navigator.geolocation) {
+    Geolocation = navigator.geolocation;
+  }
+}
+
+/** Distância em metros entre dois pontos (fórmula de Haversine). */
+function distanciaHaversineMetros(lat1, lon1, lat2, lon2) {
+  const R = 6371000; // raio da Terra em metros
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/** Tempo estimado em minutos: distância linear a 25 km/h. */
+function tempoEstimadoMinutos(distanciaMetros) {
+  const km = distanciaMetros / 1000;
+  const horas = km / 25;
+  return Math.max(1, Math.round(horas * 60));
+}
+
 const LocalizacaoOnibus = ({ navigation, route }) => {
   const { rota, viagem } = route?.params || {};
 
-  // 1. Criamos um estado para guardar a posição real do motorista
   const [posicaoMotorista, setPosicaoMotorista] = useState(null);
+  const [posicaoAluno, setPosicaoAluno] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [distanciaAluno, setDistanciaAluno] = useState(1500); // Mantenha se ainda for usar a lógica de distância
+  const [distanciaMetros, setDistanciaMetros] = useState(null);
 
-  // 2. Movemos o fetch da API para dentro de um useEffect
   const viagemId = viagem?.id ?? viagem?.viagem_id;
 
+  // Busca posição do motorista (API) e do aluno (GPS); recalcula distância quando ambas existem
   useEffect(() => {
-    // Função assíncrona interna para poder usar o await
+    const obterMinhaPosicao = () => {
+      if (!Geolocation) return;
+      Geolocation.getCurrentPosition(
+        (pos) => {
+          setPosicaoAluno({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          });
+        },
+        () => {},
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+      );
+    };
+
     const buscarLocalizacao = async () => {
       if (!viagemId) return;
-      
+
       try {
-        // Pega as coordenadas na API
         const dadosLocalizacao = await motoristaService.obterLocalizacao(viagemId);
-        
-        // Atualiza o estado com a latitude e longitude recebidas
-        // (Ajuste caso o formato de retorno da sua API seja diferente)
-        setPosicaoMotorista({
+        const motorista = {
           latitude: dadosLocalizacao.latitude,
           longitude: dadosLocalizacao.longitude,
-        });
+        };
+        setPosicaoMotorista(motorista);
+        obterMinhaPosicao();
       } catch (error) {
         console.log('Erro ao buscar localização do motorista:', error);
       } finally {
@@ -45,18 +88,22 @@ const LocalizacaoOnibus = ({ navigation, route }) => {
       }
     };
 
-    // Busca a primeira vez imediatamente
     buscarLocalizacao();
-
-    // Configura o polling: busca a posição real a cada 5 segundos (5000ms)
-    const interval = setInterval(() => {
-      buscarLocalizacao();
-      // Simulação da distância diminuindo (substitua pela lógica real depois)
-      setDistanciaAluno((prev) => Math.max(0, prev - Math.random() * 50));
-    }, 5000);
-
+    const interval = setInterval(buscarLocalizacao, 5000);
     return () => clearInterval(interval);
   }, [viagemId]);
+
+  // Recalcula distância (e tempo) quando temos as duas posições
+  useEffect(() => {
+    if (!posicaoMotorista || !posicaoAluno) return;
+    const metros = distanciaHaversineMetros(
+      posicaoAluno.latitude,
+      posicaoAluno.longitude,
+      posicaoMotorista.latitude,
+      posicaoMotorista.longitude
+    );
+    setDistanciaMetros(metros);
+  }, [posicaoMotorista, posicaoAluno]);
 
   // Validação inicial (Se não houver rota ou viagem)
   if (!rota || !viagem) {
@@ -124,7 +171,11 @@ const LocalizacaoOnibus = ({ navigation, route }) => {
             </View>
             <Text style={styles.infoLabel}>Distância até você</Text>
             <Text style={styles.infoValue}>
-              {distanciaAluno > 1000 ? `${(distanciaAluno / 1000).toFixed(1)} km` : `${Math.round(distanciaAluno)} m`}
+              {distanciaMetros == null
+                ? '—'
+                : distanciaMetros >= 1000
+                  ? `${(distanciaMetros / 1000).toFixed(1)} km`
+                  : `${Math.round(distanciaMetros)} m`}
             </Text>
           </View>
           <View style={styles.infoDivider} />
@@ -132,8 +183,10 @@ const LocalizacaoOnibus = ({ navigation, route }) => {
             <View style={styles.infoIconContainer}>
               <Icon name={IconNames.schedule} size="md" color={colors.secondary.main} />
             </View>
-            <Text style={styles.infoLabel}>Tempo estimado</Text>
-            <Text style={styles.infoValue}>{Math.max(1, Math.round(distanciaAluno / 200))} min</Text>
+            <Text style={styles.infoLabel}>Tempo estimado (25 km/h)</Text>
+            <Text style={styles.infoValue}>
+              {distanciaMetros == null ? '—' : `${tempoEstimadoMinutos(distanciaMetros)} min`}
+            </Text>
           </View>
         </View>
 
