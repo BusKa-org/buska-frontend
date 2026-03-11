@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
-import motoristaService from '../../services/motoristaService';
+import { motoristaService } from '../../services/motoristaService';
 import MapaLocalizacaoMotorista from './MapaLocalizacaoMotorista';
 
 const LocalizacaoOnibus = ({ navigation, route }) => {
@@ -21,14 +21,16 @@ const LocalizacaoOnibus = ({ navigation, route }) => {
   const [distanciaAluno, setDistanciaAluno] = useState(1500); // Mantenha se ainda for usar a lógica de distância
 
   // 2. Movemos o fetch da API para dentro de um useEffect
+  const viagemId = viagem?.id ?? viagem?.viagem_id;
+
   useEffect(() => {
     // Função assíncrona interna para poder usar o await
     const buscarLocalizacao = async () => {
-      if (!viagem?.viagem_id) return;
+      if (!viagemId) return;
       
       try {
         // Pega as coordenadas na API
-        const dadosLocalizacao = await motoristaService.obterLocalizacao(viagem.viagem_id);
+        const dadosLocalizacao = await motoristaService.obterLocalizacao(viagemId);
         
         // Atualiza o estado com a latitude e longitude recebidas
         // (Ajuste caso o formato de retorno da sua API seja diferente)
@@ -54,7 +56,7 @@ const LocalizacaoOnibus = ({ navigation, route }) => {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [viagem?.viagem_id]);
+  }, [viagemId]);
 
   // Validação inicial (Se não houver rota ou viagem)
   if (!rota || !viagem) {
