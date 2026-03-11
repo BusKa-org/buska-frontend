@@ -9,17 +9,35 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
+import api from '../../services/api';
 
 const RecuperarSenha = ({navigation}) => {
   const [email, setEmail] = useState('');
   const [enviado, setEnviado] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleRecuperarSenha = () => {
-    // TODO: Implement actual password recovery API call
-    setEnviado(true);
+  const handleRecuperarSenha = async () => {
+    const emailTrim = email.trim();
+    if (!emailTrim) {
+      setError('Informe seu e-mail');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      await api.post('/auth/forgot-password', { email: emailTrim.toLowerCase() });
+      setEnviado(true);
+    } catch (err) {
+      const msg = err?.message || err?.response?.data?.message || 'Não foi possível enviar o e-mail. Tente novamente.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (enviado) {
@@ -92,16 +110,25 @@ const RecuperarSenha = ({navigation}) => {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
+                  editable={!loading}
                 />
               </View>
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
               <TouchableOpacity
-                style={styles.recuperarButton}
-                onPress={handleRecuperarSenha}>
-                <Icon name="send" size="md" color={colors.primary.contrast} />
-                <Text style={styles.recuperarButtonText}>
-                  Enviar Link de Recuperação
-                </Text>
+                style={[styles.recuperarButton, loading && styles.recuperarButtonDisabled]}
+                onPress={handleRecuperarSenha}
+                disabled={loading}>
+                {loading ? (
+                  <ActivityIndicator color={colors.primary.contrast} />
+                ) : (
+                  <>
+                    <Icon name="send" size="md" color={colors.primary.contrast} />
+                    <Text style={styles.recuperarButtonText}>
+                      Enviar Link de Recuperação
+                    </Text>
+                  </>
+                )}
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -195,6 +222,11 @@ const styles = StyleSheet.create({
     fontSize: textStyles.inputText.fontSize,
     color: colors.text.primary,
   },
+  errorText: {
+    ...textStyles.bodySmall,
+    color: colors.error.main,
+    marginBottom: spacing.base,
+  },
   recuperarButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -208,6 +240,9 @@ const styles = StyleSheet.create({
   recuperarButtonText: {
     ...textStyles.button,
     color: colors.primary.contrast,
+  },
+  recuperarButtonDisabled: {
+    opacity: 0.7,
   },
   backLink: {
     flexDirection: 'row',
