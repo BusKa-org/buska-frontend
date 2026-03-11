@@ -241,6 +241,46 @@ export const motoristaService = {
   },
 
   /**
+   * Send current driver/bus GPS position (real-time tracking).
+   * Backend: POST /v1/viagens/{id}/localizacao
+   * @param {string} viagemId - Trip UUID
+   * @param {object} position - { latitude: number, longitude: number }
+   */
+  async enviarLocalizacao(viagemId, position) {
+    if (!viagemId || position?.latitude == null || position?.longitude == null) {
+      throw new Error('viagemId e latitude/longitude são obrigatórios');
+    }
+    try {
+      const response = await api.post(`/viagens/${viagemId}/localizacao`, {
+        latitude: Number(position.latitude),
+        longitude: Number(position.longitude),
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Get current driver/bus GPS position (real-time tracking).
+   * Backend: GET /v1/viagens/{id}/localizacao
+   * @param {string} viagemId - Trip UUID
+   * @returns {Promise<{latitude: number, longitude: number}>} Current position
+   */
+  async obterLocalizacao(viagemId) {
+    if (!viagemId) {
+      throw new Error('viagemId é obrigatório');
+    }
+    
+    try {
+      const response = await api.get(`/viagens/${viagemId}/localizacao`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
    * List confirmed students for a trip
    * Note: Backend may need this endpoint added
    * For now, try getting trip details

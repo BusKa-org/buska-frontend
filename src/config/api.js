@@ -11,9 +11,10 @@ const isWeb = Platform.OS === 'web';
 
 // Na Web, o Config vira um objeto vazio, por isso o undefined.
 // Usamos o process.env (padrão Web) ou uma string fixa como fallback.
-export const API_BASE_URL = isWeb 
-  ? process.env.API_URL
-  : Config.API_URL;
+const envUrl = isWeb ? process.env.API_URL : Config.API_URL;
+const DEFAULT_API_URL = 'http://localhost:5000';
+export const API_BASE_URL = (envUrl && envUrl !== 'undefined') ? envUrl : DEFAULT_API_URL;
+
 
 console.log(`[${Platform.OS.toUpperCase()}] API URL:`, API_BASE_URL);
 
