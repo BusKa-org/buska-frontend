@@ -4,8 +4,9 @@ const webpack = require('webpack');
 const Dotenv = require('dotenv-webpack');
 
 module.exports = {
-  entry: './index.web.js',
-  mode: 'development',
+  entry: './index.web.tsx',
+  mode: process.env.NODE_ENV || 'development',
+
   devServer: {
     static: {
       directory: path.join(__dirname, 'public'),
@@ -20,18 +21,19 @@ module.exports = {
     path: path.resolve(__dirname, 'dist'),
     filename: 'bundle.js',
     publicPath: '/',
+    clean: true,
   },
+  
   module: {
     rules: [
       {
         test: /\.(js|jsx|mjs|ts|tsx)$/,
-        // Many native libs need to be processed by babel-loader to work on web.
-        exclude: /node_modules\/(?!(react-native-vector-icons|react-native-safe-area-context|react-native-screens|@react-navigation|expo-font|@expo-google-fonts)\/).*/,
+        exclude:
+          /node_modules\/(?!(react-native-vector-icons|react-native-safe-area-context|react-native-screens|@react-navigation|expo-font|@expo-google-fonts)\/).*/,
         use: {
           loader: 'babel-loader',
           options: {
-            // Using the Metro preset ensures compatibility with React Native code
-            presets: ['module:metro-react-native-babel-preset', '@babel/preset-react'],
+            presets: ['module:metro-react-native-babel-preset'],
             plugins: ['react-native-web'],
           },
         },
@@ -56,21 +58,36 @@ module.exports = {
       },
     ],
   },
+
   resolve: {
     alias: {
       'react-native$': 'react-native-web',
       'react-native-vector-icons': 'react-native-vector-icons/dist',
+      '@': path.resolve(__dirname, 'src'),
     },
-    extensions: ['.web.js', '.js', '.jsx', '.json', '.mjs', '.ts', '.tsx'],
+    extensions: [
+      '.web.tsx',
+      '.web.ts',
+      '.tsx',
+      '.ts',
+      '.web.js',
+      '.js',
+      '.jsx',
+      '.json',
+      '.mjs',
+    ],
   },
+
   plugins: [
     new HtmlWebpackPlugin({
       template: './public/index.html',
       filename: 'index.html',
     }),
     new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
-      __DEV__: process.env.NODE_ENV !== 'production' || true,
+      'process.env.NODE_ENV': JSON.stringify(
+        process.env.NODE_ENV || 'development'
+      ),
+      __DEV__: JSON.stringify((process.env.NODE_ENV || 'development') !== 'production'),
     }),
     new Dotenv({
       path: './.env', // Garante que ele leia o arquivo da raiz
