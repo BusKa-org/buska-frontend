@@ -1,11 +1,19 @@
-import React, {useState, createContext, useContext} from 'react';
+import React, {useState, createContext, useContext, useEffect} from 'react';
 
 const NavigationContext = createContext();
+
+const formatTitle = (routeName) => `BusKá - ${routeName}`;
 
 export const NavigationProvider = ({children, initialRoute = 'Login'}) => {
   const [currentRoute, setCurrentRoute] = useState(initialRoute);
   const [routeParams, setRouteParams] = useState({});
   const [history, setHistory] = useState([{route: initialRoute, params: {}}]);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.title = formatTitle(currentRoute);
+    }
+  }, [currentRoute]);
 
   const navigate = (routeName, params = {}) => {
     setCurrentRoute(routeName);

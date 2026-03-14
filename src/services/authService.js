@@ -64,8 +64,8 @@ export const authService = {
     if (!userData.email?.trim()) {
       throw new ValidationError('E-mail é obrigatório', 'email');
     }
-    if (!userData.password || userData.password.length < 6) {
-      throw new ValidationError('Senha deve ter pelo menos 6 caracteres', 'password');
+    if (!userData.password || userData.password.length < 8) {
+      throw new ValidationError('Senha deve ter pelo menos 8 caracteres', 'password');
     }
     if (!userData.cpf || userData.cpf.replace(/\D/g, '').length !== 11) {
       throw new ValidationError('CPF inválido. Informe os 11 dígitos', 'cpf');

@@ -6,6 +6,8 @@ import {
   Platform,
   Alert,
   StyleSheet,
+  Text,
+  TouchableOpacity,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import Geolocation from 'react-native-geolocation-service';
@@ -68,35 +70,59 @@ function buildHtml() {
       background: #ffffff;
     }
 
-    body {
-      overflow: visible;
-    }
+    body { overflow: visible; }
 
-    .leaflet-container {
-      width: 100%;
-      height: 100%;
+    .leaflet-container { width: 100%; height: 100%; background: #f5f5f5; }
+
+    .motorista-icon { background: transparent; border: none; }
+
+    .leaflet-routing-container { display: none !important; }
+
+    #error-msg {
+      display: none;
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
       background: #f5f5f5;
+      font-family: sans-serif;
+      color: #64748B;
+      font-size: 14px;
+      text-align: center;
+      padding: 16px;
     }
-
-    .motorista-icon {
-      background: transparent;
-      border: none;
-    }
-
-    /* Evita UI extra do routing machine */
-    .leaflet-routing-container {
-      display: none !important;
-    }
+    #error-msg.visible { display: flex; }
   </style>
 </head>
 <body>
   <div id="map"></div>
+  <div id="error-msg">
+    <span style="font-size:32px">🗺️</span>
+    <p style="margin:8px 0 4px">Mapa indisponível</p>
+    <small>Verifique sua conexão com a internet</small>
+  </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    function showError() {
+      document.getElementById('map').style.display = 'none';
+      document.getElementById('error-msg').classList.add('visible');
+      window.ReactNativeWebView &&
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'mapError' }));
+    }
+    var loadTimeout = setTimeout(function() {
+      if (typeof L === 'undefined') showError();
+    }, 8000);
+  </script>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" onerror="clearTimeout(loadTimeout); showError();"></script>
   <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
 
   <script>
     (function () {
+      if (typeof L === 'undefined') return;
+      clearTimeout(loadTimeout);
+
       const BuskaMap = {
         mapInstance: null,
         routingControl: null,
@@ -272,7 +298,6 @@ function buildHtml() {
 export default function MapaComponent({ pontosRota, onPontoChegado }) {
   const webViewRef = useRef(null);
 
-  // Mantidos para ficar próximos da arquitetura web
   const mapInstance = useRef(null);
   const routingControl = useRef(null);
   const userMarker = useRef(null);
@@ -280,6 +305,8 @@ export default function MapaComponent({ pontosRota, onPontoChegado }) {
 
   const [mapReady, setMapReady] = useState(false);
   const [loadingMap, setLoadingMap] = useState(true);
+  const [mapError, setMapError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const destinoAtual = pontosRota && pontosRota.length > 0 ? pontosRota[0] : null;
 
@@ -460,21 +487,26 @@ export default function MapaComponent({ pontosRota, onPontoChegado }) {
   const handleWebViewMessage = useCallback((event) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
-
-      if (data.type === 'mapReady') {
-        setMapReady(true);
-        setLoadingMap(false);
-      }
+      if (data.type === 'mapReady') { setMapReady(true); setLoadingMap(false); }
+      if (data.type === 'mapError') { setLoadingMap(false); setMapError(true); }
     } catch (error) {
       console.log('Mensagem inválida do WebView:', error);
     }
   }, []);
 
+  const handleReload = () => {
+    setMapError(false);
+    setMapReady(false);
+    setLoadingMap(true);
+    setReloadKey(k => k + 1);
+  };
+
   return (
     <View style={styles.container}>
       <WebView
+        key={reloadKey}
         ref={webViewRef}
-        style={styles.webview}
+        style={[styles.webview, mapError && styles.hidden]}
         originWhitelist={['*']}
         source={{ html: initialHtml }}
         javaScriptEnabled
@@ -486,9 +518,20 @@ export default function MapaComponent({ pontosRota, onPontoChegado }) {
         androidLayerType="software"
       />
 
-      {loadingMap && (
+      {loadingMap && !mapError && (
         <View pointerEvents="none" style={styles.loadingOverlay}>
-          <ActivityIndicator size="small" />
+          <ActivityIndicator size="small" color="#00B4D8" />
+        </View>
+      )}
+
+      {mapError && (
+        <View style={styles.errorOverlay}>
+          <Text style={styles.errorIcon}>🗺️</Text>
+          <Text style={styles.errorTitle}>Mapa indisponível</Text>
+          <Text style={styles.errorSubtitle}>Verifique sua conexão com a internet</Text>
+          <TouchableOpacity style={styles.reloadButton} onPress={handleReload}>
+            <Text style={styles.reloadText}>Tentar novamente</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -501,16 +544,33 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 10,
     backgroundColor: '#fff',
-    overflow: 'visible', // evita problemas comuns do Android WebView
+    overflow: 'hidden',
   },
   webview: {
     flex: 1,
-    opacity: 0.99, // workaround clássico para renderização Android
+    opacity: 0.99,
     backgroundColor: 'transparent',
+  },
+  hidden: {
+    opacity: 0,
+    height: 0,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#f5f5f5',
   },
+  errorOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f5f5f5',
+    padding: 24,
+  },
+  errorIcon: { fontSize: 40, marginBottom: 8 },
+  errorTitle: { fontSize: 15, fontWeight: '600', color: '#334155', marginBottom: 4 },
+  errorSubtitle: { fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 16 },
+  reloadButton: { backgroundColor: '#00B4D8', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
+  reloadText: { color: '#fff', fontWeight: '600', fontSize: 14 },
 });

@@ -128,7 +128,7 @@ export const fieldValidationMessages = {
   },
   password: {
     required: 'Senha é obrigatória.',
-    minLength: 'Senha deve ter pelo menos 6 caracteres.',
+    minLength: 'Senha deve ter pelo menos 8 caracteres.',
     weak: 'Senha muito fraca. Use letras e números.',
     mismatch: 'As senhas não coincidem.',
   },

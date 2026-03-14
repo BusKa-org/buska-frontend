@@ -1,6 +1,7 @@
 # OSX
 #
 .DS_Store
+Thumbs.db
 
 # Xcode
 #
@@ -33,6 +34,8 @@ local.properties
 .cxx/
 *.keystore
 !debug.keystore
+debug.keystore.properties
+keystore.properties
 
 # node.js
 #
@@ -60,9 +63,6 @@ yarn-error.log
 /ios/Pods/
 /vendor/bundle/
 
-# Temporary files created by Metro to check the health of the file watcher
-.metro-health-check*
-
 # testing
 /coverage
 
@@ -81,3 +81,32 @@ dist/
 # react-native-config codegen
 ios/tmp.xcconfig
 bundle.js
+
+# TypeScript
+*.tsbuildinfo
+
+# Metro
+.metro/
+# Temporary files created by Metro to check the health of the file watcher
+.metro-health-check*
+
+# Expo
+.expo/
+.expo-shared/
+
+# Webpack
+node_modules/.cache/
+.cache-loader/
+
+# ESLint
+.eslintcache
+
+# Jest
+coverage/
+
+# Logs
+*.log
+
+# Editors
+.vscode/
+.idea/

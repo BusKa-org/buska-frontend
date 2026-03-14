@@ -44,6 +44,7 @@ const backendErrorPatterns = [
   { pattern: /credenciais?.*(inválid|invalid|incorrect)/i, code: ErrorCode.INVALID_CREDENTIALS, field: null, message: 'E-mail ou senha incorretos.' },
   { pattern: /(invalid|incorrect).*credentials/i, code: ErrorCode.INVALID_CREDENTIALS, field: null, message: 'E-mail ou senha incorretos.' },
   { pattern: /email.*ou.*senha.*incorre/i, code: ErrorCode.INVALID_CREDENTIALS, field: null, message: 'E-mail ou senha incorretos.' },
+  { pattern: /^unauthorized$/i, code: ErrorCode.INVALID_CREDENTIALS, field: null, message: 'E-mail ou senha incorretos.' },
   
   // Token errors
   { pattern: /token.*(expirado|expired)/i, code: ErrorCode.TOKEN_EXPIRED, field: null, message: 'Sua sessão expirou. Faça login novamente.' },
@@ -134,6 +135,20 @@ function extractErrorDetails(responseData) {
     return { message, field, details, fieldErrors };
   }
   
+  // Handle BusKá backend envelope: { "error": { "code", "message", "details", "request_id" } }
+  if (responseData.error && typeof responseData.error === 'object') {
+    const envelope = responseData.error;
+    message = envelope.message || null;
+    const envelopeDetails = envelope.details;
+    if (envelopeDetails && typeof envelopeDetails === 'object') {
+      details = envelopeDetails;
+      for (const [k, v] of Object.entries(envelopeDetails)) {
+        fieldErrors[k] = typeof v === 'string' ? v : JSON.stringify(v);
+      }
+    }
+    return { message, field: null, details, fieldErrors };
+  }
+
   // Extract main message
   message = responseData.message || responseData.error || responseData.msg || responseData.detail;
   

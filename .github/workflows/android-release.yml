@@ -1,0 +1,23 @@
+name: Android Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    uses: ./.github/workflows/_android-build-reusable.yml
+    with:
+      build_type: Release
+      version_name: ${{ github.ref_name }}
+      should_gradle_clean: 'true'
+      create_github_release: true
+      discord_mode: release
+    secrets:
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_RELEASES }}
+      API_URL_PRODUCTION: ${{ secrets.API_URL_PRODUCTION }}
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}

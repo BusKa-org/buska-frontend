@@ -47,6 +47,7 @@ export const colors = {
   success: {
     main: '#10B981',        // Modern green
     light: '#D1FAE5',       // Background
+    lighter: '#ECFDF5',     // Subtle background
     dark: '#059669',        // Emphasized
     contrast: '#FFFFFF',
   },
@@ -54,6 +55,7 @@ export const colors = {
   warning: {
     main: '#F59E0B',        // Amber
     light: '#FEF3C7',       // Background
+    lighter: '#FFFBEB',     // Subtle background
     dark: '#D97706',        // Emphasized
     contrast: '#0F2942',
   },
@@ -61,6 +63,7 @@ export const colors = {
   error: {
     main: '#EF4444',        // Modern red
     light: '#FEE2E2',       // Background
+    lighter: '#FFF5F5',     // Subtle background
     dark: '#DC2626',        // Emphasized
     contrast: '#FFFFFF',
   },
