@@ -3,9 +3,21 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const webpack = require('webpack');
 const Dotenv = require('dotenv-webpack');
 
+const mode = process.env.NODE_ENV || 'development';
+const isProd = mode === 'production';
+
+const transpileModules = [
+  'react-native-vector-icons',
+  'react-native-safe-area-context',
+  'react-native-screens',
+  '@react-navigation',
+  'expo-font',
+  '@expo-google-fonts',
+].join('|');
+
 module.exports = {
   entry: './index.web.tsx',
-  mode: process.env.NODE_ENV || 'development',
+  mode,
 
   devServer: {
     static: {
@@ -17,19 +29,19 @@ module.exports = {
     open: true,
     historyApiFallback: true, // Crucial for React Navigation
   },
+
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'bundle.js',
     publicPath: '/',
     clean: true,
   },
-  
+
   module: {
     rules: [
       {
         test: /\.(js|jsx|mjs|ts|tsx)$/,
-        exclude:
-          /node_modules\/(?!(react-native-vector-icons|react-native-safe-area-context|react-native-screens|@react-navigation|expo-font|@expo-google-fonts)\/).*/,
+        exclude: new RegExp(`node_modules\\/(?!(${transpileModules})\\/)`),
         use: {
           loader: 'babel-loader',
           options: {
@@ -82,12 +94,11 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: './public/index.html',
       filename: 'index.html',
+      title: 'BusKá - Transporte Escolar',
     }),
     new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify(
-        process.env.NODE_ENV || 'development'
-      ),
-      __DEV__: JSON.stringify((process.env.NODE_ENV || 'development') !== 'production'),
+      'process.env.NODE_ENV': JSON.stringify(mode),
+      __DEV__: JSON.stringify(!isProd),
     }),
     new Dotenv({
       path: './.env', // Garante que ele leia o arquivo da raiz

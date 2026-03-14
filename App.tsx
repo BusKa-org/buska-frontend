@@ -20,10 +20,26 @@ export const App: React.FC = () => {
   return (
     <ToastProvider>
       <AuthProvider>
-        <NavigationContainer>
+        <NavigationContainer
+          documentTitle={{
+            formatter: (options, route) =>
+              `BusKá - ${options?.title ?? route?.name ?? 'Transporte Escolar'}`,
+          }}
+        >
           <Root />
         </NavigationContainer>
       </AuthProvider>
     </ToastProvider>
   );
 };
+
+/**
+ * import React from "react";
+import { Text, View } from "react-native";
+
+export const App: React.FC = () => (
+  <View>
+    <Text>BusKá Web Test</Text>
+  </View>
+);
+ */
