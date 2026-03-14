@@ -4,16 +4,29 @@ on:
   push:
     tags:
       - 'v*'
-
+  workflow_dispatch:
+    inputs:
+      VERSION_NAME:
+        description: 'Version name (Optional - ex: 1.0.0)'
+        required: false
+        default: ''
+      SHOULD_GRADLE_CLEAN:
+        description: 'Should run gradle clean before build'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 jobs:
   release:
     uses: ./.github/workflows/_android-build-reusable.yml
     with:
-      build_type: Release
-      version_name: ${{ github.ref_name }}
-      should_gradle_clean: 'true'
-      create_github_release: true
-      discord_mode: release
+      GRADLE_PARAMS: Release
+      VERSION_NAME: ${{ github.ref_name }}
+      SHOULD_GRADLE_CLEAN: 'true'
+      CREATE_GITHUB_RELEASE: true
+      DISCORD_MODE: release
     secrets:
       DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_RELEASES }}
       API_URL_PRODUCTION: ${{ secrets.API_URL_PRODUCTION }}
