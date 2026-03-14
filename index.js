@@ -7,7 +7,7 @@ if (Platform.OS !== 'web') {
   try {
     const messaging = require('@react-native-firebase/messaging').default;
 
-    messaging().setBackgroundMessageHandler(async (remoteMessage: any) => {
+    messaging().setBackgroundMessageHandler(async (remoteMessage) => {
       // The OS already shows the system notification automatically.
       // Use this handler for silent data-only messages or any background logic.
       console.log('[FCM] Background message:', remoteMessage?.messageId);
