@@ -2,10 +2,10 @@ name: Android Build APK
 
 on:
   push:
-    branches: [ main, develop, chore/add-ci ]
+    branches: [ main, release/* ]
     tags: [ 'v*' ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, release/* ]
   workflow_dispatch:
     inputs:
       GRADLE_PARAMS:
@@ -20,6 +20,14 @@ on:
         description: 'Version name (Optional - ex: 1.0.0)'
         required: false
         default: ''
+      SHOULD_GRADLE_CLEAN:
+        description: 'Should run gradle clean before build'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 jobs:
   build:
@@ -65,10 +73,14 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '17'
-          cache: 'gradle'
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          START=$(date +%s)
+          npm ci
+          END=$(date +%s)
+          echo "NPM_INSTALL_SECONDS=$((END - START))" >> $GITHUB_ENV
+          echo "npm ci took $((END - START))s"
       
       - name: Setup Global Variables
         id: vars
@@ -90,6 +102,7 @@ jobs:
           echo "VERSION=$FINAL_VERSION" >> $GITHUB_ENV
           echo "BRANCH_NAME=$REF_NAME" >> $GITHUB_ENV
           echo "RUN_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
+          echo "SHOULD_GRADLE_CLEAN=${{ inputs.SHOULD_GRADLE_CLEAN || 'false' }}" >> $GITHUB_ENV
       
       - name: Force the correct use of SDK
         run: |
@@ -188,11 +201,24 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
+
+          if [ "${SHOULD_GRADLE_CLEAN}" = "true" ]; then
+            echo "Running gradle clean..."
+            ./gradlew clean --no-daemon
+          else
+            echo "Skipping gradle clean..."
+          fi
+
+          START=$(date +%s)
           
-          ./gradlew clean assemble${{ env.BUILD_TYPE }} --no-daemon \
+          ./gradlew assemble${{ env.BUILD_TYPE }} --no-daemon \
             --max-workers=2 \
             -Dorg.gradle.caching=false \
             -Dorg.gradle.jvmargs="-Xmx2g -XX:MaxMetaspaceSize=512m"
+          
+          END=$(date +%s)
+          echo "GRADLE_BUILD_SECONDS=$((END - START))" >> $GITHUB_ENV
+          echo "Gradle build took $((END - START))s"
       
       - name: Rename and Prepare Artifact
         id: prepare_artifact
