@@ -1,7 +1,23 @@
 module.exports = {
-  presets: [
-    'module:metro-react-native-babel-preset',
-    ['@babel/preset-env', { targets: { node: 'current' } }],
-    '@babel/preset-react',
+  presets: ['module:metro-react-native-babel-preset'],
+  plugins: [
+    [
+      'module-resolver',
+      {
+        root: ['./'],
+        alias: {
+          '@': './src',
+        },
+        extensions: [
+          '.ios.js',
+          '.android.js',
+          '.js',
+          '.jsx',
+          '.ts',
+          '.tsx',
+          '.json',
+        ],
+      },
+    ],
   ],
 };

@@ -1,12 +1,12 @@
 import React from 'react';
-import { Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
+
 import MainNavigator from './src/navigation/MainNavigator';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { ToastProvider } from './src/components';
 import SplashScreen from './src/screens/SplashScreen';
 
-const Root = () => {
+const Root: React.FC = () => {
   const { loading } = useAuth();
 
   if (loading) {
@@ -16,22 +16,30 @@ const Root = () => {
   return <MainNavigator />;
 };
 
-function App() {
-  const isWeb = Platform.OS === 'web';
-
+export const App: React.FC = () => {
   return (
     <ToastProvider>
       <AuthProvider>
-        {isWeb ? (
+        <NavigationContainer
+          documentTitle={{
+            formatter: (options, route) =>
+              `BusKá - ${options?.title ?? route?.name ?? 'Transporte Escolar'}`,
+          }}
+        >
           <Root />
-        ) : (
-          <NavigationContainer>
-            <Root />
-          </NavigationContainer>
-        )}
+        </NavigationContainer>
       </AuthProvider>
     </ToastProvider>
   );
-}
+};
 
-export default App;
+/**
+ * import React from "react";
+import { Text, View } from "react-native";
+
+export const App: React.FC = () => (
+  <View>
+    <Text>BusKá Web Test</Text>
+  </View>
+);
+ */
