@@ -21,14 +21,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Toast notifications** — In-app feedback system for actions, errors, and async state changes
 - **Error handling** — Field-level validation errors from the backend displayed inline in forms
 
-### Removed
-
-- Chat feature (descoped from this version)
-
 ### Infrastructure
 
 - Self-hosted GitHub Actions runner for Android builds
 - Automated signed APK generation with keystore managed via GitHub Secrets
-- Separate workflows for debug builds (on push) and release builds (on `v*` tags)
+- Separate workflows for builds (on push) and release creation (on `v*` tags)
 - GitHub Release created automatically with APK attached on tag push
 - Discord notifications for both build and release events
