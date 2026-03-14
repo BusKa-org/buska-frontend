@@ -29,8 +29,10 @@ on:
         default: 'build'
         type: string
     secrets:
-      DISCORD_WEBHOOK:
+      DISCORD_WEBHOOK_CI:
         required: true
+      DISCORD_WEBHOOK_RELEASES:
+        required: false
       API_URL_PRODUCTION:
         required: false
       API_URL_DEVELOPMENT:
@@ -280,6 +282,7 @@ jobs:
           BUILD_TIME=$((BUILD_END - BUILD_START))
           BUILD_MIN=$((BUILD_TIME / 60))
           BUILD_SEC=$((BUILD_TIME % 60))
+          WEBHOOK=${{ secrets.DISCORD_WEBHOOK_CI }}
 
           if [ "${{ job.status }}" == "success" ]; then
             COLOR=3066993
@@ -287,6 +290,7 @@ jobs:
             if [ "${{ inputs.DISCORD_MODE }}" == "release" ]; then
               CONTENT="📦 **New BusKá release available!**\n🔗 **Download:** https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
               PING="@here"
+              WEBHOOK=${{ secrets.DISCORD_WEBHOOK_RELEASES }}
             else
               CONTENT="🚀 **New BusKá build available!**\n📦 **Download:** [Artifacts Page]($RUN_URL)"
               PING=""
@@ -309,7 +313,7 @@ jobs:
             }]
           }'
 
-          curl -X POST -H "Content-Type: application/json" -d "$PAYLOAD" ${{ secrets.DISCORD_WEBHOOK }}
+          curl -X POST -H "Content-Type: application/json" -d "$PAYLOAD" $WEBHOOK
 
       - name: Final cleanup
         if: always()

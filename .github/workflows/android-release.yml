@@ -18,6 +18,10 @@ on:
         options:
           - 'true'
           - 'false'
+
+permissions:
+  contents: write
+
 jobs:
   release:
     uses: ./.github/workflows/_android-build-reusable.yml
@@ -28,7 +32,8 @@ jobs:
       CREATE_GITHUB_RELEASE: true
       DISCORD_MODE: release
     secrets:
-      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_RELEASES }}
+      DISCORD_WEBHOOK_CI: ${{ secrets.DISCORD_WEBHOOK_CI }}
+      DISCORD_WEBHOOK_RELEASES: ${{ secrets.DISCORD_WEBHOOK_RELEASES }}
       API_URL_PRODUCTION: ${{ secrets.API_URL_PRODUCTION }}
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
