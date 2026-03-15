@@ -38,7 +38,7 @@ jobs:
       CREATE_GITHUB_RELEASE: false
       DISCORD_MODE: build
     secrets:
-      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_CI }}
+      DISCORD_WEBHOOK_CI: ${{ secrets.DISCORD_WEBHOOK_CI }}
       API_URL_PRODUCTION: ${{ secrets.API_URL_PRODUCTION }}
       API_URL_DEVELOPMENT: ${{ secrets.API_URL_DEVELOPMENT }}
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
