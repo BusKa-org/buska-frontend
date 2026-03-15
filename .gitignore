@@ -70,6 +70,7 @@ yarn-error.log
 debug.keystore.properties
 keystore.properties
 *.keystore
+
 # Environment Configs
 .env
 .env.*

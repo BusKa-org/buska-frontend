@@ -29,8 +29,10 @@ on:
         default: 'build'
         type: string
     secrets:
-      DISCORD_WEBHOOK:
+      DISCORD_WEBHOOK_CI:
         required: true
+      DISCORD_WEBHOOK_RELEASES:
+        required: false
       API_URL_PRODUCTION:
         required: false
       API_URL_DEVELOPMENT:
@@ -274,42 +276,52 @@ jobs:
       - name: Notify Discord
         if: always()
         run: |
-          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          COMMIT_MSG=$(git log -1 --pretty=%s)
           BUILD_END=$(date +%s)
           BUILD_TIME=$((BUILD_END - BUILD_START))
           BUILD_MIN=$((BUILD_TIME / 60))
           BUILD_SEC=$((BUILD_TIME % 60))
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
+          APK_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/buska-${{ env.VERSION }}.apk"
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          COMMIT_URL="https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          APK_SIZE_FORMATTED=$(echo "${{ env.APK_SIZE }}" | sed 's/\([0-9]\)M$/\1 MB/' | sed 's/\([0-9]\)K$/\1 KB/')
+          WEBHOOK=${{ secrets.DISCORD_WEBHOOK_CI }}
+
+          MSG="**Build Information**\n**File:** \`buska-${{ env.VERSION }}.apk\`\n**Type:** \`${{ env.BUILD_TYPE }}\`\n**Size:** \`${{ env.APK_SIZE }}\`\n**Build Time:** \`${BUILD_MIN}m ${BUILD_SEC}s\`\n\n🔧 **Origin**\n**Change:** \`$COMMIT_MSG\`\n**Branch:** \`${{ env.BRANCH_NAME }}\`"
 
           if [ "${{ job.status }}" == "success" ]; then
             COLOR=3066993
 
             if [ "${{ inputs.DISCORD_MODE }}" == "release" ]; then
-              CONTENT="📦 **New BusKá release available!**\n🔗 **Download:** https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
+              TITLE="📦 BusKá ${{ github.ref_name }}"
+              CONTENT="Uma nova versão do aplicativo BusKá foi gerada e publicada com sucesso.\n\n🔗 **Página da release:** $RELEASE_URL\n📦 **Download direto do APK:** $APK_URL"
               PING="@here"
+              WEBHOOK=${{ secrets.DISCORD_WEBHOOK_RELEASES }}
+              MSG="📱 **Informações da versão**\n**Versão:** \`${{ github.ref_name }}\`\n**Arquivo:** \`buska-${{ env.VERSION }}.apk\`\n**Tamanho:** \`$APK_SIZE_FORMATTED\`\n**Tempo de build:** \`${BUILD_MIN}m ${BUILD_SEC}s\`\n\n🔧 **Origem**\n**Branch:** \`${{ env.BRANCH_NAME }}\`\n**Commit:** \`$SHORT_SHA\`\n**URL do commit:** $COMMIT_URL\n**Autor:** \`${{ github.actor }}\`\n\n⚠️ **Observação:** caso seja a primeira instalação, pode ser necessário habilitar a instalação de aplicativos de fontes externas no Android."
             else
-              CONTENT="🚀 **New BusKá build available!**\n📦 **Download:** [Artifacts Page]($RUN_URL)"
+              TITLE="🚀 BusKá Build Update"
+              CONTENT="A new BusKá build was generated successfully.\n\n📦 **Download (GitHub Actions):** $RUN_URL\n\n⚠️ **Note:** this artifact is available through GitHub Actions and may expire according to repository artifact retention settings."
               PING=""
             fi
           else
             COLOR=15158332
-            CONTENT="❌ **The build failed!**\n🔍 **Logs:** [View on GitHub]($RUN_URL)"
+            TITLE="❌ BusKá Build Failure"
+            CONTENT="The build failed during the pipeline execution.\n\n🔍 **Logs:** $RUN_URL"
             PING="@here"
           fi
-
-          MSG="**File:** \`buska-${{ env.VERSION }}.apk\`\n**Type:** \`${{ env.BUILD_TYPE }}\`\n**Size:** \`${{ env.APK_SIZE }}\`\n**Build Time:** \`${BUILD_MIN}m ${BUILD_SEC}s\`\n**Change:** \`$COMMIT_MSG\`\n**Branch:** \`${{ env.BRANCH_NAME }}\`"
 
           PAYLOAD='{
             "content": "'"$PING"'",
             "embeds": [{
-              "title": "BusKá Build Update",
+              "title": "'"$TITLE"'",
               "description": "'"$MSG"'\n\n'"$CONTENT"'",
-              "color": '$COLOR',
-              "footer": { "text": "Author: ${{ github.actor }} | Branch: ${{ env.BRANCH_NAME }} | Commit: ${{ github.sha }}" }
+              "color": '$COLOR'
             }]
           }'
 
-          curl -X POST -H "Content-Type: application/json" -d "$PAYLOAD" ${{ secrets.DISCORD_WEBHOOK }}
+          curl -X POST -H "Content-Type: application/json" -d "$PAYLOAD" $WEBHOOK
 
       - name: Final cleanup
         if: always()

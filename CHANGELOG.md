@@ -1,8 +1,9 @@
 # Histórico de Versões
 
 Todas as novidades, melhorias e correções do BusKá são registradas aqui.
+O formato é baseado em [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [0.1.1-beta] — 15 de março de 2026
+## [0.1.1-beta] — 2026-03-15
 
 ### Melhorias
 
@@ -10,7 +11,7 @@ Todas as novidades, melhorias e correções do BusKá são registradas aqui.
 
 ---
 
-## [0.1.0-beta] — 14 de março de 2026
+## [0.1.0-beta] — 2026-03-14
 
 ### Novidades
 
