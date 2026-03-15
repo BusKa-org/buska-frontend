@@ -8,40 +8,34 @@ Este diretório contém os workflows de CI/CD para o projeto BusKa.
 **Propósito:** Build de desenvolvimento automático
 
 **Quando executa:**
-- ✅ Push para `main`, `master`, ou `develop`
-- ✅ Pull requests para essas branches
+- ✅ Push para `main`
+- ✅ Pull requests para `main` ou `release/*` 
 - ✅ Manualmente via GitHub Actions UI
 
 **O que gera:**
-- APK de debug/development
+- APK de debug/release
 - Disponível como artifact por 30 dias
 
 ---
 
 ### 🚀 android-release.yml
-**Propósito:** Build de produção (assinado)
+**Propósito:** Build de produção com criação automática de GitHub Releases
 
 **Quando executa:**
 - ✅ Ao criar uma tag (ex: `v1.0.0`, `v2.1.3`)
-- ✅ Manualmente via GitHub Actions UI
 
 **O que gera:**
 - APK assinado para produção
 - Cria GitHub Release com APK anexado
 - Nomeia APK com versão (ex: `buska-1.0.0.apk`)
 
-**Requer:** Secrets configurados para assinatura (opcional)
+**Requer:** Secrets configurados para assinatura
 
 ---
 
 ## 🎯 Comandos Rápidos
 
-### Acionar build de desenvolvimento
-```bash
-git push origin develop
-```
-
-### Acionar build de produção
+### Acionar build de produção com criação de release automático
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
@@ -93,14 +87,12 @@ Para builds de produção assinados, configure estes secrets:
 ## 🛠️ Modificar Workflows
 
 ### Adicionar nova branch para build automático
-Edite `android-build.yml`:
+Edite:
 ```yaml
 on:
   push:
     branches:
       - main
-      - master
-      - develop
       - sua-nova-branch  # Adicione aqui
 ```
 
@@ -109,7 +101,7 @@ on:
 - name: Upload APK artifact
   uses: actions/upload-artifact@v4
   with:
-    retention-days: 60  # Mude de 30 para 60 dias
+    retention-days: 60  # Mude para 60 dias
 ```
 
 ### Adicionar notificações do Slack

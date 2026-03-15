@@ -1,30 +1,37 @@
-# Changelog
+# Histórico de Versões
 
-All notable changes to BusKá will be documented in this file.
+Todas as novidades, melhorias e correções do BusKá são registradas aqui.
+O formato é baseado em [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+## [0.1.1-beta] — 2026-03-15
 
-## [0.1.0-beta] - 2026-03-14
+### Melhorias
 
-### Added
+- Ícone do aplicativo atualizado com a identidade visual oficial do BusKá
 
-- **Authentication** — Login, step-by-step registration with address fields, and password recovery
-- **Role-based navigation** — Distinct flows for students (aluno), drivers (motorista), and managers (gestor)
-- **Design system** — BusKá theme with design tokens, Inter font, and Material Icons across Android and web
-- **Route management** — Managers can create routes, define stops with an interactive map, and assign drivers
-- **Trip management** — Managers can schedule trips with departure times; drivers can start and end trips in real time
-- **Bus location tracking** — Students can view their bus location live on an interactive Leaflet map
-- **Driver geolocation** — Driver GPS coordinates are sent to the backend continuously during active trips
-- **Student presence confirmation** — Students can confirm attendance for upcoming trips from their dashboard
-- **Push notifications** — Firebase Cloud Messaging integration for trip and route updates
-- **CEP auto-fill** — Address fields auto-populated from postal code lookup during registration
-- **Toast notifications** — In-app feedback system for actions, errors, and async state changes
-- **Error handling** — Field-level validation errors from the backend displayed inline in forms
+---
 
-### Infrastructure
+## [0.1.0-beta] — 2026-03-14
 
-- Self-hosted GitHub Actions runner for Android builds
-- Automated signed APK generation with keystore managed via GitHub Secrets
-- Separate workflows for builds (on push) and release creation (on `v*` tags)
-- GitHub Release created automatically with APK attached on tag push
-- Discord notifications for both build and release events
+### Novidades
+
+- **Autenticação** — Login, cadastro passo a passo com campos de endereço e recuperação de senha
+- **Navegação por perfil** — Fluxos distintos para alunos, motoristas e gestores
+- **Sistema de design** — Tema BusKá com tokens de design, fonte Inter e ícones Material em Android e web
+- **Gestão de rotas** — Gestores podem criar rotas, definir pontos de parada com mapa interativo e atribuir motoristas
+- **Gestão de viagens** — Gestores programam viagens com horários; motoristas iniciam e encerram pelo aplicativo
+- **Localização do ônibus** — Alunos acompanham a localização do ônibus em tempo real no mapa
+- **Envio de localização do motorista** — Coordenadas GPS do motorista são enviadas continuamente ao servidor durante viagens ativas
+- **Confirmação de presença** — Alunos confirmam presença nas viagens pelo painel
+- **Notificações push** — Integração com Firebase Cloud Messaging para atualizações de rotas e viagens
+- **Preenchimento automático por CEP** — Endereço preenchido automaticamente ao digitar o CEP no cadastro
+- **Notificações in-app** — Sistema de feedback para ações, erros e estados assíncronos
+- **Tratamento de erros** — Erros de validação do servidor exibidos diretamente nos campos do formulário
+
+### Infraestrutura
+
+- Runner próprio no GitHub Actions para builds Android
+- Geração automática de APK assinado com keystore gerenciada via GitHub Secrets
+- Workflows separados para builds (a cada push) e criação de release (via tags `v*`)
+- GitHub Release criado automaticamente com APK anexado ao enviar uma tag
+- Notificações Discord para eventos de build e release
