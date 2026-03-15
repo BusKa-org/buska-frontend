@@ -9,13 +9,14 @@ jobs:
   release:
     uses: ./.github/workflows/_android-build-reusable.yml
     with:
-      build_type: Release
-      version_name: ${{ github.ref_name }}
-      should_gradle_clean: 'true'
-      create_github_release: true
-      discord_mode: release
+      GRADLE_PARAMS: Release
+      VERSION_NAME: ${{ github.ref_name }}
+      SHOULD_GRADLE_CLEAN: 'true'
+      CREATE_GITHUB_RELEASE: true
+      DISCORD_MODE: release
     secrets:
       DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_RELEASES }}
+      GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
       API_URL_PRODUCTION: ${{ secrets.API_URL_PRODUCTION }}
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
