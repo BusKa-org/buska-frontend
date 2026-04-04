@@ -15,6 +15,7 @@ import {useAuth} from '../../contexts/AuthContext';
 import {useToast} from '../../components/Toast';
 import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
+import { unwrapItems } from '../../types';
 
 const isWeb = Platform.OS === 'web';
 
@@ -41,11 +42,11 @@ const CriarViagem = ({navigation, route}) => {
         setLoadingMotoristas(true);
 
         const [rotasData, motoristasData] = await Promise.all([
-          motoristaService.listarRotas(),
+          motoristaService.listarRotas().then(unwrapItems),
           motoristaService.listarMotoristas()
         ]);
         
-        setRotas(rotasData || []);
+        setRotas(rotasData);
         setMotoristas(motoristasData || []);
         
       } catch (error) {
@@ -76,7 +77,7 @@ const CriarViagem = ({navigation, route}) => {
   useEffect(() => {
     const loadRotas = async () => {
       try {
-        const rotasData = await motoristaService.listarRotas();
+        const rotasData = await motoristaService.listarRotas().then(unwrapItems);
         setRotas(rotasData || []);
         
         // Se veio com rota pré-selecionada, garantir que está na lista

@@ -12,6 +12,7 @@ import { alunoService } from '../../services';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
 import { Icon, IconNames, LoadingSpinner, EmptyState } from '../../components';
+import { unwrapItems } from '../../types';
 
 const DashboardAluno = ({navigation}) => {
   const [rotasCadastradas, setRotasCadastradas] = useState([]);
@@ -39,8 +40,8 @@ const DashboardAluno = ({navigation}) => {
 
   const loadData = async () => {
     try {
-      const rotas = await alunoService.listarMinhasRotas();
-      setRotasCadastradas(rotas || []);
+      const rotas = await alunoService.listarMinhasRotas().then(unwrapItems);
+      setRotasCadastradas(rotas);
 
       const todasViagens = await alunoService.listarViagens();
       

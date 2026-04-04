@@ -15,6 +15,7 @@ import * as veiculoService from '../../services/veiculoService';
 import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
 import { useToast } from '../../components/Toast';
+import { unwrapItems } from '../../types';
 
 const RotaAluno = ({navigation, route}) => {
   const rota = route?.params?.rota; // Can be null to show all trips
@@ -39,7 +40,7 @@ const RotaAluno = ({navigation, route}) => {
 
   const loadViagens = async () => {
     try {
-      const todasViagens = await alunoService.listarViagens();
+      const todasViagens = await alunoService.listarViagens().then(unwrapItems);
       
       // Filter by route if a specific route is provided, otherwise show all
       const viagensFiltradas = isAllTrips 
@@ -50,6 +51,7 @@ const RotaAluno = ({navigation, route}) => {
       
       // Use status_confirmacao from the agenda response directly
       const statusMap = {};
+      console.log('viagensFiltradas', viagensFiltradas);
       viagensFiltradas.forEach((viagem) => {
         statusMap[viagem.id] = viagem.status_confirmacao || false;
       });
@@ -99,7 +101,7 @@ const RotaAluno = ({navigation, route}) => {
       
       if (novoStatus && !pontoEmbarqueId && viagem.rota_id) {
         try {
-          const pontos = await alunoService.listarPontosRota(viagem.rota_id);
+          const pontos = await alunoService.listarPontosRota(viagem.rota_id).then(unwrapItems);
           if (pontos && pontos.length > 0) {
             pontoEmbarqueId = pontos[0].id;
           }
@@ -115,11 +117,11 @@ const RotaAluno = ({navigation, route}) => {
       }
       
       await alunoService.alterarPresencaViagem(viagem.id, novoStatus, pontoEmbarqueId);
-      
-      // Reload data from backend to get fresh status
-      await loadViagens();
-      
+
+      setPresencasStatus(prev => ({ ...prev, [viagem.id]: novoStatus }));
       toast.success(novoStatus ? 'Presença confirmada!' : 'Presença cancelada.');
+
+      loadViagens();
     } catch (error) {
       const errorMessage = error?.message || error?.error || 'Não foi possível atualizar a presença.';
       toast.error(errorMessage);
@@ -148,14 +150,11 @@ const RotaAluno = ({navigation, route}) => {
       let capacidadeDoVeiculo = inscritos; 
 
       try {
-        console.log(viagem);
         if (viagem.rota_id) {
           const rota = await rotaService.getRota(viagem.rota_id);
-          console.log(rota);
           if (rota && rota.veiculo_id) {
             const veiculo = await veiculoService.getVeiculo(rota.veiculo_id);
             
-            console.log(veiculo);
             if (veiculo && veiculo.capacidade) {
               capacidadeDoVeiculo = veiculo.capacidade;
             }

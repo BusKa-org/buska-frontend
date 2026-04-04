@@ -14,6 +14,7 @@ import {
 import { alunoService } from '../../services';
 import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
+import { unwrapItems } from '../../types';
 
 const SelecaoRotas = ({navigation}) => {
   const [busca, setBusca] = useState('');
@@ -25,10 +26,10 @@ const SelecaoRotas = ({navigation}) => {
 
   const loadRotas = async () => {
     try {
-      const rotas = await alunoService.listarRotas();
-      const rotasInscritasData = await alunoService.listarMinhasRotas();
-      setRotasDisponiveis(rotas || []);
-      setRotasInscritas(rotasInscritasData || []);
+      const rotas = await alunoService.listarRotas().then(unwrapItems);
+      const rotasInscritasData = await alunoService.listarMinhasRotas().then(unwrapItems);
+      setRotasDisponiveis(rotas);
+      setRotasInscritas(rotasInscritasData);
     } catch (error) {
       console.error('Error loading routes:', error);
       Alert.alert('Erro', 'Não foi possível carregar as rotas. Tente novamente.');
@@ -55,7 +56,7 @@ const SelecaoRotas = ({navigation}) => {
     try {
       setSubscribing(rota.id);
       await alunoService.gerenciarInscricaoRota(rota.id, 'inscrever');
-      const rotasInscritasAtualizadas = await alunoService.listarMinhasRotas();
+      const rotasInscritasAtualizadas = await alunoService.listarMinhasRotas().then(unwrapItems);
       setRotasInscritas(rotasInscritasAtualizadas || []);
       setRotasDisponiveis(rotasDisponiveis.filter((r) => r.id !== rota.id));
       Alert.alert('Sucesso', 'Você foi cadastrado nesta rota!', [

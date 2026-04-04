@@ -11,6 +11,7 @@ import type {
   AlunoMeUpdateRequest,
   AlunoResponse,
 } from '../types';
+import { unwrapItems } from '../types';
 
 // Normalized UI representation of a ViagemAgendaAlunoResponse
 type ViagemAgendaUI = {
@@ -89,7 +90,7 @@ export const alunoService = {
    */
   async listarViagens(): Promise<ViagemAgendaUI[]> {
     const response = await api.get<ViagemAgendaAlunoListResponse>('/viagens/aluno/agenda');
-    return (response.data.items ?? []).map(normalizeViagemAgenda);
+    return unwrapItems(response.data).map(normalizeViagemAgenda);
   },
 
   /**
@@ -164,6 +165,7 @@ export const alunoService = {
       `/viagens/${viagemId}/confirmacao`,
       payload,
     );
+
     return response.data;
   },
 

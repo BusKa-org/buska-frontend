@@ -15,6 +15,7 @@ import {useAuth} from '../../contexts/AuthContext';
 import {useToast} from '../../components/Toast';
 import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
+import { unwrapItems } from '../../types';
 
 const RotaMotorista = ({navigation, route}) => {
   const { user } = useAuth();
@@ -39,7 +40,7 @@ const RotaMotorista = ({navigation, route}) => {
 
   const loadRotas = async () => {
     try {
-      const rotasData = await motoristaService.listarRotas();
+      const rotasData = await motoristaService.listarRotas().then(unwrapItems);
       setRotas(rotasData || []);
     } catch (error) {
       console.error('Error loading routes:', error);

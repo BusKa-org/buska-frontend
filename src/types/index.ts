@@ -2,6 +2,23 @@ import type { components } from './openapi';
 
 type Schemas = components['schemas'];
 
+// Generic shape for all paginated list responses from this backend.
+// If the backend ever changes a response to a plain array or a different
+// envelope, regenerating openapi.ts will cause a type error here,
+// pointing you to exactly what broke.
+export type ListResponse<T> = {
+  items?: T[];
+  total?: number;
+};
+
+// Safely extracts the items array from any paginated response or plain array.
+export const unwrapItems = <T>(response: ListResponse<T> | T[]): T[] => {
+  if (Array.isArray(response)) {
+    return response;
+  }
+  return response.items ?? [];
+}
+
 // Auth
 export type LoginRequest = Schemas['LoginRequest'];
 export type TokenResponse = Schemas['TokenResponse'];

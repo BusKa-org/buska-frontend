@@ -11,6 +11,7 @@ import {
 import { alunoService } from '../../services';
 import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
+import { unwrapItems } from '../../types';
 
 import MapaComponent from '../Motorista/MapaComponent'; 
 
@@ -53,7 +54,7 @@ const DetalheViagem = ({navigation, route}) => {
       if (rota?.id) {
         try {
           setCarregandoPontos(true);
-          const pontos = await alunoService.listarPontosRota(rota.id);
+          const pontos = await alunoService.listarPontosRota(rota.id).then(unwrapItems);
           setPontosRota(pontos || []);
         } catch (error) {
           setPontosRota([]);

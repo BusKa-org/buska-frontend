@@ -1,4 +1,5 @@
 import { api } from '../api/client';
+import type { RotaListResponse } from '../types';
 
 export const gestorService = {
   /**
@@ -6,13 +7,9 @@ export const gestorService = {
    * Backend: GET /v1/rotas/
    * GESTOR sees all routes in their prefeitura
    */
-  async listarRotas() {
-    try {
-      const response = await api.get('/rotas/');
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error);
-    }
+  async listarRotas(): Promise<RotaListResponse> {
+    const response = await api.get<RotaListResponse>('/rotas/');
+    return response.data;
   },
 
   /**
