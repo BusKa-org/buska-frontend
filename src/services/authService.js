@@ -1,4 +1,4 @@
-import api from './api';
+import { api } from '../api/client';
 import { Storage, STORAGE_KEYS } from '../utils/storage';
 import { ValidationError, errorLogger } from '../utils/errors';
 

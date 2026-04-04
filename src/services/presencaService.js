@@ -3,7 +3,7 @@
  * Handles student attendance/confirmation operations using Axios API
  */
 
-import api from './api';
+import { api } from '../api/client';
 
 /**
  * Get attendance records for a trip

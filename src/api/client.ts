@@ -6,7 +6,7 @@ import axios, {
     InternalAxiosRequestConfig,
   } from 'axios';
   import { Storage, STORAGE_KEYS } from '../utils/storage';
-  import { API_BASE_URL } from '../config/api';
+  import apiConfig from '../config/api';
   import {
     parseApiError,
     requiresReauth,
@@ -15,7 +15,7 @@ import axios, {
 
 // Create axios instance with /v1 prefix
 export const api: AxiosInstance = axios.create({
-  baseURL: `${API_BASE_URL}/v1`,
+  baseURL: `${apiConfig.baseUrl}/v1`,
   headers: {
     'Content-Type': 'application/json',
   },

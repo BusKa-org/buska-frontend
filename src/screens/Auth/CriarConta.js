@@ -15,7 +15,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
-import api from '../../services/api';
+import { api } from '../../api/client';
 import { 
   ErrorCode, 
   getFieldValidationMessage,

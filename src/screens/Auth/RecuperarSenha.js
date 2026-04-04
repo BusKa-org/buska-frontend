@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
-import api from '../../services/api';
+import { api } from '../../api/client';
 
 const RecuperarSenha = ({navigation}) => {
   const [email, setEmail] = useState('');

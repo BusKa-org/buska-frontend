@@ -1,0 +1,77 @@
+import type { components } from './openapi';
+
+type Schemas = components['schemas'];
+
+// Auth
+export type LoginRequest = Schemas['LoginRequest'];
+export type TokenResponse = Schemas['TokenResponse'];
+export type UserInfo = Schemas['UserInfo'];
+export type ForgotPasswordRequest = Schemas['ForgotPasswordRequest'];
+export type ChangePasswordRequest = Schemas['ChangePasswordRequest'];
+export type ChangePasswordResponse = Schemas['ChangePasswordResponse'];
+
+// Users
+export type UserResponse = Schemas['UserResponse'];
+export type UserListResponse = Schemas['UserListResponse'];
+
+// Alunos
+export type AlunoResponse = Schemas['AlunoResponse'];
+export type AlunoListResponse = Schemas['AlunoListResponse'];
+export type AlunoSelfSignupRequest = Schemas['AlunoSelfSignupRequest'];
+export type AlunoMeUpdateRequest = Schemas['AlunoMeUpdateRequest'];
+export type AlunoProvisionAccountRequest = Schemas['AlunoProvisionAccountRequest'];
+
+// Motoristas
+export type MotoristaCreateRequest = Schemas['MotoristaCreateRequest'];
+
+// Onibus
+export type OnibusResponse = Schemas['OnibusResponse'];
+export type OnibusListResponse = Schemas['OnibusListResponse'];
+export type OnibusCreateRequest = Schemas['OnibusCreateRequest'];
+
+// Rotas
+export type RotaResponse = Schemas['RotaResponse'];
+export type RotaListResponse = Schemas['RotaListResponse'];
+export type RotaDetailResponse = Schemas['RotaDetailResponse'];
+export type RotaCreateRequest = Schemas['RotaCreateRequest'];
+export type RotaUpdateRequest = Schemas['RotaUpdateRequest'];
+export type RotaPontoAddRequest = Schemas['RotaPontoAddRequest'];
+export type RotaInscricaoRequest = Schemas['RotaInscricaoRequest'];
+export type RotaHorarioResponse = Schemas['RotaHorarioResponse'];
+export type RotaHorarioListResponse = Schemas['RotaHorarioListResponse'];
+export type RotaHorarioCreateRequest = Schemas['RotaHorarioCreateRequest'];
+
+// Pontos
+export type PontoResponse = Schemas['PontoResponse'];
+export type PontoListResponse = Schemas['PontoListResponse'];
+export type PontoFlatResponse = Schemas['PontoFlatResponse'];
+export type PontoFlatListResponse = Schemas['PontoFlatListResponse'];
+export type PontoCreateRequest = Schemas['PontoCreateRequest'];
+export type PontoUpdateRequest = Schemas['PontoUpdateRequest'];
+export type PontoProgresso = Schemas['PontoProgresso'];
+export type PontoTelemetria = Schemas['PontoTelemetria'];
+
+// Viagens
+export type ViagemResponse = Schemas['ViagemResponse'];
+export type ViagemListResponse = Schemas['ViagemListResponse'];
+export type ViagemCreateRequest = Schemas['ViagemCreateRequest'];
+export type ViagemLoteRequest = Schemas['ViagemLoteRequest'];
+export type ViagemLoteResponse = Schemas['ViagemLoteResponse'];
+export type ViagemAcaoRequest = Schemas['ViagemAcaoRequest'];
+export type ViagemConfirmacaoRequest = Schemas['ViagemConfirmacaoRequest'];
+export type ViagemAlunoConfirmacaoResponse = Schemas['ViagemAlunoConfirmacaoResponse'];
+export type ViagemAgendaAlunoResponse = Schemas['ViagemAgendaAlunoResponse'];
+export type ViagemAgendaAlunoListResponse = Schemas['ViagemAgendaAlunoListResponse'];
+
+// Instituicoes
+export type InstituicaoResponse = Schemas['InstituicaoResponse'];
+export type InstituicaoListResponse = Schemas['InstituicaoListResponse'];
+export type InstituicaoCreateRequest = Schemas['InstituicaoCreateRequest'];
+export type InstituicaoEnderecoInput = Schemas['InstituicaoEnderecoInput'];
+
+// Shared
+export type EnderecoInput = Schemas['EnderecoInput'];
+export type LocalizacaoRequest = Schemas['LocalizacaoRequest'];
+export type NotificacaoInput = Schemas['NotificacaoInput'];
+export type FcmTokenRequest = Schemas['FcmTokenRequest'];
+export type RelatorioEstatisticas = Schemas['RelatorioEstatisticas'];
