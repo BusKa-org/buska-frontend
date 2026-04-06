@@ -11,7 +11,7 @@ import {
 import {motoristaService} from '../../services/motoristaService';
 import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
-import MapaComponent from './MapaComponent';
+import { RouteMap } from '../../components/index';
 import pontoService from '../../services/pontoService';
 
 const DetalheViagemMotorista = ({navigation, route}) => {
@@ -261,7 +261,7 @@ const DetalheViagemMotorista = ({navigation, route}) => {
           {/* Mapa Simplificado */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Mapa da Rota</Text>
-            <MapaComponent
+            <RouteMap
               pontosRota={pontosRota} 
               onPontoChegado={() => {
                 setPontosRota((listaAtual) => {

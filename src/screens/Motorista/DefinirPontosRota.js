@@ -15,7 +15,7 @@ import { colors, spacing, borderRadius, shadows, textStyles, fontWeight } from '
 import Icon, { IconNames } from '../../components/Icon';
 import { useToast } from '../../components/Toast';
 import Svg, { Polyline } from 'react-native-svg';
-import MapaComponent from './MapaComponent'; 
+import { RouteMap } from '../../components/index';
 
 const RotaMapaSimples = ({ pontos, onPontoChegado }) => {
   const { validPontos, hasValidPoints } = useMemo(() => {
@@ -55,7 +55,7 @@ const RotaMapaSimples = ({ pontos, onPontoChegado }) => {
       </View>
 
       <View style={[mapStyles.mapWrapper, { height: 400, overflow: 'hidden' }]}>
-        <MapaComponent 
+        <RouteMap 
           pontosRota={validPontos} 
           onPontoChegado={onPontoChegado} 
         />

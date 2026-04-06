@@ -13,7 +13,7 @@ import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme'
 import Icon, { IconNames } from '../../components/Icon';
 import { unwrapItems } from '../../types';
 
-import MapaComponent from '../Motorista/MapaComponent'; 
+import { RouteMap } from '../../components/index';
 
 const DetalheViagem = ({navigation, route}) => {
   const {rota, viagem} = route?.params || {};
@@ -248,7 +248,7 @@ const DetalheViagem = ({navigation, route}) => {
                 <Text style={styles.mapaPlaceholderLabel}>Carregando mapa...</Text>
               </View>
             ) : pontosRota.length > 0 ? (
-              <MapaComponent 
+              <RouteMap 
                 pontosRota={pontosRota} 
                 onPontoChegado={() => {
                   Alert.alert('Chegou!', 'Você se aproximou do ponto de embarque.');

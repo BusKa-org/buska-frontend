@@ -45,8 +45,7 @@ module.exports = {
         use: {
           loader: 'babel-loader',
           options: {
-            presets: ['module:metro-react-native-babel-preset'],
-            plugins: ['react-native-web'],
+            cacheDirectory: true,
           },
         },
       },

@@ -20,3 +20,7 @@ export {
   EmptyView, 
   StateHandler 
 } from './LoadingState';
+
+// Maps
+export { default as RouteMap } from './map/RouteMap';
+export { default as MapaLocalizacao } from './map/LocationMap';
