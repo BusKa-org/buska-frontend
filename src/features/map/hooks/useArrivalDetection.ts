@@ -1,7 +1,7 @@
 // src/components/mapa/hooks/useArrivalDetection.ts
 import { useEffect, useRef } from 'react';
-import type { LatLng, RoutePoint } from '../components/map/types';
-import { buildArrivalKey, distanceInMeters, isValidLatLng } from '../components/map/utils/geo';
+import type { LatLng, RoutePoint } from '../types';
+import { buildArrivalKey, distanceInMeters, isValidLatLng } from '../utils/geo';
 
 type Params = {
   userLocation: LatLng | null;

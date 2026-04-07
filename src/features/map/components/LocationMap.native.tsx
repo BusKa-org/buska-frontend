@@ -1,11 +1,11 @@
-// src/components/mapa/MapaLocalizacao.native.tsx
+// src/features/map/components/LocationMap.native.tsx
 import React, { useEffect, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
-import type { LocationMapProps } from './types';
-import { useLeafletWebViewBridge } from '../../hooks/useLeafletWebViewBridge';
-import { normalizeRoutePoints, pointToLatLng } from './utils/points';
+import type { LocationMapProps } from '../types';
+import { useLeafletWebViewBridge } from '../hooks/useLeafletWebViewBridge';
+import { normalizeRoutePoints, pointToLatLng } from '../utils/points';
 
 export default function LocationMap({ pontosRota }: LocationMapProps) {
   const pontosValidos = useMemo(() => normalizeRoutePoints(pontosRota), [pontosRota]);

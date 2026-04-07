@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import type * as LeafletNS from 'leaflet';
 
-import type { LatLng, RouteMapProps } from './types';
-import { useRoutePolyline } from '../../hooks/useRoutePolyline';
-import { useArrivalDetection } from '../../hooks/useArrivalDetection';
-import { normalizeRoutePoints, pointToLatLng, buildFitCoordinates } from './utils/points';
+import type { LatLng, RouteMapProps } from '../types';
+import { useRoutePolyline } from '../hooks/useRoutePolyline';
+import { useArrivalDetection } from '../hooks/useArrivalDetection';
+import { normalizeRoutePoints, pointToLatLng, buildFitCoordinates } from '../utils/points';
 
 type LeafletModule = typeof LeafletNS;
 type LeafletMap = LeafletNS.Map;

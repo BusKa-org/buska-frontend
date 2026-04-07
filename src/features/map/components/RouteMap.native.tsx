@@ -3,13 +3,13 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
-import type { RouteMapProps } from './types';
-import { useLocationPermission } from '../../hooks/useLocationPermissionWrapper';
-import { useCurrentLocation } from '../../hooks/useCurrentLocation';
-import { useArrivalDetection } from '../../hooks/useArrivalDetection';
-import { useRoutePolyline } from '../../hooks/useRoutePolyline';
-import { useLeafletWebViewBridge } from '../../hooks/useLeafletWebViewBridge';
-import { normalizeRoutePoints, pointToLatLng } from './utils/points';
+import type { RouteMapProps } from '../types';
+import { useLocationPermission } from '../hooks/useLocationPermissionWrapper';
+import { useCurrentLocation } from '../hooks/useCurrentLocation';
+import { useArrivalDetection } from '../hooks/useArrivalDetection';
+import { useRoutePolyline } from '../hooks/useRoutePolyline';
+import { useLeafletWebViewBridge } from '../hooks/useLeafletWebViewBridge';
+import { normalizeRoutePoints, pointToLatLng } from '../utils/points';
 
 export default function RouteMap({ pontosRota, onPontoChegado }: RouteMapProps) {
   const hasFittedRef = useRef(false);

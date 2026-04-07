@@ -11,7 +11,7 @@ import {
 import {motoristaService} from '../../services/motoristaService';
 import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
-import { RouteMap } from '../../components/index';
+import { RouteMap } from '../../features/map/index';
 import pontoService from '../../services/pontoService';
 
 const DetalheViagemMotorista = ({navigation, route}) => {

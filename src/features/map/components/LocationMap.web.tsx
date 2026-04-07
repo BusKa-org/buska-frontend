@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import type * as LeafletNS from 'leaflet';
 
-import type { LocationMapProps } from './types';
-import { normalizeRoutePoints, pointToLatLng } from './utils/points';
+import type { LocationMapProps } from '../types';
+import { normalizeRoutePoints, pointToLatLng } from '../utils/points';
 
 type LeafletModule = typeof LeafletNS;
 type LeafletMap = LeafletNS.Map;

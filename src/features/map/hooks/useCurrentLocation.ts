@@ -1,7 +1,7 @@
 // src/components/mapa/hooks/useCurrentLocation.ts
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Geolocation from 'react-native-geolocation-service';
-import type { LatLng } from '../components/map/types';
+import type { LatLng } from '../types';
 
 type Params = {
   enabled: boolean;

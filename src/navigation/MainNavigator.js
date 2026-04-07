@@ -12,7 +12,7 @@ import {
 } from './SimpleNavigator';
 
 // Detecta se está na web
-const isWeb = Platform.OS === 'web' || typeof window !== 'undefined';
+const isWeb = Platform.OS === 'web';
 
 // Para mobile, tenta usar React Navigation
 let NativeStackNavigator = null;

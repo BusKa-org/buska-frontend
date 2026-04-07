@@ -10,7 +10,7 @@ import {
 import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
 import { motoristaService } from '../../services/motoristaService';
-import MapaLocalizacao from '../../components/index';
+import { LocationMap } from '../../features/map/index';
 
 // Geolocation: same as InicioFimViagem (native vs web)
 let Geolocation = null;
@@ -158,7 +158,7 @@ const LocalizacaoOnibus = ({ navigation, route }) => {
             <Text style={styles.mapLoadingText}>Buscando localização do ônibus...</Text>
           </View>
         ) : (
-          <MapaLocalizacao pontosRota={pontosRotaMapa} />
+          <LocationMap pontosRota={pontosRotaMapa} />
         )}
       </View>
 

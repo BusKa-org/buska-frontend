@@ -1,8 +1,8 @@
 // src/components/mapa/hooks/useLeafletWebViewBridge.ts
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { WebViewMessageEvent } from 'react-native-webview';
-import { buildLeafletHtml } from '../components/map/utils/leafletHtml';
-import type { LatLng } from '../components/map/types';
+import { buildLeafletHtml } from '../utils/leafletHtml';
+import type { LatLng } from '../types';
 
 type Result = {
   webViewRef: React.MutableRefObject<any>;

@@ -15,7 +15,7 @@ import { colors, spacing, borderRadius, shadows, textStyles, fontWeight } from '
 import Icon, { IconNames } from '../../components/Icon';
 import { useToast } from '../../components/Toast';
 import Svg, { Polyline } from 'react-native-svg';
-import { RouteMap } from '../../components/index';
+import { RouteMap } from '../../features/map/index';
 
 const RotaMapaSimples = ({ pontos, onPontoChegado }) => {
   const { validPontos, hasValidPoints } = useMemo(() => {

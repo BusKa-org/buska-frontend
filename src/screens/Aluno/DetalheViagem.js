@@ -13,7 +13,7 @@ import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme'
 import Icon, { IconNames } from '../../components/Icon';
 import { unwrapItems } from '../../types';
 
-import { RouteMap } from '../../components/index';
+import { RouteMap } from '../../features/map/index';
 
 const DetalheViagem = ({navigation, route}) => {
   const {rota, viagem} = route?.params || {};

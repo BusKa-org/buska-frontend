@@ -1,8 +1,8 @@
 // src/components/mapa/hooks/useRoutePolyline.ts
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { LatLng } from '../components/map/types';
-import { distanceInMeters } from '../components/map/utils/geo';
-import { fetchRoutePolyline } from '../components/map/utils/routeProvider';
+import type { LatLng } from '../types';
+import { distanceInMeters } from '../utils/geo';
+import { fetchRoutePolyline } from '../utils/routeProvider';
 
 type Params = {
   origin: LatLng | null;

@@ -12,7 +12,7 @@ import DefinirHorariosRota from '../screens/Motorista/DefinirHorariosRota';
 import RotaOtimizada from '../screens/Motorista/RotaOtimizada';
 import InicioFimViagem from '../screens/Motorista/InicioFimViagem';
 import ChatGestor from '../screens/Motorista/ChatGestor';
-import ConfigNotificacoesMotorista from '../screens/Motorista/ConfigNotificacoesMotorista';
+import ConfigNotificacoes from '../screens/ConfigNotificacoes';
 import {
   NavigationProvider,
   Navigator,
@@ -20,7 +20,7 @@ import {
 } from './SimpleNavigator';
 
 // Detecta se está na web
-const isWeb = Platform.OS === 'web' || typeof window !== 'undefined';
+const isWeb = Platform.OS === 'web';
 
 // Para mobile, tenta usar React Navigation
 let NativeStackNavigator = null;
@@ -60,7 +60,7 @@ const MotoristaNavigator = () => {
           <Screen name="InicioFimViagem" component={InicioFimViagem} />
           <Screen
             name="ConfigNotificacoesMotorista"
-            component={ConfigNotificacoesMotorista}
+            component={ConfigNotificacoes}
           />
         </Navigator>
       </NavigationProvider>
@@ -100,7 +100,7 @@ const MotoristaNavigator = () => {
       <Stack.Screen name="InicioFimViagem" component={InicioFimViagem} />
       <Stack.Screen
         name="ConfigNotificacoesMotorista"
-        component={ConfigNotificacoesMotorista}
+        component={ConfigNotificacoes}
       />
     </Stack.Navigator>
   );
