@@ -417,6 +417,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/routing/route": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_route"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/users": {
         parameters: {
             query?: never;
@@ -863,11 +879,6 @@ export interface components {
             /** @description Ano de fabricação */
             ano?: number;
         };
-        OnibusListResponse: {
-            items?: components["schemas"]["OnibusResponse"][];
-            /** @description Total de ônibus */
-            total?: number;
-        };
         OnibusResponse: {
             /** @description UUID do ônibus */
             id?: string;
@@ -879,6 +890,11 @@ export interface components {
             capacidade?: number;
             /** @description Ano */
             ano?: number;
+        };
+        OnibusListResponse: {
+            items?: components["schemas"]["OnibusResponse"][];
+            /** @description Total de ônibus */
+            total?: number;
         };
         RotaCreateRequest: {
             /** @description Nome da rota */
@@ -906,11 +922,6 @@ export interface components {
             /** @description Dias da semana (SEG, TER, ...) */
             dias: string[];
         };
-        RotaListResponse: {
-            items?: components["schemas"]["RotaResponse"][];
-            /** @description Total de rotas */
-            total?: number;
-        };
         RotaResponse: {
             /** @description UUID */
             id?: string;
@@ -926,6 +937,11 @@ export interface components {
             municipio_nome?: string;
             /** @description UF do município */
             municipio_uf?: string;
+        };
+        RotaListResponse: {
+            items?: components["schemas"]["RotaResponse"][];
+            /** @description Total de rotas */
+            total?: number;
         };
         RotaInscricaoRequest: {
             /** @description inscrever ou desinscrever */
@@ -948,11 +964,6 @@ export interface components {
             /** @description Ordem */
             ordem?: number;
         };
-        RotaHorarioListResponse: {
-            items?: components["schemas"]["RotaHorarioResponse"][];
-            /** @description Total de horários */
-            total?: number;
-        };
         RotaHorarioResponse: {
             /** @description UUID */
             id?: string;
@@ -962,6 +973,11 @@ export interface components {
             sentido?: string;
             /** @description Dias */
             dias?: string[];
+        };
+        RotaHorarioListResponse: {
+            items?: components["schemas"]["RotaHorarioResponse"][];
+            /** @description Total de horários */
+            total?: number;
         };
         RotaUpdateRequest: {
             /** @description Nome da rota */
@@ -1001,11 +1017,6 @@ export interface components {
             /** @description Longitude */
             longitude: number;
         };
-        PontoListResponse: {
-            items?: components["schemas"]["PontoResponse"][];
-            /** @description Total de pontos */
-            total?: number;
-        };
         PontoResponse: {
             /** @description UUID do ponto */
             id?: string;
@@ -1020,9 +1031,28 @@ export interface components {
             /** @description Instituição vinculada */
             instituicao?: string;
         };
+        PontoListResponse: {
+            items?: components["schemas"]["PontoResponse"][];
+            /** @description Total de pontos */
+            total?: number;
+        };
         PontoUpdateRequest: {
             /** @description Nome do ponto (ex: Escola A) */
             apelido?: string;
+            /** @description Latitude */
+            latitude?: number;
+            /** @description Longitude */
+            longitude?: number;
+        };
+        RouteResponse: {
+            /** @description Polyline ordenada do ponto de origem ao destino */
+            coordinates?: components["schemas"]["RouteCoordinate"][];
+            /** @description Distância total em metros */
+            distance_meters?: number;
+            /** @description Duração estimada em segundos */
+            duration_seconds?: number;
+        };
+        RouteCoordinate: {
             /** @description Latitude */
             latitude?: number;
             /** @description Longitude */
@@ -1081,11 +1111,6 @@ export interface components {
             /** @description UUID do veículo (opcional) */
             veiculo_id?: string;
         };
-        ViagemListResponse: {
-            items?: components["schemas"]["ViagemResponse"][];
-            /** @description Total de viagens */
-            total?: number;
-        };
         ViagemResponse: {
             /** @description UUID */
             id?: string;
@@ -1105,6 +1130,11 @@ export interface components {
             motorista_id?: string;
             /** @description UUID do veículo */
             veiculo_id?: string;
+        };
+        ViagemListResponse: {
+            items?: components["schemas"]["ViagemResponse"][];
+            /** @description Total de viagens */
+            total?: number;
         };
         ViagemLoteRequest: {
             /** @description Data para gerar viagens (YYYY-MM-DD) */
@@ -2155,6 +2185,56 @@ export interface operations {
             };
         };
     };
+    get_route: {
+        parameters: {
+            query?: {
+                /** @description Latitude da origem */
+                origin_lat?: string;
+                /** @description Longitude da origem */
+                origin_lng?: string;
+                /** @description Latitude do destino */
+                dest_lat?: string;
+                /** @description Longitude do destino */
+                dest_lng?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RouteResponse"];
+                };
+            };
+            /** @description Parâmetros inválidos ou ausentes */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Nenhuma rota encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Serviço de roteamento indisponível */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     list_users: {
         parameters: {
             query?: never;
@@ -2440,7 +2520,18 @@ export interface operations {
     };
     list_all_viagens: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Data inicial (YYYY-MM-DD) */
+                data_inicio?: string;
+                /** @description Data final (YYYY-MM-DD) */
+                data_fim?: string;
+                /** @description Status da viagem */
+                status?: string;
+                /** @description UUID do motorista */
+                motorista_id?: string;
+                /** @description UUID da rota */
+                rota_id?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2583,7 +2674,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Success */
+            /** @description Trip cancelled successfully */
             200: {
                 headers: {
                     [name: string]: unknown;

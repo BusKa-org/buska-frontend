@@ -1,6 +1,7 @@
-import type { components } from './openapi';
+import type { components, operations } from './openapi';
 
 type Schemas = components['schemas'];
+type ListAllViagens = operations['list_all_viagens'];
 
 // Generic shape for all paginated list responses from this backend.
 // If the backend ever changes a response to a plain array or a different
@@ -17,7 +18,7 @@ export const unwrapItems = <T>(response: ListResponse<T> | T[]): T[] => {
     return response;
   }
   return response.items ?? [];
-}
+};
 
 // Auth
 export type LoginRequest = Schemas['LoginRequest'];
@@ -79,6 +80,7 @@ export type ViagemConfirmacaoRequest = Schemas['ViagemConfirmacaoRequest'];
 export type ViagemAlunoConfirmacaoResponse = Schemas['ViagemAlunoConfirmacaoResponse'];
 export type ViagemAgendaAlunoResponse = Schemas['ViagemAgendaAlunoResponse'];
 export type ViagemAgendaAlunoListResponse = Schemas['ViagemAgendaAlunoListResponse'];
+export type ViagemListQueryParams = ListAllViagens['parameters']['query'];
 
 // Instituicoes
 export type InstituicaoResponse = Schemas['InstituicaoResponse'];
