@@ -87,9 +87,15 @@ const DashboardAluno: React.FC<Props> = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [alert, setAlert] = useState<TripAlert | null>(null);
   const prevUnreadRef = useRef(0);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
-  const isPendingApproval = (user as Record<string, unknown>)?.status === 'PENDING_APPROVAL';
+  const userRecord = user as Record<string, unknown>;
+  const userStatus = userRecord?.status as string | undefined;
+  const isPendingApproval = userStatus === 'PENDING_APPROVAL';
+  const isAwaitingGuardian =
+    userStatus === 'PENDING_SIGNUP' &&
+    !!userRecord?.email_responsavel &&
+    !userRecord?.guardian_consented_at;
 
   const loadNotifBadge = useCallback(async () => {
     try {
@@ -267,6 +273,52 @@ const DashboardAluno: React.FC<Props> = ({ navigation }) => {
     );
   }
 
+  if (isAwaitingGuardian || isPendingApproval) {
+    const isGuardian = isAwaitingGuardian;
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.blockedRoot}>
+          <View style={styles.blockedIconWrap}>
+            <Icon
+              name={isGuardian ? 'mail-outline' : IconNames.schedule}
+              size="xl"
+              color={isGuardian ? colors.warning.dark : colors.primary.main}
+              style={undefined}
+            />
+          </View>
+
+          <Text style={styles.blockedTitle}>
+            {isGuardian ? 'Aguardando responsável' : 'Cadastro em análise'}
+          </Text>
+
+          <Text style={styles.blockedBody}>
+            {isGuardian
+              ? `Um e-mail de autorização foi enviado para ${userRecord?.email_responsavel as string}. O responsável precisa confirmar antes de você continuar.`
+              : 'Seu responsável já autorizou o cadastro. O gestor municipal está analisando sua solicitação e você será avisado quando for aprovado.'}
+          </Text>
+
+          {isGuardian && (
+            <View style={styles.blockedHint}>
+              <Icon name="info-outline" size="sm" color={colors.text.hint} style={undefined} />
+              <Text style={styles.blockedHintText}>
+                Não recebeu? Peça ao responsável para verificar a caixa de spam.
+              </Text>
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={styles.blockedLogoutBtn}
+            onPress={() => void logout()}
+            accessibilityRole="button"
+            accessibilityLabel="Sair da conta">
+            <Icon name="logout" size="sm" color={colors.text.secondary} style={undefined} />
+            <Text style={styles.blockedLogoutText}>Sair da conta</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <TripAlertBanner alert={alert} onDismiss={() => setAlert(null)} />
@@ -310,23 +362,6 @@ const DashboardAluno: React.FC<Props> = ({ navigation }) => {
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* Pending Approval Banner */}
-        {isPendingApproval && (
-          <View
-            style={styles.approvalBanner}
-            accessible
-            accessibilityRole="alert"
-            accessibilityLabel="Cadastro aguardando aprovação do gestor">
-            <Icon name={IconNames.schedule} size="md" color={colors.warning.dark} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.approvalTitle}>Cadastro em análise</Text>
-              <Text style={styles.approvalSub}>
-                Seu cadastro está aguardando aprovação do gestor.
-              </Text>
-            </View>
-          </View>
-        )}
 
         {/* Today's Trip Banner */}
         {todayBannerConfig && (
@@ -668,29 +703,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Approval Banner
-  approvalBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginHorizontal: spacing.base,
-    marginTop: spacing.base,
-    padding: spacing.base,
-    backgroundColor: colors.warning.light,
-    borderRadius: borderRadius.lg,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.warning.main,
-  },
-  approvalTitle: {
-    ...textStyles.h5,
-    color: colors.warning.dark,
-    fontWeight: '700',
-  },
-  approvalSub: {
-    ...textStyles.bodySmall,
-    color: colors.warning.dark,
-  },
-
   // Today Banner
   todayBanner: {
     flexDirection: 'row',
@@ -959,6 +971,64 @@ const styles = StyleSheet.create({
   emptyStateButtonText: {
     ...textStyles.button,
     color: colors.primary.contrast,
+  },
+
+  // Blocked state (PENDING_SIGNUP guardian / PENDING_APPROVAL)
+  blockedRoot: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    gap: spacing.lg,
+  },
+  blockedIconWrap: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: colors.warning.light,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  blockedTitle: {
+    ...textStyles.h3,
+    color: colors.text.primary,
+    textAlign: 'center',
+  },
+  blockedBody: {
+    ...textStyles.body,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  blockedHint: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    backgroundColor: colors.neutral[100],
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+  },
+  blockedHintText: {
+    ...textStyles.bodySmall,
+    color: colors.text.hint,
+    flex: 1,
+    lineHeight: 18,
+  },
+  blockedLogoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xl,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.neutral[300],
+  },
+  blockedLogoutText: {
+    ...textStyles.body,
+    color: colors.text.secondary,
   },
 
   // Config

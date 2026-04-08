@@ -33,9 +33,20 @@ export type UserResponse = Schemas['UserResponse'];
 export type UserListResponse = Schemas['UserListResponse'];
 
 // Alunos
-export type AlunoResponse = Schemas['AlunoResponse'];
+export type AlunoResponse = Schemas['AlunoResponse'] & {
+  // Guardian consent fields (added after openapi was generated)
+  data_nascimento?: string | null;
+  is_minor?: boolean;
+  email_responsavel?: string | null;
+  nome_responsavel?: string | null;
+  cpf_responsavel?: string | null;
+  guardian_consented_at?: string | null;
+};
 export type AlunoListResponse = Schemas['AlunoListResponse'];
-export type AlunoSelfSignupRequest = Schemas['AlunoSelfSignupRequest'];
+export type AlunoSelfSignupRequest = Schemas['AlunoSelfSignupRequest'] & {
+  data_nascimento: string;
+  email_responsavel?: string;
+};
 export type AlunoMeUpdateRequest = Schemas['AlunoMeUpdateRequest'];
 export type AlunoProvisionAccountRequest = Schemas['AlunoProvisionAccountRequest'];
 

@@ -7,6 +7,7 @@ import ViagensList from '../screens/Gestor/ViagensList';
 import EquipeGestor from '../screens/Gestor/EquipeGestor';
 import FrotaGestor from '../screens/Gestor/FrotaGestor';
 import NotificacoesGestor from '../screens/Gestor/NotificacoesGestor';
+import DetalheAlunoGestor from '../screens/Gestor/DetalheAlunoGestor';
 
 // Shared screens (reused from Motorista)
 import RotaMotorista from '../screens/Motorista/RotaMotorista';
@@ -14,6 +15,7 @@ import CriarRota from '../screens/Motorista/CriarRota';
 import CriarViagem from '../screens/Motorista/CriarViagem';
 import DetalheViagemMotorista from '../screens/Motorista/DetalheViagemMotorista';
 import ListaAlunosConfirmados from '../screens/Motorista/ListaAlunosConfirmados';
+import ListaViagensMotorista from '../screens/Motorista/ListaViagens';
 import DefinirPontosRota from '../screens/Motorista/DefinirPontosRota';
 import DefinirHorariosRota from '../screens/Motorista/DefinirHorariosRota';
 import ConfigNotificacoes from '../screens/ConfigNotificacoes';
@@ -65,6 +67,7 @@ const TAB_LABEL_MAP = {
 
 let ViagensStackNavigator = null;
 let RotasStackNavigator = null;
+let EquipeStackNavigator = null;
 let PerfilStackNavigator = null;
 
 function ViagensStack() {
@@ -94,6 +97,23 @@ function RotasStack() {
       <Stack.Screen name="DefinirPontosRota" component={DefinirPontosRota} />
       <Stack.Screen name="DefinirHorariosRota" component={DefinirHorariosRota} />
       <Stack.Screen name="CriarViagem" component={CriarViagem} />
+      {/* RotaMotorista navigates here when the gestor taps "Ver Viagens" */}
+      <Stack.Screen name="ListaViagens" component={ListaViagensMotorista} />
+      <Stack.Screen name="DetalheViagemMotorista" component={DetalheViagemMotorista} />
+      <Stack.Screen name="ListaAlunosConfirmados" component={ListaAlunosConfirmados} />
+    </Stack.Navigator>
+  );
+}
+
+function EquipeStack() {
+  if (!EquipeStackNavigator && createNativeStackNavigator) {
+    EquipeStackNavigator = createNativeStackNavigator();
+  }
+  const Stack = EquipeStackNavigator;
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+      <Stack.Screen name="EquipeGestor" component={EquipeGestor} />
+      <Stack.Screen name="DetalheAlunoGestor" component={DetalheAlunoGestor} />
     </Stack.Navigator>
   );
 }
@@ -131,7 +151,9 @@ const GestorNavigator = () => {
           <Screen name="CriarRota" component={CriarRota} />
           <Screen name="DefinirPontosRota" component={DefinirPontosRota} />
           <Screen name="DefinirHorariosRota" component={DefinirHorariosRota} />
+          <Screen name="ListaViagens" component={ListaViagensMotorista} />
           <Screen name="EquipeGestor" component={EquipeGestor} />
+          <Screen name="DetalheAlunoGestor" component={DetalheAlunoGestor} />
           <Screen name="FrotaGestor" component={FrotaGestor} />
           <Screen name="ConfigNotificacoesGestor" component={ConfigNotificacoes} />
           <Screen name="NotificacoesGestor" component={NotificacoesGestor} />
@@ -177,7 +199,7 @@ const GestorNavigator = () => {
       <Tab.Screen name="InicioTab" component={DashboardGestor} />
       <Tab.Screen name="ViagensTab" component={ViagensStack} />
       <Tab.Screen name="RotasTab" component={RotasStack} />
-      <Tab.Screen name="EquipeTab" component={EquipeGestor} />
+      <Tab.Screen name="EquipeTab" component={EquipeStack} />
       <Tab.Screen name="FrotaTab" component={FrotaGestor} />
       <Tab.Screen name="PerfilTab" component={PerfilStack} />
     </Tab.Navigator>

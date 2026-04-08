@@ -67,6 +67,42 @@ const CriarConta = ({navigation}) => {
   const [showSenha, setShowSenha] = useState(false);
   const [showConfirmarSenha, setShowConfirmarSenha] = useState(false);
 
+  // Date of birth and guardian
+  const [dataNascimento, setDataNascimento] = useState('');
+  const [emailResponsavel, setEmailResponsavel] = useState('');
+
+  const calcAge = rawDate => {
+    const digits = rawDate.replace(/\D/g, '');
+    if (digits.length !== 8) return null;
+    const day = parseInt(digits.slice(0, 2), 10);
+    const month = parseInt(digits.slice(2, 4), 10) - 1;
+    const year = parseInt(digits.slice(4, 8), 10);
+    const birth = new Date(year, month, day);
+    if (isNaN(birth.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    if (
+      today.getMonth() < birth.getMonth() ||
+      (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())
+    ) age--;
+    return age;
+  };
+
+  const isMinor = calcAge(dataNascimento) !== null && calcAge(dataNascimento) < 18;
+
+  const formatDate = text => {
+    const digits = text.replace(/\D/g, '').slice(0, 8);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+  };
+
+  const toIsoDate = rawDate => {
+    const digits = rawDate.replace(/\D/g, '');
+    if (digits.length !== 8) return null;
+    return `${digits.slice(4, 8)}-${digits.slice(2, 4)}-${digits.slice(0, 2)}`;
+  };
+
   const [instituicaoId, setInstituicaoId] = useState('');
   const [instituicoes, setInstituicoes] = useState([]);
   const [selectedInstitutionName, setSelectedInstitutionName] = useState('');
@@ -286,6 +322,21 @@ const CriarConta = ({navigation}) => {
       newErrors.instituicaoId = 'Selecione uma instituição de ensino.';
     }
 
+    const age = calcAge(dataNascimento);
+    if (!dataNascimento || dataNascimento.replace(/\D/g, '').length !== 8) {
+      newErrors.dataNascimento = 'Data de nascimento é obrigatória.';
+    } else if (age === null || age > 120) {
+      newErrors.dataNascimento = 'Data de nascimento inválida.';
+    }
+
+    if (age !== null && age < 18) {
+      if (!emailResponsavel.trim()) {
+        newErrors.emailResponsavel = 'E-mail do responsável é obrigatório para menores de 18 anos.';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailResponsavel)) {
+        newErrors.emailResponsavel = 'E-mail do responsável inválido.';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -383,6 +434,9 @@ const CriarConta = ({navigation}) => {
     setLoading(true);
 
     try {
+      const isoDate = toIsoDate(dataNascimento);
+      const minor = isMinor;
+
       const result = await register({
         nome,
         email,
@@ -391,6 +445,8 @@ const CriarConta = ({navigation}) => {
         matricula,
         telefone: telefone ? telefone.replace(/\D/g, '') : undefined,
         instituicao_id: instituicaoId || undefined,
+        data_nascimento: isoDate,
+        email_responsavel: minor ? emailResponsavel.trim().toLowerCase() : undefined,
         endereco_casa: {
           logradouro: logradouro.trim(),
           numero: numero.trim(),
@@ -403,7 +459,13 @@ const CriarConta = ({navigation}) => {
       });
 
       if (result.success) {
-        navigation.navigate('Login');
+        if (minor) {
+          navigation.navigate('Login', {
+            message: `Um e-mail foi enviado para ${emailResponsavel.trim()}. Após a confirmação do responsável, seu cadastro será analisado pelo gestor.`,
+          });
+        } else {
+          navigation.navigate('Login');
+        }
         return;
       }
 
@@ -427,6 +489,8 @@ const CriarConta = ({navigation}) => {
     matricula: STEPS.PERSONAL,
     instituicaoId: STEPS.PERSONAL,
     telefone: STEPS.PERSONAL,
+    dataNascimento: STEPS.PERSONAL,
+    emailResponsavel: STEPS.PERSONAL,
     cep: STEPS.ADDRESS,
     logradouro: STEPS.ADDRESS,
     numero: STEPS.ADDRESS,
@@ -936,6 +1000,63 @@ const CriarConta = ({navigation}) => {
                   />
                 </View>
                 {renderFieldError('telefone')}
+
+                <Text style={styles.label}>Data de nascimento *</Text>
+                <View
+                  style={[
+                    styles.inputWrapper,
+                    errors.dataNascimento && styles.inputWrapperError,
+                  ]}>
+                  <Icon name="cake" size="md" color={colors.neutral[400]} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="DD/MM/AAAA"
+                    placeholderTextColor={colors.neutral[400]}
+                    value={dataNascimento}
+                    onChangeText={text => {
+                      setDataNascimento(formatDate(text));
+                      clearFieldError('dataNascimento');
+                      clearFieldError('emailResponsavel');
+                    }}
+                    keyboardType="numeric"
+                    maxLength={10}
+                  />
+                </View>
+                {renderFieldError('dataNascimento')}
+
+                {isMinor && (
+                  <>
+                    <View style={styles.minorBanner}>
+                      <Icon name="family-restroom" size="md" color={colors.warning.dark} />
+                      <Text style={styles.minorBannerText}>
+                        Por ser menor de 18 anos, é necessária a autorização de um responsável legal.
+                      </Text>
+                    </View>
+
+                    <Text style={styles.label}>E-mail do responsável *</Text>
+                    <View
+                      style={[
+                        styles.inputWrapper,
+                        errors.emailResponsavel && styles.inputWrapperError,
+                      ]}>
+                      <Icon name="email" size="md" color={colors.neutral[400]} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="responsavel@email.com"
+                        placeholderTextColor={colors.neutral[400]}
+                        value={emailResponsavel}
+                        onChangeText={text => {
+                          setEmailResponsavel(text);
+                          clearFieldError('emailResponsavel');
+                        }}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                      />
+                    </View>
+                    {renderFieldError('emailResponsavel')}
+                  </>
+                )}
               </View>
             )}
 
@@ -1445,6 +1566,26 @@ const styles = StyleSheet.create({
     color: colors.text.disabled,
     textAlign: 'center',
     marginTop: spacing.base,
+  },
+
+  minorBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(245,158,11,0.10)',
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginTop: spacing.sm,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.warning.dark,
+  },
+
+  minorBannerText: {
+    flex: 1,
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
+    color: colors.warning.dark,
+    lineHeight: 18,
   },
 
   modalOverlay: {

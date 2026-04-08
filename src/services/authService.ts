@@ -109,6 +109,8 @@ export const authService = {
       cpf: onlyDigits(userData.cpf),
       matricula: userData.matricula.trim(),
       telefone: userData.telefone ? onlyDigits(userData.telefone) : undefined,
+      data_nascimento: userData.data_nascimento,
+      email_responsavel: userData.email_responsavel ?? undefined,
       endereco_casa: userData.endereco_casa,
     };
 

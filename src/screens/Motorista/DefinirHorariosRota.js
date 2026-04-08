@@ -37,6 +37,8 @@ const DefinirHorariosRota = ({ navigation, route }) => {
   const rotaId = rota?.id;
   const rotaNome = rota?.nome || 'Rota';
   const pontosRota = rota?.pontos || [];
+  const motoristaPadraoId = params.motorista_padrao_id || null;
+  const veiculoPadraoId = params.veiculo_padrao_id || null;
 
   const toast = useToast();
 
@@ -128,11 +130,13 @@ const DefinirHorariosRota = ({ navigation, route }) => {
           ordem: p.ordem,
         })),
         horarios: horarios,
+        motorista_padrao_id: motoristaPadraoId,
+        veiculo_padrao_id: veiculoPadraoId,
       });
     } else {
       await motoristaService.adicionarHorarioRota(rotaId, horarios);
     }
-    navigation.navigate('DashboardMotorista');
+    navigation.popToTop();
   };
 
   const formatDias = (dias) => {

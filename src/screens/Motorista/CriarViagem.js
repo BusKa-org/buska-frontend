@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,20 +10,38 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import {motoristaService} from '../../services/motoristaService';
-import {useAuth} from '../../contexts/AuthContext';
-import {useToast} from '../../components/Toast';
+import { motoristaService } from '../../services/motoristaService';
+import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../components/Toast';
 import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
 import { unwrapItems } from '../../types';
 
 const isWeb = Platform.OS === 'web';
 
-const CriarViagem = ({navigation, route}) => {
-  const {user} = useAuth();
+const DIAS_ORDER = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB', 'DOM'];
+const DIAS_SHORT = { SEG: 'Seg', TER: 'Ter', QUA: 'Qua', QUI: 'Qui', SEX: 'Sex', SAB: 'Sáb', DOM: 'Dom' };
+const SENTIDO_LABEL = { IDA: 'Ida', VOLTA: 'Volta', CIRCULAR: 'Circular' };
+const SENTIDO_COLOR = {
+  IDA: colors.info.main,
+  VOLTA: colors.warning.main,
+  CIRCULAR: colors.success.main,
+};
+
+const formatDias = (dias) => {
+  if (!dias || dias.length === 0) return '—';
+  const sorted = [...dias].sort((a, b) => DIAS_ORDER.indexOf(a) - DIAS_ORDER.indexOf(b));
+  if (dias.length === 7) return 'Todos os dias';
+  if (dias.length === 5 && !dias.includes('SAB') && !dias.includes('DOM')) return 'Seg a Sex';
+  if (dias.length === 2 && dias.includes('SAB') && dias.includes('DOM')) return 'Fim de semana';
+  return sorted.map(d => DIAS_SHORT[d] || d).join(', ');
+};
+
+const CriarViagem = ({ navigation, route }) => {
+  const { user } = useAuth();
   const toast = useToast();
   const rotaParam = route?.params?.rota;
-  
+
   const [rotas, setRotas] = useState([]);
   const [rotaSelecionada, setRotaSelecionada] = useState(rotaParam?.id || null);
   const [horarios, setHorarios] = useState([]);
@@ -39,17 +57,22 @@ const CriarViagem = ({navigation, route}) => {
   useEffect(() => {
     const loadDadosIniciais = async () => {
       try {
-        setLoadingMotoristas(true);
-
         const [rotasData, motoristasData] = await Promise.all([
           motoristaService.listarRotas().then(unwrapItems),
-          motoristaService.listarMotoristas().then(unwrapItems)
+          motoristaService.listarMotoristas().then(unwrapItems),
         ]);
-        
-        setRotas(rotasData);
+
+        const rotasList = rotasData || [];
+        setRotas(rotasList);
         setMotoristas(motoristasData || []);
-        
-      } catch (error) {
+
+        if (rotaParam && rotasList.find(r => r.id === rotaParam.id)) {
+          setRotaSelecionada(rotaParam.id);
+          // Pre-select default motorista from route
+          const rota = rotasList.find(r => r.id === rotaParam.id);
+          if (rota?.motorista_id) setMotoristaSelecionado(rota.motorista_id);
+        }
+      } catch {
         toast.error('Não foi possível carregar os dados.');
       } finally {
         setLoadingRotas(false);
@@ -60,59 +83,26 @@ const CriarViagem = ({navigation, route}) => {
     loadDadosIniciais();
   }, []);
 
-  // Helper to get date string in YYYY-MM-DD format
-  const formatDateToString = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  const getDateOffset = (daysOffset) => {
-    const date = new Date();
-    date.setDate(date.getDate() + daysOffset);
-    return formatDateToString(date);
-  };
-
+  // When route changes, pre-select default motorista and load schedules
   useEffect(() => {
-    const loadRotas = async () => {
-      try {
-        const rotasData = await motoristaService.listarRotas().then(unwrapItems);
-        setRotas(rotasData || []);
-        
-        // Se veio com rota pré-selecionada, garantir que está na lista
-        if (rotaParam && rotasData) {
-          const rotaExiste = rotasData.find((r) => r.id === rotaParam.id);
-          if (rotaExiste) {
-            setRotaSelecionada(rotaParam.id);
-          }
-        }
-      } catch (error) {
-        console.error('Error loading routes:', error);
-        toast.error('Não foi possível carregar as rotas.');
-      } finally {
-        setLoadingRotas(false);
-      }
-    };
+    if (!rotaSelecionada) {
+      setHorarios([]);
+      setHorarioSelecionado(null);
+      return;
+    }
 
-    loadRotas();
-  }, []);
+    const rota = rotas.find(r => r.id === rotaSelecionada);
+    if (rota?.motorista_id && !motoristaSelecionado) {
+      setMotoristaSelecionado(rota.motorista_id);
+    }
 
-  // Load schedules when route is selected
-  useEffect(() => {
     const loadHorarios = async () => {
-      if (!rotaSelecionada) {
-        setHorarios([]);
-        return;
-      }
-      
       try {
         setLoadingHorarios(true);
         const horariosData = await motoristaService.listarHorariosRota(rotaSelecionada).then(unwrapItems);
         setHorarios(horariosData || []);
         setHorarioSelecionado(null);
-      } catch (error) {
-        console.error('Error loading schedules:', error);
+      } catch {
         setHorarios([]);
       } finally {
         setLoadingHorarios(false);
@@ -122,28 +112,29 @@ const CriarViagem = ({navigation, route}) => {
     loadHorarios();
   }, [rotaSelecionada]);
 
+  const formatDateToString = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const getDateOffset = (n) => {
+    const d = new Date();
+    d.setDate(d.getDate() + n);
+    return formatDateToString(d);
+  };
+
+  const getTodayDate = () => formatDateToString(new Date());
+
   const handleCriarViagem = async () => {
-    if (!rotaSelecionada) {
-      toast.error('Selecione uma rota');
+    if (!rotaSelecionada) { toast.error('Selecione uma rota'); return; }
+    if (!motoristaSelecionado) { toast.error('Selecione um motorista'); return; }
+    if (!data.trim()) { toast.error('Informe a data da viagem'); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+      toast.error('Formato de data inválido. Use YYYY-MM-DD');
       return;
     }
-    if (!motoristaSelecionado) {
-      toast.error('Selecione um motorista');
-      return;
-    }
-
-    if (!data.trim()) {
-      toast.error('Informe a data da viagem');
-      return;
-    }
-
-    // Validar formato da data (YYYY-MM-DD)
-    const dataRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dataRegex.test(data)) {
-      toast.error('Formato de data inválido. Use YYYY-MM-DD (ex: 2024-12-25)');
-      return;
-    }
-
     if (!horarioSelecionado && horarios.length > 0) {
       toast.error('Selecione um horário');
       return;
@@ -151,54 +142,48 @@ const CriarViagem = ({navigation, route}) => {
 
     try {
       setLoading(true);
-
-      const viagemData = {
+      await motoristaService.criarViagem({
         rota_id: rotaSelecionada,
         motorista_id: motoristaSelecionado,
         data: data.trim(),
         horario_id: horarioSelecionado || undefined,
-      };
-
-      console.log(viagemData)
-      
-      await motoristaService.criarViagem(viagemData);
-
+      });
       toast.success('Viagem criada com sucesso!');
-      navigation.navigate('ListaViagens');
+      navigation.goBack();
     } catch (error) {
-      console.error('Error creating trip:', error);
       toast.error(error?.message || 'Não foi possível criar a viagem. Tente novamente.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Obter data de hoje no formato YYYY-MM-DD
-  const getTodayDate = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
+  const rotaSelecionadaObj = rotas.find(r => r.id === rotaSelecionada);
 
-  const formatHorario = (horario) => {
-    const sentidoLabel = {
-      'IDA': 'Ida',
-      'VOLTA': 'Volta',
-      'CIRCULAR': 'Circular'
-    };
-    const diasLabel = (horario.dias || []).join(', ');
-    return `${horario.horario_saida} - ${sentidoLabel[horario.sentido] || horario.sentido}${diasLabel ? ` (${diasLabel})` : ''}`;
-  };
+  if (loadingRotas) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+              <Icon name={IconNames.back} size="md" color={colors.primary.contrast} />
+            </TouchableOpacity>
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.title}>Nova Viagem</Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary.dark} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <Icon name={IconNames.back} size="md" color={colors.primary.contrast} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
@@ -211,225 +196,239 @@ const CriarViagem = ({navigation, route}) => {
         </View>
       </View>
 
-      {loadingRotas ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary.dark} />
-        </View>
-      ) : (
-        <ScrollView style={styles.scrollView}>
-          <View style={styles.content}>
-            {/* Seleção de Rota */}
-            <View style={styles.section}>
-              <Text style={styles.label}>Rota *</Text>
-              {rotas.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyText}>
-                    Você não possui rotas cadastradas
-                  </Text>
+      <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
+        <View style={styles.content}>
+
+          {/* ── Rota ───────────────────────────────────────────────────── */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Rota *</Text>
+            {rotas.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>Nenhuma rota cadastrada</Text>
+                <TouchableOpacity style={styles.emptyButton} onPress={() => navigation.navigate('CriarRota')}>
+                  <Text style={styles.emptyButtonText}>Criar Rota</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              rotas.map(rota => {
+                const selected = rotaSelecionada === rota.id;
+                return (
                   <TouchableOpacity
-                    style={styles.emptyButton}
-                    onPress={() => navigation.navigate('CriarRota')}>
-                    <Text style={styles.emptyButtonText}>Criar Rota</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.rotasScroll}>
-                  {rotas.map((rota) => (
-                    <TouchableOpacity
-                      key={rota.id}
-                      style={[
-                        styles.rotaOption,
-                        rotaSelecionada === rota.id && styles.rotaOptionSelected,
-                      ]}
-                      onPress={() => setRotaSelecionada(rota.id)}>
-                      <Text
-                        style={[
-                          styles.rotaOptionText,
-                          rotaSelecionada === rota.id &&
-                            styles.rotaOptionTextSelected,
-                        ]}>
-                        {rota.nome}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              )}
-            </View>
-
-            {/* Seleção de Horário */}
-            {rotaSelecionada && (
-              <View style={styles.section}>
-                <Text style={styles.label}>Horário</Text>
-                {loadingHorarios ? (
-                  <ActivityIndicator size="small" color={colors.primary.dark} />
-                ) : horarios.length === 0 ? (
-                  <View style={styles.infoBox}>
-                    <Icon name={IconNames.info} size="md" color={colors.info.main} />
-                    <Text style={styles.infoText}>
-                      Esta rota não possui horários cadastrados. A viagem será criada sem horário definido.
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={styles.horariosContainer}>
-                    {horarios.map((horario) => (
-                      <TouchableOpacity
-                        key={horario.id}
-                        style={[
-                          styles.horarioOption,
-                          horarioSelecionado === horario.id && styles.horarioOptionSelected,
-                        ]}
-                        onPress={() => setHorarioSelecionado(horario.id)}>
-                        <View style={styles.horarioContent}>
-                          <Icon 
-                            name={IconNames.schedule} 
-                            size="md" 
-                            color={horarioSelecionado === horario.id ? colors.primary.dark : colors.text.secondary} 
-                          />
-                          <Text
-                            style={[
-                              styles.horarioText,
-                              horarioSelecionado === horario.id && styles.horarioTextSelected,
-                            ]}>
-                            {formatHorario(horario)}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View>
-            )}
-
-            {/* Data */}
-            <View style={styles.section}>
-              <Text style={styles.label}>Data da Viagem *</Text>
-              
-              {/* Quick date selection buttons */}
-              <View style={styles.quickDatesContainer}>
-                <TouchableOpacity
-                  style={[styles.quickDateButton, data === getDateOffset(0) && styles.quickDateButtonSelected]}
-                  onPress={() => setData(getDateOffset(0))}
-                >
-                  <Text style={[styles.quickDateText, data === getDateOffset(0) && styles.quickDateTextSelected]}>Hoje</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.quickDateButton, data === getDateOffset(1) && styles.quickDateButtonSelected]}
-                  onPress={() => setData(getDateOffset(1))}
-                >
-                  <Text style={[styles.quickDateText, data === getDateOffset(1) && styles.quickDateTextSelected]}>Amanhã</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.quickDateButton, data === getDateOffset(2) && styles.quickDateButtonSelected]}
-                  onPress={() => setData(getDateOffset(2))}
-                >
-                  <Text style={[styles.quickDateText, data === getDateOffset(2) && styles.quickDateTextSelected]}>+2 dias</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.quickDateButton, data === getDateOffset(7) && styles.quickDateButtonSelected]}
-                  onPress={() => setData(getDateOffset(7))}
-                >
-                  <Text style={[styles.quickDateText, data === getDateOffset(7) && styles.quickDateTextSelected]}>+1 semana</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Date input - native for web, text for mobile */}
-              {isWeb ? (
-                <input
-                  type="date"
-                  value={data}
-                  min={getTodayDate()}
-                  onChange={(e) => setData(e.target.value)}
-                  disabled={loading}
-                  style={{
-                    width: '100%',
-                    padding: 16,
-                    fontSize: 16,
-                    borderRadius: 8,
-                    border: `1px solid ${colors.border.light}`,
-                    backgroundColor: colors.background.default,
-                    color: colors.text.primary,
-                    fontFamily: 'inherit',
-                  }}
-                />
-              ) : (
-                <TextInput
-                  style={styles.input}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={colors.text.hint}
-                  value={data}
-                  onChangeText={setData}
-                  editable={!loading}
-                  keyboardType="numbers-and-punctuation"
-                />
-              )}
-              
-              {data && (
-                <Text style={styles.selectedDateText}>
-                  Selecionado: {new Date(data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                </Text>
-              )}
-            </View>
-
-
-            {/* Seleção de Motorista */}
-            <View style={styles.section}>
-              <Text style={styles.label}>Motorista *</Text>
-              {loadingMotoristas ? (
-                <ActivityIndicator size="small" color={colors.primary.dark} />
-              ) : (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.rotasScroll}>
-                  {motoristas.map((mot) => (
-                    <TouchableOpacity
-                      key={mot.id}
-                      style={[
-                        styles.rotaOption,
-                        motoristaSelecionado === mot.id && styles.rotaOptionSelected,
-                      ]}
-                      onPress={() => setMotoristaSelecionado(mot.id)}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Icon name={IconNames.person} size="sm" color={motoristaSelecionado === mot.id ? colors.primary.dark : colors.text.secondary} />
-                        <Text
-                          style={[
-                            styles.rotaOptionText,
-                            motoristaSelecionado === mot.id && styles.rotaOptionTextSelected,
-                          ]}>
-                          {mot.nome}
+                    key={rota.id}
+                    style={[styles.listItem, selected && styles.listItemSelected]}
+                    onPress={() => {
+                      setRotaSelecionada(rota.id);
+                      setMotoristaSelecionado(rota.motorista_id || null);
+                    }}>
+                    <View style={styles.listItemContent}>
+                      <View style={[styles.listItemIcon, selected && styles.listItemIconSelected]}>
+                        <Icon name={IconNames.route} size="sm" color={selected ? colors.primary.dark : colors.text.secondary} />
+                      </View>
+                      <View style={styles.listItemText}>
+                        <Text style={[styles.listItemLabel, selected && styles.listItemLabelSelected]} numberOfLines={1}>
+                          {rota.nome}
                         </Text>
                       </View>
+                    </View>
+                    {selected && <Icon name={IconNames.check} size="sm" color={colors.primary.dark} />}
+                  </TouchableOpacity>
+                );
+              })
+            )}
+          </View>
+
+          {/* ── Horário ─────────────────────────────────────────────────── */}
+          {rotaSelecionada && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Horário de Operação</Text>
+              {loadingHorarios ? (
+                <ActivityIndicator size="small" color={colors.primary.dark} style={{ marginTop: spacing.sm }} />
+              ) : horarios.length === 0 ? (
+                <View style={styles.infoBox}>
+                  <Icon name={IconNames.info} size="sm" color={colors.info.main} />
+                  <Text style={styles.infoText}>
+                    Esta rota não possui horários. A viagem será criada sem horário fixo.
+                  </Text>
+                </View>
+              ) : (
+                horarios.map(horario => {
+                  const selected = horarioSelecionado === horario.id;
+                  const dias = (horario.dias || []).map(d => (typeof d === 'object' ? d.dia : d));
+                  const diasLabel = formatDias(dias);
+                  const sentidoColor = SENTIDO_COLOR[horario.sentido] || colors.neutral[400];
+                  return (
+                    <TouchableOpacity
+                      key={horario.id}
+                      style={[styles.horarioItem, selected && styles.horarioItemSelected]}
+                      onPress={() => setHorarioSelecionado(selected ? null : horario.id)}>
+                      <View style={styles.horarioItemLeft}>
+                        <Text style={[styles.horarioTime, selected && styles.horarioTimeSelected]}>
+                          {horario.horario_saida}
+                        </Text>
+                        <View style={styles.horarioMeta}>
+                          <View style={[styles.sentidoTag, { backgroundColor: sentidoColor }]}>
+                            <Text style={styles.sentidoTagText}>
+                              {SENTIDO_LABEL[horario.sentido] || horario.sentido}
+                            </Text>
+                          </View>
+                          <Text style={[styles.diasLabel, selected && styles.diasLabelSelected]}>
+                            {diasLabel}
+                          </Text>
+                        </View>
+                        {/* Day chips */}
+                        <View style={styles.diasChipsRow}>
+                          {DIAS_ORDER.map(d => {
+                            const active = dias.includes(d);
+                            return (
+                              <View
+                                key={d}
+                                style={[
+                                  styles.diaChip,
+                                  active ? styles.diaChipActive : styles.diaChipInactive,
+                                ]}>
+                                <Text style={[styles.diaChipText, active ? styles.diaChipTextActive : styles.diaChipTextInactive]}>
+                                  {DIAS_SHORT[d]}
+                                </Text>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      </View>
+                      {selected && (
+                        <View style={styles.horarioCheck}>
+                          <Icon name={IconNames.check} size="sm" color={colors.primary.dark} />
+                        </View>
+                      )}
                     </TouchableOpacity>
-                  ))}
-                </ScrollView>
+                  );
+                })
               )}
             </View>
-            {/* Botão Criar */}
-            <TouchableOpacity
-              style={[styles.button, (loading || !rotaSelecionada || rotas.length === 0) && styles.buttonDisabled]}
-              onPress={handleCriarViagem}
-              disabled={loading || !rotaSelecionada || rotas.length === 0}>
-              {loading ? (
-                <ActivityIndicator color={colors.text.inverse} />
-              ) : (
-                <Text style={styles.buttonText}>Criar Viagem</Text>
-              )}
-            </TouchableOpacity>
+          )}
+
+          {/* ── Data ───────────────────────────────────────────────────── */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Data da Viagem *</Text>
+            <View style={styles.quickDatesRow}>
+              {[
+                { label: 'Hoje', offset: 0 },
+                { label: 'Amanhã', offset: 1 },
+                { label: '+2 dias', offset: 2 },
+                { label: '+1 semana', offset: 7 },
+              ].map(({ label, offset }) => {
+                const val = getDateOffset(offset);
+                const selected = data === val;
+                return (
+                  <TouchableOpacity
+                    key={offset}
+                    style={[styles.quickDateBtn, selected && styles.quickDateBtnSelected]}
+                    onPress={() => setData(val)}>
+                    <Text style={[styles.quickDateText, selected && styles.quickDateTextSelected]}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {isWeb ? (
+              <input
+                type="date"
+                value={data}
+                min={getTodayDate()}
+                onChange={e => setData(e.target.value)}
+                disabled={loading}
+                style={{
+                  width: '100%', padding: 16, fontSize: 16,
+                  borderRadius: 8, border: `1px solid ${colors.border.light}`,
+                  backgroundColor: colors.background.default, color: colors.text.primary,
+                  fontFamily: 'inherit', marginTop: 8,
+                }}
+              />
+            ) : (
+              <TextInput
+                style={styles.dateInput}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={colors.text.hint}
+                value={data}
+                onChangeText={setData}
+                editable={!loading}
+                keyboardType="numbers-and-punctuation"
+              />
+            )}
+
+            {data ? (
+              <Text style={styles.selectedDateText}>
+                {new Date(data + 'T12:00:00').toLocaleDateString('pt-BR', {
+                  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+                })}
+              </Text>
+            ) : null}
           </View>
-        </ScrollView>
-      )}
+
+          {/* ── Motorista ──────────────────────────────────────────────── */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Motorista *</Text>
+            {rotaSelecionadaObj?.motorista_id && (
+              <View style={styles.infoBox}>
+                <Icon name={IconNames.info} size="sm" color={colors.info.main} />
+                <Text style={styles.infoText}>
+                  O motorista padrão da rota foi pré-selecionado. Você pode alterar abaixo.
+                </Text>
+              </View>
+            )}
+            {loadingMotoristas ? (
+              <ActivityIndicator size="small" color={colors.primary.dark} style={{ marginTop: spacing.sm }} />
+            ) : (
+              motoristas.map(mot => {
+                const selected = motoristaSelecionado === mot.id;
+                return (
+                  <TouchableOpacity
+                    key={mot.id}
+                    style={[styles.listItem, selected && styles.listItemSelected]}
+                    onPress={() => setMotoristaSelecionado(mot.id)}>
+                    <View style={styles.listItemContent}>
+                      <View style={[styles.listItemIcon, selected && styles.listItemIconSelected]}>
+                        <Icon name={IconNames.person} size="sm" color={selected ? colors.primary.dark : colors.text.secondary} />
+                      </View>
+                      <View style={styles.listItemText}>
+                        <Text style={[styles.listItemLabel, selected && styles.listItemLabelSelected]}>
+                          {mot.nome}
+                        </Text>
+                        {mot.cnh && (
+                          <Text style={styles.listItemSub}>CNH: {mot.cnh}</Text>
+                        )}
+                      </View>
+                    </View>
+                    {selected && <Icon name={IconNames.check} size="sm" color={colors.primary.dark} />}
+                  </TouchableOpacity>
+                );
+              })
+            )}
+          </View>
+
+          {/* ── Submit ─────────────────────────────────────────────────── */}
+          <TouchableOpacity
+            style={[
+              styles.submitBtn,
+              (loading || !rotaSelecionada || !motoristaSelecionado || !data) && styles.submitBtnDisabled,
+            ]}
+            onPress={handleCriarViagem}
+            disabled={loading || !rotaSelecionada || !motoristaSelecionado || !data}>
+            {loading ? (
+              <ActivityIndicator color={colors.text.inverse} />
+            ) : (
+              <Text style={styles.submitBtnText}>Criar Viagem</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.default,
-  },
+  container: { flex: 1, backgroundColor: colors.background.default },
   header: {
     backgroundColor: colors.primary.dark,
     paddingHorizontal: spacing.base,
@@ -438,216 +437,130 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: borderRadius.xxl,
     borderBottomRightRadius: borderRadius.xxl,
   },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+  headerTop: { flexDirection: 'row', alignItems: 'center' },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary.main,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 40, height: 40, borderRadius: borderRadius.full,
+    backgroundColor: colors.primary.main, justifyContent: 'center', alignItems: 'center',
   },
-  headerTitleContainer: {
-    flex: 1,
-    marginLeft: spacing.md,
-  },
-  title: {
-    ...textStyles.h3,
-    color: colors.primary.contrast,
-  },
-  subtitle: {
-    ...textStyles.bodySmall,
-    color: 'rgba(255,255,255,0.75)',
-    marginTop: spacing.xs,
-  },
+  headerTitleContainer: { flex: 1, marginLeft: spacing.md },
+  title: { ...textStyles.h3, color: colors.primary.contrast },
+  subtitle: { ...textStyles.bodySmall, color: 'rgba(255,255,255,0.75)', marginTop: spacing.xs },
   headerIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary.main,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 44, height: 44, borderRadius: borderRadius.full,
+    backgroundColor: colors.primary.main, justifyContent: 'center', alignItems: 'center',
   },
-  scrollView: {
-    flex: 1,
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  scrollView: { flex: 1 },
+  content: { padding: spacing.base, paddingBottom: spacing.xxxl },
+
+  section: { marginBottom: spacing.xl },
+  sectionTitle: {
+    ...textStyles.inputLabel, color: colors.text.primary,
+    marginBottom: spacing.sm, fontWeight: fontWeight.semiBold,
   },
-  content: {
-    padding: spacing.base,
-  },
-  section: {
-    marginBottom: spacing.xl,
-  },
-  label: {
-    ...textStyles.inputLabel,
-    color: colors.text.primary,
-    marginBottom: spacing.sm,
-  },
-  input: {
+
+  // List-style selector
+  listItem: {
+    flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.background.paper,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    ...textStyles.inputText,
-    borderWidth: 1,
-    borderColor: colors.border.light,
-    color: colors.text.primary,
+    borderRadius: borderRadius.md, padding: spacing.md,
+    marginBottom: spacing.xs, borderWidth: 1.5, borderColor: colors.border.light,
+    ...shadows.xs,
   },
-  hint: {
-    ...textStyles.inputHelper,
-    color: colors.text.secondary,
-    marginTop: spacing.xs,
+  listItemSelected: { borderColor: colors.primary.dark, backgroundColor: colors.info.light },
+  listItemContent: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  listItemIcon: {
+    width: 32, height: 32, borderRadius: borderRadius.sm,
+    backgroundColor: colors.background.default,
+    justifyContent: 'center', alignItems: 'center',
   },
-  quickDatesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
+  listItemIconSelected: { backgroundColor: colors.primary.light },
+  listItemText: { flex: 1 },
+  listItemLabel: { ...textStyles.body, color: colors.text.primary, fontWeight: fontWeight.medium },
+  listItemLabelSelected: { color: colors.primary.dark, fontWeight: fontWeight.semiBold },
+  listItemSub: { ...textStyles.caption, color: colors.text.secondary, marginTop: 2 },
+
+  // Schedule item
+  horarioItem: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.md, padding: spacing.md,
+    marginBottom: spacing.sm, borderWidth: 1.5, borderColor: colors.border.light,
+    ...shadows.xs,
   },
-  quickDateButton: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.full,
-    borderWidth: 2,
-    borderColor: colors.border.light,
+  horarioItemSelected: { borderColor: colors.primary.dark, backgroundColor: colors.info.light },
+  horarioItemLeft: { flex: 1 },
+  horarioTime: {
+    fontSize: fontSize.h4, fontWeight: fontWeight.bold, color: colors.text.primary, marginBottom: 4,
+  },
+  horarioTimeSelected: { color: colors.primary.dark },
+  horarioMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: 6 },
+  sentidoTag: {
+    paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4,
+  },
+  sentidoTagText: { fontSize: 10, fontWeight: '700', color: '#fff' },
+  diasLabel: { ...textStyles.caption, color: colors.text.secondary, fontWeight: fontWeight.medium },
+  diasLabelSelected: { color: colors.primary.main },
+  diasChipsRow: { flexDirection: 'row', gap: 3, marginTop: 2 },
+  diaChip: { paddingHorizontal: 5, paddingVertical: 2, borderRadius: 3 },
+  diaChipActive: { backgroundColor: colors.primary.dark },
+  diaChipInactive: { backgroundColor: colors.background.default, borderWidth: 1, borderColor: colors.border.light },
+  diaChipText: { fontSize: 9, fontWeight: '600' },
+  diaChipTextActive: { color: '#fff' },
+  diaChipTextInactive: { color: colors.text.hint },
+  horarioCheck: { marginLeft: spacing.sm },
+
+  // Date
+  quickDatesRow: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md,
+  },
+  quickDateBtn: {
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.full, borderWidth: 1.5, borderColor: colors.border.light,
     backgroundColor: colors.background.paper,
   },
-  quickDateButtonSelected: {
-    borderColor: colors.primary.dark,
-    backgroundColor: colors.primary.dark,
-  },
-  quickDateText: {
-    ...textStyles.bodySmall,
-    color: colors.text.secondary,
-    fontWeight: fontWeight.medium,
-  },
-  quickDateTextSelected: {
-    color: colors.text.inverse,
+  quickDateBtnSelected: { borderColor: colors.primary.dark, backgroundColor: colors.primary.dark },
+  quickDateText: { ...textStyles.bodySmall, color: colors.text.secondary, fontWeight: fontWeight.medium },
+  quickDateTextSelected: { color: colors.text.inverse },
+  dateInput: {
+    backgroundColor: colors.background.paper, borderRadius: borderRadius.md,
+    padding: spacing.md, ...textStyles.inputText, borderWidth: 1, borderColor: colors.border.light,
+    color: colors.text.primary,
   },
   selectedDateText: {
-    ...textStyles.bodySmall,
-    color: colors.success.main,
-    marginTop: spacing.sm,
+    ...textStyles.bodySmall, color: colors.success.main, marginTop: spacing.sm,
     fontWeight: fontWeight.medium,
   },
-  rotasScroll: {
-    marginTop: spacing.sm,
-  },
-  rotaOption: {
-    backgroundColor: colors.background.paper,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
-    marginRight: spacing.md,
-    borderWidth: 2,
-    borderColor: colors.border.light,
-    ...shadows.xs,
-  },
-  rotaOptionSelected: {
-    borderColor: colors.primary.dark,
-    backgroundColor: colors.info.light,
-  },
-  rotaOptionText: {
-    ...textStyles.bodySmall,
-    color: colors.text.secondary,
-    fontWeight: fontWeight.medium,
-  },
-  rotaOptionTextSelected: {
-    color: colors.primary.dark,
-    fontWeight: fontWeight.semiBold,
-  },
-  horariosContainer: {
-    gap: spacing.sm,
-  },
-  horarioOption: {
-    backgroundColor: colors.background.paper,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    borderWidth: 2,
-    borderColor: colors.border.light,
-    ...shadows.xs,
-  },
-  horarioOptionSelected: {
-    borderColor: colors.primary.dark,
-    backgroundColor: colors.info.light,
-  },
-  horarioContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  horarioText: {
-    ...textStyles.body,
-    color: colors.text.secondary,
-  },
-  horarioTextSelected: {
-    color: colors.primary.dark,
-    fontWeight: fontWeight.semiBold,
-  },
+
+  // Info/empty
   infoBox: {
-    backgroundColor: colors.info.light,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.info.main,
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
+    backgroundColor: colors.info.light, borderRadius: borderRadius.md,
+    padding: spacing.md, marginBottom: spacing.sm,
+    borderLeftWidth: 3, borderLeftColor: colors.info.main,
   },
-  infoText: {
-    ...textStyles.bodySmall,
-    color: colors.info.dark,
-    flex: 1,
-  },
-  button: {
-    backgroundColor: colors.success.main,
-    borderRadius: borderRadius.md,
-    padding: spacing.base,
-    alignItems: 'center',
-    marginTop: spacing.sm,
-    ...shadows.sm,
-  },
-  buttonDisabled: {
-    backgroundColor: colors.success.light,
-  },
-  buttonText: {
-    ...textStyles.button,
-    color: colors.text.inverse,
-    fontSize: fontSize.h4,
-    fontWeight: fontWeight.bold,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xxxl,
-  },
+  infoText: { ...textStyles.bodySmall, color: colors.info.dark, flex: 1 },
   emptyState: {
-    alignItems: 'center',
-    padding: spacing.xl,
-    backgroundColor: colors.background.paper,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border.light,
-    ...shadows.xs,
+    alignItems: 'center', padding: spacing.xl,
+    backgroundColor: colors.background.paper, borderRadius: borderRadius.md,
+    borderWidth: 1, borderColor: colors.border.light,
   },
-  emptyText: {
-    ...textStyles.bodySmall,
-    color: colors.text.secondary,
-    marginBottom: spacing.base,
-    textAlign: 'center',
-  },
+  emptyText: { ...textStyles.bodySmall, color: colors.text.secondary, marginBottom: spacing.md },
   emptyButton: {
-    backgroundColor: colors.primary.dark,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    ...shadows.xs,
+    backgroundColor: colors.primary.dark, borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
   },
-  emptyButtonText: {
-    ...textStyles.button,
-    color: colors.text.inverse,
+  emptyButtonText: { ...textStyles.button, color: colors.text.inverse },
+
+  // Submit
+  submitBtn: {
+    backgroundColor: colors.success.main, borderRadius: borderRadius.md,
+    padding: spacing.base, alignItems: 'center', marginTop: spacing.sm, ...shadows.sm,
+  },
+  submitBtnDisabled: { backgroundColor: colors.success.light },
+  submitBtnText: {
+    ...textStyles.button, color: colors.text.inverse,
+    fontSize: fontSize.h4, fontWeight: fontWeight.bold,
   },
 });
 

@@ -30,6 +30,7 @@ import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeigh
 import Icon, { IconNames } from '../../components/Icon';
 import { StaticRouteMap } from '../../features/map/index';
 import { motoristaService } from '../../services/motoristaService';
+import { useAuth } from '../../contexts/AuthContext';
 import { unwrapItems } from '../../types';
 import type { PontoFlatResponse } from '../../types';
 
@@ -49,6 +50,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 
 const DetalheViagemMotorista: React.FC<Props> = ({ navigation, route: navRoute }) => {
   const viagem = (navRoute?.params?.viagem ?? {}) as Record<string, unknown>;
+  const { user } = useAuth();
+  const isMotorista = user?.role?.toLowerCase() === 'motorista';
 
   const [pontosRota, setPontosRota] = useState<PontoFlatResponse[]>([]);
   const [carregando, setCarregando] = useState(false);
@@ -227,8 +230,8 @@ const DetalheViagemMotorista: React.FC<Props> = ({ navigation, route: navRoute }
             </View>
           )}
 
-          {/* Iniciar CTA — only when trip hasn't started yet */}
-          {status === 'AGENDADA' && (
+          {/* Iniciar CTA — only for motoristas when trip hasn't started yet */}
+          {isMotorista && status === 'AGENDADA' && (
             <TouchableOpacity
               style={styles.iniciarButton}
               onPress={() => navigation.navigate('InicioFimViagem', { viagem })}
@@ -239,8 +242,8 @@ const DetalheViagemMotorista: React.FC<Props> = ({ navigation, route: navRoute }
             </TouchableOpacity>
           )}
 
-          {/* Resume trip CTA — if somehow arriving here during EM_ANDAMENTO */}
-          {status === 'EM_ANDAMENTO' && (
+          {/* Resume trip CTA — only for motoristas when already in progress */}
+          {isMotorista && status === 'EM_ANDAMENTO' && (
             <TouchableOpacity
               style={[styles.iniciarButton, { backgroundColor: colors.success.dark }]}
               onPress={() => navigation.navigate('InicioFimViagem', { viagem })}

@@ -605,6 +605,8 @@ const DefinirPontosRota = ({navigation, route}) => {
         navigation.navigate('DefinirHorariosRota', {
           rota: { nome: rotaNome, pontos: pontosRota },
           isNovaRota: true,
+          motorista_padrao_id: params.motorista_padrao_id || null,
+          veiculo_padrao_id: params.veiculo_padrao_id || null,
         });
       } else {
         if (!rotaId) {

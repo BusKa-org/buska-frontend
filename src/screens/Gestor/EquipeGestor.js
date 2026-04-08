@@ -57,7 +57,7 @@ const avatarStyles = StyleSheet.create({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-const EquipeGestor = () => {
+const EquipeGestor = ({ navigation }) => {
   const toast = useToast();
   const [segmento, setSegmento] = useState(SEGMENT.MOTORISTAS);
   const [busca, setBusca] = useState('');
@@ -343,23 +343,36 @@ const EquipeGestor = () => {
                         detalhe={a.email}
                         color={a.status === 'PENDING_APPROVAL' ? colors.warning.main : colors.success.main}
                         statusLabel={a.status === 'PENDING_APPROVAL' ? 'Aguardando aprovação' : undefined}
+                        guardianConsentedAt={a.guardian_consented_at}
+                        isMinor={a.is_minor}
+                        onViewDetail={() => navigation?.navigate?.('DetalheAlunoGestor', { alunoId: a.id })}
                       />
                       {a.status === 'PENDING_APPROVAL' && (
-                        <TouchableOpacity
-                          style={[styles.aprovarBtn, aprovandoId === a.id && styles.formBtnDisabled]}
-                          onPress={() => handleAprovar(a.id)}
-                          disabled={aprovandoId === a.id}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Aprovar cadastro de ${a.nome}`}>
-                          {aprovandoId === a.id ? (
-                            <ActivityIndicator size="small" color="#FFFFFF" />
-                          ) : (
-                            <>
-                              <Icon name={IconNames.checkCircle} size="sm" color="#FFFFFF" />
-                              <Text style={styles.aprovarBtnText}>Aprovar cadastro</Text>
-                            </>
-                          )}
-                        </TouchableOpacity>
+                        <View style={styles.alunoActions}>
+                          <TouchableOpacity
+                            style={styles.detailBtn}
+                            onPress={() => navigation?.navigate?.('DetalheAlunoGestor', { alunoId: a.id })}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Ver detalhes de ${a.nome}`}>
+                            <Icon name="info-outline" size="sm" color={GESTOR_COLOR} />
+                            <Text style={styles.detailBtnText}>Ver detalhes</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.aprovarBtn, aprovandoId === a.id && styles.formBtnDisabled]}
+                            onPress={() => handleAprovar(a.id)}
+                            disabled={aprovandoId === a.id}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Aprovar cadastro de ${a.nome}`}>
+                            {aprovandoId === a.id ? (
+                              <ActivityIndicator size="small" color="#FFFFFF" />
+                            ) : (
+                              <>
+                                <Icon name={IconNames.checkCircle} size="sm" color="#FFFFFF" />
+                                <Text style={styles.aprovarBtnText}>Aprovar cadastro</Text>
+                              </>
+                            )}
+                          </TouchableOpacity>
+                        </View>
                       )}
                     </View>
                   ))
@@ -372,36 +385,52 @@ const EquipeGestor = () => {
   );
 };
 
-const PessoaCard = ({ nome, detalhe, extra, color, statusLabel, onDelete, deleting }) => (
-  <View style={[cardStyles.card, statusLabel && cardStyles.cardPending]}>
-    <Avatar name={nome} color={color} />
-    <View style={cardStyles.info}>
-      <Text style={cardStyles.nome} numberOfLines={1}>{nome ?? '—'}</Text>
-      {detalhe && <Text style={cardStyles.detalhe} numberOfLines={1}>{detalhe}</Text>}
-      {extra && <Text style={cardStyles.extra} numberOfLines={1}>{extra}</Text>}
-      {statusLabel && (
-        <View style={cardStyles.statusBadge}>
-          <Icon name={IconNames.schedule} size="xs" color={colors.warning.dark} />
-          <Text style={cardStyles.statusBadgeText}>{statusLabel}</Text>
-        </View>
+const PessoaCard = ({ nome, detalhe, extra, color, statusLabel, onDelete, deleting, guardianConsentedAt, isMinor, onViewDetail }) => {
+  const fmtDatetime = iso => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    return `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getFullYear()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+  };
+
+  return (
+    <View style={[cardStyles.card, statusLabel && cardStyles.cardPending]}>
+      <Avatar name={nome} color={color} />
+      <View style={cardStyles.info}>
+        <Text style={cardStyles.nome} numberOfLines={1}>{nome ?? '—'}</Text>
+        {detalhe && <Text style={cardStyles.detalhe} numberOfLines={1}>{detalhe}</Text>}
+        {extra && <Text style={cardStyles.extra} numberOfLines={1}>{extra}</Text>}
+        {statusLabel && (
+          <View style={cardStyles.statusBadge}>
+            <Icon name={IconNames.schedule} size="xs" color={colors.warning.dark} />
+            <Text style={cardStyles.statusBadgeText}>{statusLabel}</Text>
+          </View>
+        )}
+        {isMinor && guardianConsentedAt && (
+          <View style={cardStyles.consentBadge}>
+            <Icon name="verified-user" size="xs" color={colors.success?.main ?? '#22c55e'} />
+            <Text style={cardStyles.consentBadgeText}>
+              Resp. autorizou em {fmtDatetime(guardianConsentedAt)}
+            </Text>
+          </View>
+        )}
+      </View>
+      {onDelete && (
+        <TouchableOpacity
+          style={cardStyles.deleteBtn}
+          onPress={onDelete}
+          disabled={deleting}
+          accessibilityRole="button"
+          accessibilityLabel={`Remover ${nome}`}>
+          {deleting ? (
+            <ActivityIndicator size="small" color={colors.error.main} />
+          ) : (
+            <Icon name={IconNames.delete} size="sm" color={colors.error.main} />
+          )}
+        </TouchableOpacity>
       )}
     </View>
-    {onDelete && (
-      <TouchableOpacity
-        style={cardStyles.deleteBtn}
-        onPress={onDelete}
-        disabled={deleting}
-        accessibilityRole="button"
-        accessibilityLabel={`Remover ${nome}`}>
-        {deleting ? (
-          <ActivityIndicator size="small" color={colors.error.main} />
-        ) : (
-          <Icon name={IconNames.delete} size="sm" color={colors.error.main} />
-        )}
-      </TouchableOpacity>
-    )}
-  </View>
-);
+  );
+};
 
 const cardStyles = StyleSheet.create({
   card: {
@@ -452,6 +481,18 @@ const cardStyles = StyleSheet.create({
     backgroundColor: colors.error.light ?? '#FEE2E2',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  consentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    marginTop: spacing.xs,
+  },
+  consentBadgeText: {
+    ...textStyles.caption,
+    color: colors.success?.main ?? '#22c55e',
+    fontWeight: '600',
+    fontSize: 11,
   },
 });
 
@@ -625,6 +666,30 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
+  alunoActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+    marginLeft: spacing.md + 44,
+  },
+  detailBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: GESTOR_COLOR,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.base,
+    minHeight: 36,
+    flex: 1,
+  },
+  detailBtnText: {
+    ...textStyles.caption,
+    color: GESTOR_COLOR,
+    fontWeight: '700',
+  },
   aprovarBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -634,9 +699,8 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.base,
-    marginBottom: spacing.sm,
-    marginLeft: spacing.md + 44,
     minHeight: 36,
+    flex: 1,
   },
   aprovarBtnText: {
     ...textStyles.caption,
