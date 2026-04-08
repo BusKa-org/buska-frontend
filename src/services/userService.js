@@ -54,6 +54,19 @@ export const userService = {
   },
 
   /**
+   * Update own profile (nome, telefone, receber_notificacoes, cnh for motoristas)
+   * Backend: PATCH /v1/users/me
+   */
+  async updateProfile(data) {
+    try {
+      const response = await api.patch('/users/me', data);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
    * Change password
    * Backend: POST /v1/users/change-password
    */

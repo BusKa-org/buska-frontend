@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -9,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { api } from '../../api/client';
 import { gestorService } from '../../services/gestorService';
 import { unwrapItems } from '../../types';
 import { useFetch } from '../../hooks';
@@ -66,6 +68,34 @@ const ViagensList = ({ navigation }) => {
     [filtroAtivo],
     { showErrorToast: true },
   );
+
+  const [cancelando, setCancelando] = useState(null);
+
+  const handleCancelarViagem = (v) => {
+    Alert.alert(
+      'Cancelar viagem',
+      `Cancelar a viagem da rota "${v.rota_nome ?? 'Rota'}" em ${formatDate(v.data)}?`,
+      [
+        { text: 'Voltar', style: 'cancel' },
+        {
+          text: 'Cancelar viagem',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setCancelando(v.id);
+              await api.put(`/viagens/${v.id}/cancelar`);
+              toast.info('Viagem cancelada.');
+              await refetch();
+            } catch (e) {
+              toast.error(e?.message ?? 'Erro ao cancelar viagem.');
+            } finally {
+              setCancelando(null);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -150,50 +180,69 @@ const ViagensList = ({ navigation }) => {
           <View style={styles.listContent}>
             {(viagens ?? []).map(v => {
               const cor = STATUS_COLOR[v.status] ?? colors.text.hint;
+              const podeCancel = v.status === 'AGENDADA';
               return (
-                <TouchableOpacity
-                  key={v.id}
-                  style={styles.card}
-                  activeOpacity={0.7}
-                  onPress={() => navigation.navigate('DetalheViagemMotorista', { viagem: v })}>
+                <View key={v.id} style={styles.card}>
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => navigation.navigate('DetalheViagemMotorista', { viagem: v })}>
 
-                  <View style={styles.cardTop}>
-                    <View style={styles.cardInfo}>
-                      <Text style={styles.cardRota} numberOfLines={1}>
-                        {v.rota_nome ?? 'Rota'}
-                      </Text>
-                      <Text style={styles.cardMotorista} numberOfLines={1}>
-                        {v.motorista_nome ? `Motorista: ${v.motorista_nome}` : 'Sem motorista'}
-                      </Text>
-                      <View style={styles.cardMeta}>
-                        <Icon name={IconNames.calendarToday} size="xs" color={colors.text.secondary} />
-                        <Text style={styles.cardMetaText}>
-                          {formatDate(v.data)} · {formatTime(v.horario_inicio)}
+                    <View style={styles.cardTop}>
+                      <View style={styles.cardInfo}>
+                        <Text style={styles.cardRota} numberOfLines={1}>
+                          {v.rota_nome ?? 'Rota'}
                         </Text>
-                        {v.total_alunos != null && (
-                          <>
-                            <View style={styles.dot} />
-                            <Icon name={IconNames.group} size="xs" color={colors.text.secondary} />
-                            <Text style={styles.cardMetaText}>
-                              {v.alunos_confirmados_count ?? 0}/{v.total_alunos}
-                            </Text>
-                          </>
-                        )}
+                        <Text style={styles.cardMotorista} numberOfLines={1}>
+                          {v.motorista_nome ? `Motorista: ${v.motorista_nome}` : 'Sem motorista'}
+                        </Text>
+                        <View style={styles.cardMeta}>
+                          <Icon name={IconNames.calendarToday} size="xs" color={colors.text.secondary} />
+                          <Text style={styles.cardMetaText}>
+                            {formatDate(v.data)} · {formatTime(v.horario_inicio)}
+                          </Text>
+                          {v.total_alunos != null && (
+                            <>
+                              <View style={styles.dot} />
+                              <Icon name={IconNames.group} size="xs" color={colors.text.secondary} />
+                              <Text style={styles.cardMetaText}>
+                                {v.alunos_confirmados_count ?? 0}/{v.total_alunos}
+                              </Text>
+                            </>
+                          )}
+                        </View>
+                      </View>
+                      <View style={[styles.badge, { backgroundColor: cor + '20' }]}>
+                        <Text style={[styles.badgeText, { color: cor }]}>
+                          {STATUS_LABEL[v.status] ?? v.status}
+                        </Text>
                       </View>
                     </View>
-                    <View style={[styles.badge, { backgroundColor: cor + '20' }]}>
-                      <Text style={[styles.badgeText, { color: cor }]}>
-                        {STATUS_LABEL[v.status] ?? v.status}
-                      </Text>
-                    </View>
-                  </View>
 
-                  {v.origem && v.destino && (
-                    <Text style={styles.cardRota2} numberOfLines={1}>
-                      {v.origem} → {v.destino}
-                    </Text>
+                    {v.origem && v.destino && (
+                      <Text style={styles.cardRota2} numberOfLines={1}>
+                        {v.origem} → {v.destino}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+
+                  {podeCancel && (
+                    <TouchableOpacity
+                      style={[styles.cancelBtn, cancelando === v.id && { opacity: 0.5 }]}
+                      onPress={() => handleCancelarViagem(v)}
+                      disabled={cancelando === v.id}
+                      accessibilityRole="button"
+                      accessibilityLabel="Cancelar viagem">
+                      {cancelando === v.id ? (
+                        <ActivityIndicator size="small" color={colors.error.main} />
+                      ) : (
+                        <>
+                          <Icon name={IconNames.close} size="xs" color={colors.error.main} />
+                          <Text style={styles.cancelBtnText}>Cancelar viagem</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
                   )}
-                </TouchableOpacity>
+                </View>
               );
             })}
           </View>
@@ -356,6 +405,21 @@ const styles = StyleSheet.create({
     color: colors.text.hint,
     marginTop: spacing.xs,
     textAlign: 'center',
+  },
+  cancelBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.light,
+    paddingTop: spacing.sm,
+  },
+  cancelBtnText: {
+    ...textStyles.caption,
+    color: colors.error.main,
+    fontWeight: '600',
   },
 });
 

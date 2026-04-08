@@ -115,11 +115,32 @@ export const gestorService = {
   },
 
   /**
+   * Update a bus
+   * Backend: PATCH /v1/onibus/{id}
+   */
+  async atualizarOnibus(
+    onibusId: string,
+    data: Partial<OnibusCreateRequest>
+  ): Promise<OnibusResponse> {
+    const response = await api.patch<OnibusResponse>(`/onibus/${onibusId}`, data);
+    return response.data;
+  },
+
+  /**
    * Delete a bus
    * Backend: DELETE /v1/onibus/{id}
    */
   async excluirOnibus(onibusId: string): Promise<{ message: string }> {
     const response = await api.delete<{ message: string }>(`/onibus/${onibusId}`);
+    return response.data;
+  },
+
+  /**
+   * Delete a motorista (gestor only)
+   * Backend: DELETE /v1/users/motoristas/{id}
+   */
+  async deletarMotorista(motoristaId: string): Promise<{ message: string }> {
+    const response = await api.delete<{ message: string }>(`/users/motoristas/${motoristaId}`);
     return response.data;
   },
 

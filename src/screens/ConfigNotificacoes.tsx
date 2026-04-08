@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   View,
   Text,
   TouchableOpacity,
@@ -11,6 +12,8 @@ import {
   Platform,
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { userService } from '../services/userService';
+import { useToast } from '../components/Toast';
 import { colors, spacing, borderRadius, shadows, textStyles, fontSize, lineHeight } from '../theme';
 import Icon, { IconNames } from '../components/Icon';
 
@@ -25,16 +28,17 @@ const roleLabel = (role?: string) => {
 };
 
 const ConfigNotificacoes = ({ navigation }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth() as any;
+  const toast = useToast();
   const role = user?.role?.toLowerCase();
 
   const isAluno = role === 'aluno';
   const isMotorista = role === 'motorista';
 
-  const [notificacaoAlunos, setNotificacaoAlunos] = useState(true);
-  const [notificacaoAtrasos, setNotificacaoAtrasos] = useState(true);
-  const [notificacaoEmergencia, setNotificacaoEmergencia] = useState(true);
-  const [notificacaoRotas, setNotificacaoRotas] = useState(true);
+  const [receberNotificacoes, setReceberNotificacoes] = useState<boolean>(
+    user?.receber_notificacoes !== false,
+  );
+  const [salvandoPrefs, setSalvandoPrefs] = useState(false);
 
   const headerSubtitle = useMemo(() => {
     if (isAluno) return 'Perfil e notificações';
@@ -69,8 +73,17 @@ const ConfigNotificacoes = ({ navigation }) => {
     }
   };
 
-  const handleSaveMotoristaSettings = () => {
-    Alert.alert('Em breve', 'O salvamento das preferências será integrado ao backend.');
+  const handleSalvarPreferencias = async () => {
+    try {
+      setSalvandoPrefs(true);
+      await userService.updateProfile({ receber_notificacoes: receberNotificacoes });
+      if (refreshUser) await refreshUser();
+      toast.success('Preferências salvas!');
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Erro ao salvar preferências.');
+    } finally {
+      setSalvandoPrefs(false);
+    }
   };
 
   return (
@@ -95,29 +108,27 @@ const ConfigNotificacoes = ({ navigation }) => {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <AccountSection user={user} showProfileCard={isAluno} />
 
+        {isAluno && (
+          <TouchableOpacity
+            style={styles.editProfileBtn}
+            onPress={() => navigation.navigate('EditarPerfilAluno')}
+            accessibilityRole="button"
+            accessibilityLabel="Editar perfil">
+            <Icon name={IconNames.edit} size="md" color={colors.primary.dark} />
+            <Text style={styles.editProfileBtnText}>Editar meus dados</Text>
+            <Icon name={IconNames.chevronRight} size="sm" color={colors.text.secondary} />
+          </TouchableOpacity>
+        )}
+
         <SectionHeader title="Notificações" />
 
-        {isAluno ? (
-          <AlunoNotificationSection user={user} />
-        ) : isMotorista ? (
-          <MotoristaNotificationSection
-            values={{
-              notificacaoAlunos,
-              notificacaoAtrasos,
-              notificacaoEmergencia,
-              notificacaoRotas,
-            }}
-            onChange={{
-              setNotificacaoAlunos,
-              setNotificacaoAtrasos,
-              setNotificacaoEmergencia,
-              setNotificacaoRotas,
-            }}
-            onSave={handleSaveMotoristaSettings}
-          />
-        ) : (
-          <GenericNotificationSection />
-        )}
+        <NotificacoesSection
+          receberNotificacoes={receberNotificacoes}
+          onToggle={setReceberNotificacoes}
+          onSave={handleSalvarPreferencias}
+          salvando={salvandoPrefs}
+          role={role}
+        />
 
         <SectionHeader title="Conta" />
 
@@ -230,109 +241,52 @@ const AlunoNotificationSection = ({ user }: { user: any }) => {
   );
 };
 
-const MotoristaNotificationSection = ({
-  values,
-  onChange,
+const NotificacoesSection = ({
+  receberNotificacoes,
+  onToggle,
   onSave,
+  salvando,
+  role,
 }: {
-  values: {
-    notificacaoAlunos: boolean;
-    notificacaoAtrasos: boolean;
-    notificacaoEmergencia: boolean;
-    notificacaoRotas: boolean;
-  };
-  onChange: {
-    setNotificacaoAlunos: (value: boolean) => void;
-    setNotificacaoAtrasos: (value: boolean) => void;
-    setNotificacaoEmergencia: (value: boolean) => void;
-    setNotificacaoRotas: (value: boolean) => void;
-  };
+  receberNotificacoes: boolean;
+  onToggle: (v: boolean) => void;
   onSave: () => void;
+  salvando: boolean;
+  role?: string;
 }) => {
-  return (
-    <>
-      <View style={styles.section}>
-        <View style={styles.settingRowTopAligned}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingTitle}>Notificações de Alunos</Text>
-            <Text style={styles.settingDescription}>
-              Receber notificações quando alunos confirmarem ou cancelarem presença
-            </Text>
-          </View>
-          <Switch
-            value={values.notificacaoAlunos}
-            onValueChange={onChange.setNotificacaoAlunos}
-            trackColor={{ false: colors.border.light, true: colors.primary.dark }}
-            thumbColor={colors.background.paper}
-          />
-        </View>
-      </View>
+  const description =
+    role === 'motorista'
+      ? 'Receber avisos do gestor, confirmações de alunos e alertas da rota'
+      : role === 'gestor'
+      ? 'Receber ocorrências, relatórios e alertas do sistema'
+      : 'Receber lembretes de viagem, avisos do motorista e atualizações de rota';
 
-      <View style={styles.section}>
-        <View style={styles.settingRowTopAligned}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingTitle}>Notificações de Atrasos</Text>
-            <Text style={styles.settingDescription}>
-              Receber alertas sobre possíveis atrasos na rota
-            </Text>
-          </View>
-          <Switch
-            value={values.notificacaoAtrasos}
-            onValueChange={onChange.setNotificacaoAtrasos}
-            trackColor={{ false: colors.border.light, true: colors.primary.dark }}
-            thumbColor={colors.background.paper}
-          />
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.settingRowTopAligned}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingTitle}>Notificações de Emergência</Text>
-            <Text style={styles.settingDescription}>
-              Receber alertas urgentes do gestor ou sistema
-            </Text>
-          </View>
-          <Switch
-            value={values.notificacaoEmergencia}
-            onValueChange={onChange.setNotificacaoEmergencia}
-            trackColor={{ false: colors.border.light, true: colors.primary.dark }}
-            thumbColor={colors.background.paper}
-          />
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.settingRowTopAligned}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingTitle}>Notificações de Rotas</Text>
-            <Text style={styles.settingDescription}>
-              Receber notificações sobre mudanças ou atualizações nas rotas
-            </Text>
-          </View>
-          <Switch
-            value={values.notificacaoRotas}
-            onValueChange={onChange.setNotificacaoRotas}
-            trackColor={{ false: colors.border.light, true: colors.primary.dark }}
-            thumbColor={colors.background.paper}
-          />
-        </View>
-      </View>
-
-      <TouchableOpacity style={styles.saveButton} onPress={onSave}>
-        <Text style={styles.saveButtonText}>Salvar Configurações</Text>
-      </TouchableOpacity>
-    </>
-  );
-};
-
-const GenericNotificationSection = () => {
   return (
     <View style={styles.section}>
-      <Text style={styles.settingTitle}>Preferências de notificação</Text>
-      <Text style={styles.settingDescription}>
-        As configurações específicas deste perfil serão disponibilizadas em breve.
-      </Text>
+      <View style={styles.settingRowTopAligned}>
+        <View style={styles.settingInfo}>
+          <Text style={styles.settingTitle}>Receber notificações</Text>
+          <Text style={styles.settingDescription}>{description}</Text>
+        </View>
+        <Switch
+          value={receberNotificacoes}
+          onValueChange={onToggle}
+          trackColor={{ false: colors.border.light, true: colors.primary.dark }}
+          thumbColor={colors.background.paper}
+          accessibilityLabel="Receber notificações"
+          accessibilityRole="switch"
+        />
+      </View>
+      <TouchableOpacity
+        style={[styles.saveButton, salvando && { opacity: 0.6 }]}
+        onPress={onSave}
+        disabled={salvando}>
+        {salvando ? (
+          <ActivityIndicator color="#FFFFFF" size="small" />
+        ) : (
+          <Text style={styles.saveButtonText}>Salvar Preferências</Text>
+        )}
+      </TouchableOpacity>
     </View>
   );
 };
@@ -632,6 +586,24 @@ const styles = StyleSheet.create({
   logoutButtonText: {
     ...textStyles.button,
     color: colors.error.main,
+  },
+  editProfileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.base,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    ...shadows.sm,
+  },
+  editProfileBtnText: {
+    ...textStyles.body,
+    color: colors.primary.dark,
+    flex: 1,
+    fontWeight: '600' as const,
   },
 });
 

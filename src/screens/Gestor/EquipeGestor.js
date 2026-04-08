@@ -65,6 +65,7 @@ const EquipeGestor = () => {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [aprovandoId, setAprovandoId] = useState(null);
+  const [excluindoId, setExcluindoId] = useState(null);
 
   // Form state
   const [form, setForm] = useState({
@@ -133,6 +134,34 @@ const EquipeGestor = () => {
     } finally {
       setAprovandoId(null);
     }
+  };
+
+  // ─── Delete motorista ────────────────────────────────────────────────────
+
+  const handleExcluirMotorista = (motorista) => {
+    Alert.alert(
+      'Remover Motorista',
+      `Deseja remover ${motorista.nome} da equipe? Esta ação não pode ser desfeita.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Remover',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setExcluindoId(motorista.id);
+              await gestorService.deletarMotorista(String(motorista.id));
+              toast.info('Motorista removido.');
+              await refetchM();
+            } catch (e) {
+              toast.error(e?.message ?? 'Erro ao remover motorista.');
+            } finally {
+              setExcluindoId(null);
+            }
+          },
+        },
+      ],
+    );
   };
 
   // ─── Create motorista ────────────────────────────────────────────────────
@@ -301,6 +330,8 @@ const EquipeGestor = () => {
                       detalhe={m.email}
                       extra={m.cnh ? `CNH: ${m.cnh}` : undefined}
                       color={GESTOR_COLOR}
+                      onDelete={() => handleExcluirMotorista(m)}
+                      deleting={excluindoId === m.id}
                     />
                   ))
                 : alunosFiltered.length === 0
@@ -341,7 +372,7 @@ const EquipeGestor = () => {
   );
 };
 
-const PessoaCard = ({ nome, detalhe, extra, color, statusLabel }) => (
+const PessoaCard = ({ nome, detalhe, extra, color, statusLabel, onDelete, deleting }) => (
   <View style={[cardStyles.card, statusLabel && cardStyles.cardPending]}>
     <Avatar name={nome} color={color} />
     <View style={cardStyles.info}>
@@ -355,6 +386,20 @@ const PessoaCard = ({ nome, detalhe, extra, color, statusLabel }) => (
         </View>
       )}
     </View>
+    {onDelete && (
+      <TouchableOpacity
+        style={cardStyles.deleteBtn}
+        onPress={onDelete}
+        disabled={deleting}
+        accessibilityRole="button"
+        accessibilityLabel={`Remover ${nome}`}>
+        {deleting ? (
+          <ActivityIndicator size="small" color={colors.error.main} />
+        ) : (
+          <Icon name={IconNames.delete} size="sm" color={colors.error.main} />
+        )}
+      </TouchableOpacity>
+    )}
   </View>
 );
 
@@ -399,6 +444,14 @@ const cardStyles = StyleSheet.create({
     ...textStyles.caption,
     color: colors.warning.dark,
     fontWeight: '600',
+  },
+  deleteBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.error.light ?? '#FEE2E2',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

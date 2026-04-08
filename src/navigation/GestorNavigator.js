@@ -6,6 +6,7 @@ import DashboardGestor from '../screens/Gestor/DashboardGestor';
 import ViagensList from '../screens/Gestor/ViagensList';
 import EquipeGestor from '../screens/Gestor/EquipeGestor';
 import FrotaGestor from '../screens/Gestor/FrotaGestor';
+import NotificacoesGestor from '../screens/Gestor/NotificacoesGestor';
 
 // Shared screens (reused from Motorista)
 import RotaMotorista from '../screens/Motorista/RotaMotorista';
@@ -15,6 +16,7 @@ import DetalheViagemMotorista from '../screens/Motorista/DetalheViagemMotorista'
 import ListaAlunosConfirmados from '../screens/Motorista/ListaAlunosConfirmados';
 import DefinirPontosRota from '../screens/Motorista/DefinirPontosRota';
 import DefinirHorariosRota from '../screens/Motorista/DefinirHorariosRota';
+import ConfigNotificacoes from '../screens/ConfigNotificacoes';
 
 import { colors, spacing } from '../theme';
 import Icon from '../components/Icon';
@@ -47,6 +49,7 @@ const TAB_ICON_MAP = {
   RotasTab: 'route',
   EquipeTab: 'people',
   FrotaTab: 'commute',
+  PerfilTab: 'settings',
 };
 
 const TAB_LABEL_MAP = {
@@ -55,12 +58,14 @@ const TAB_LABEL_MAP = {
   RotasTab: 'Rotas',
   EquipeTab: 'Equipe',
   FrotaTab: 'Frota',
+  PerfilTab: 'Perfil',
 };
 
 // ─── Stacks aninhados por domínio ─────────────────────────────────────────────
 
 let ViagensStackNavigator = null;
 let RotasStackNavigator = null;
+let PerfilStackNavigator = null;
 
 function ViagensStack() {
   if (!ViagensStackNavigator && createNativeStackNavigator) {
@@ -93,6 +98,19 @@ function RotasStack() {
   );
 }
 
+function PerfilStack() {
+  if (!PerfilStackNavigator && createNativeStackNavigator) {
+    PerfilStackNavigator = createNativeStackNavigator();
+  }
+  const Stack = PerfilStackNavigator;
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+      <Stack.Screen name="ConfigNotificacoesGestor" component={ConfigNotificacoes} />
+      <Stack.Screen name="NotificacoesGestor" component={NotificacoesGestor} />
+    </Stack.Navigator>
+  );
+}
+
 // ─── Tab Navigator ─────────────────────────────────────────────────────────────
 
 let TabNavigatorInstance = null;
@@ -115,6 +133,8 @@ const GestorNavigator = () => {
           <Screen name="DefinirHorariosRota" component={DefinirHorariosRota} />
           <Screen name="EquipeGestor" component={EquipeGestor} />
           <Screen name="FrotaGestor" component={FrotaGestor} />
+          <Screen name="ConfigNotificacoesGestor" component={ConfigNotificacoes} />
+          <Screen name="NotificacoesGestor" component={NotificacoesGestor} />
         </Navigator>
       </NavigationProvider>
     );
@@ -159,6 +179,7 @@ const GestorNavigator = () => {
       <Tab.Screen name="RotasTab" component={RotasStack} />
       <Tab.Screen name="EquipeTab" component={EquipeGestor} />
       <Tab.Screen name="FrotaTab" component={FrotaGestor} />
+      <Tab.Screen name="PerfilTab" component={PerfilStack} />
     </Tab.Navigator>
   );
 };

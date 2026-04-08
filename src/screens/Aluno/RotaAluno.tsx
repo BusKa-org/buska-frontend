@@ -209,7 +209,7 @@ const RotaAluno: React.FC<Props> = ({ navigation, route }) => {
           <View style={styles.headerTitleContainer}>
             <Text style={styles.title}>{screenTitle}</Text>
             <Text style={styles.headerSubtitle}>
-              {viagens.length} viagem{viagens.length !== 1 ? 'ns' : ''}
+              {viagens.length} viage{viagens.length !== 1 ? 'ns' : 'm'}
             </Text>
           </View>
           <View style={styles.headerIcon}>

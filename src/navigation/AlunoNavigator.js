@@ -7,6 +7,7 @@ import ConfigNotificacoes from '../screens/ConfigNotificacoes';
 import NotificacoesAluno from '../screens/Aluno/NotificacoesAluno';
 import DetalheViagem from '../screens/Aluno/DetalheViagem';
 import LocalizacaoOnibus from '../screens/Aluno/LocalizacaoOnibus';
+import EditarPerfilAluno from '../screens/Aluno/EditarPerfilAluno';
 import {
   NavigationProvider,
   Navigator,
@@ -42,6 +43,7 @@ const AlunoNavigator = () => {
           <Screen name="NotificacoesAluno" component={NotificacoesAluno} />
           <Screen name="DetalheViagem" component={DetalheViagem} />
           <Screen name="LocalizacaoOnibus" component={LocalizacaoOnibus} />
+          <Screen name="EditarPerfilAluno" component={EditarPerfilAluno} />
           {/* Telas auxiliares */}
           <Screen name="MinhasRotas" component={RotaAluno} />
           <Screen name="Notificacoes" component={NotificacoesAluno} />
@@ -71,6 +73,7 @@ const AlunoNavigator = () => {
       <Stack.Screen name="NotificacoesAluno" component={NotificacoesAluno} />
       <Stack.Screen name="DetalheViagem" component={DetalheViagem} />
       <Stack.Screen name="LocalizacaoOnibus" component={LocalizacaoOnibus} />
+      <Stack.Screen name="EditarPerfilAluno" component={EditarPerfilAluno} />
       {/* Telas auxiliares */}
       <Stack.Screen name="MinhasRotas" component={RotaAluno} />
       <Stack.Screen name="Notificacoes" component={NotificacoesAluno} />

@@ -30,12 +30,29 @@ const FrotaGestor = () => {
   const [salvando, setSalvando] = useState(false);
   const [excluindo, setExcluindo] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [editandoId, setEditandoId] = useState(null);
+  const [editForm, setEditForm] = useState({ placa: '', modelo: '', capacidade: '' });
 
   const [form, setForm] = useState({
     placa: '', modelo: '', capacidade: '',
   });
 
   const setField = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
+  const setEditField = (field, value) => setEditForm(prev => ({ ...prev, [field]: value }));
+
+  const abrirEdicao = (onibusItem) => {
+    setEditandoId(onibusItem.id);
+    setEditForm({
+      placa: onibusItem.placa ?? '',
+      modelo: onibusItem.modelo ?? '',
+      capacidade: String(onibusItem.capacidade ?? ''),
+    });
+  };
+
+  const cancelarEdicao = () => {
+    setEditandoId(null);
+    setEditForm({ placa: '', modelo: '', capacidade: '' });
+  };
 
   // ─── Fetch ──────────────────────────────────────────────────────────────
 
@@ -82,6 +99,36 @@ const FrotaGestor = () => {
       await refetch();
     } catch (e) {
       toast.error(e?.message ?? 'Erro ao cadastrar ônibus.');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  // ─── Update ──────────────────────────────────────────────────────────────
+
+  const handleAtualizarOnibus = async () => {
+    if (!editForm.placa.trim() || !editForm.modelo.trim()) {
+      toast.error('Preencha placa e modelo.');
+      return;
+    }
+    const capacidade = parseInt(editForm.capacidade, 10);
+    if (editForm.capacidade && isNaN(capacidade)) {
+      toast.error('Capacidade deve ser um número.');
+      return;
+    }
+
+    try {
+      setSalvando(true);
+      await gestorService.atualizarOnibus(editandoId, {
+        placa: editForm.placa.trim().toUpperCase(),
+        modelo: editForm.modelo.trim(),
+        capacidade: capacidade || undefined,
+      });
+      toast.success('Ônibus atualizado!');
+      cancelarEdicao();
+      await refetch();
+    } catch (e) {
+      toast.error(e?.message ?? 'Erro ao atualizar ônibus.');
     } finally {
       setSalvando(false);
     }
@@ -211,32 +258,89 @@ const FrotaGestor = () => {
             }>
             <View style={styles.listContent}>
               {(onibus ?? []).map(o => (
-                <View key={o.id} style={styles.card}>
-                  <View style={[styles.cardIconWrap, { backgroundColor: INFO_COLOR + '18' }]}>
-                    <Icon name={IconNames.bus} size="lg" color={INFO_COLOR} />
+                <View key={o.id}>
+                  <View style={styles.card}>
+                    <View style={[styles.cardIconWrap, { backgroundColor: INFO_COLOR + '18' }]}>
+                      <Icon name={IconNames.bus} size="lg" color={INFO_COLOR} />
+                    </View>
+
+                    <View style={styles.cardInfo}>
+                      <Text style={styles.cardPlaca}>{o.placa}</Text>
+                      <Text style={styles.cardModelo}>{o.modelo ?? '—'}</Text>
+                      {o.capacidade != null && (
+                        <View style={styles.capacidadeRow}>
+                          <Icon name={IconNames.group} size="xs" color={colors.text.secondary} />
+                          <Text style={styles.capacidadeText}>{o.capacidade} passageiros</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <View style={styles.cardActions}>
+                      <TouchableOpacity
+                        style={styles.editBtn}
+                        onPress={() => editandoId === o.id ? cancelarEdicao() : abrirEdicao(o)}>
+                        <Icon
+                          name={editandoId === o.id ? IconNames.close : IconNames.edit}
+                          size="sm"
+                          color={GESTOR_COLOR}
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.deleteBtn}
+                        onPress={() => handleExcluir(o)}
+                        disabled={excluindo === o.id}>
+                        {excluindo === o.id ? (
+                          <ActivityIndicator size="small" color={colors.error.main} />
+                        ) : (
+                          <Icon name={IconNames.delete} size="sm" color={colors.error.main} />
+                        )}
+                      </TouchableOpacity>
+                    </View>
                   </View>
 
-                  <View style={styles.cardInfo}>
-                    <Text style={styles.cardPlaca}>{o.placa}</Text>
-                    <Text style={styles.cardModelo}>{o.modelo ?? '—'}</Text>
-                    {o.capacidade != null && (
-                      <View style={styles.capacidadeRow}>
-                        <Icon name={IconNames.group} size="xs" color={colors.text.secondary} />
-                        <Text style={styles.capacidadeText}>{o.capacidade} passageiros</Text>
+                  {editandoId === o.id && (
+                    <View style={styles.editCard}>
+                      <Text style={styles.editTitle}>Editar Ônibus</Text>
+                      <View style={styles.formRow}>
+                        <TextInput
+                          style={[styles.formInput, styles.formInputHalf]}
+                          placeholder="Placa *"
+                          placeholderTextColor={colors.text.hint}
+                          value={editForm.placa}
+                          onChangeText={v => setEditField('placa', v)}
+                          autoCapitalize="characters"
+                        />
+                        <TextInput
+                          style={[styles.formInput, styles.formInputHalf]}
+                          placeholder="Capacidade"
+                          placeholderTextColor={colors.text.hint}
+                          value={editForm.capacidade}
+                          onChangeText={v => setEditField('capacidade', v)}
+                          keyboardType="numeric"
+                        />
                       </View>
-                    )}
-                  </View>
-
-                  <TouchableOpacity
-                    style={styles.deleteBtn}
-                    onPress={() => handleExcluir(o)}
-                    disabled={excluindo === o.id}>
-                    {excluindo === o.id ? (
-                      <ActivityIndicator size="small" color={colors.error.main} />
-                    ) : (
-                      <Icon name={IconNames.delete} size="sm" color={colors.error.main} />
-                    )}
-                  </TouchableOpacity>
+                      <TextInput
+                        style={styles.formInput}
+                        placeholder="Modelo *"
+                        placeholderTextColor={colors.text.hint}
+                        value={editForm.modelo}
+                        onChangeText={v => setEditField('modelo', v)}
+                      />
+                      <TouchableOpacity
+                        style={[styles.formBtn, salvando && styles.formBtnDisabled]}
+                        onPress={handleAtualizarOnibus}
+                        disabled={salvando}>
+                        {salvando ? (
+                          <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                          <>
+                            <Icon name={IconNames.edit} size="sm" color="#FFFFFF" />
+                            <Text style={styles.formBtnText}>Salvar Alterações</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               ))}
             </View>
@@ -372,6 +476,19 @@ const styles = StyleSheet.create({
     ...textStyles.caption,
     color: colors.text.secondary,
   },
+  cardActions: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    alignItems: 'center',
+  },
+  editBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.md,
+    backgroundColor: GESTOR_COLOR + '18',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   deleteBtn: {
     width: 36,
     height: 36,
@@ -379,6 +496,27 @@ const styles = StyleSheet.create({
     backgroundColor: colors.error.light ?? '#FEE2E2',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  editCard: {
+    backgroundColor: colors.background.paper,
+    marginHorizontal: spacing.base,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.sm,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    borderWidth: 1,
+    borderColor: GESTOR_COLOR + '40',
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    ...shadows.sm,
+  },
+  editTitle: {
+    ...textStyles.caption,
+    color: GESTOR_COLOR,
+    fontWeight: fontWeight.bold,
+    marginBottom: spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   emptyContainer: {
     flex: 1,
