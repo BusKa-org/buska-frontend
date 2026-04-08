@@ -38,7 +38,7 @@ const getInitialRoute = (role) => {
       // Gestores usam MotoristaNavigator por enquanto (têm acesso às mesmas telas + admin)
       return 'MotoristaNavigator';
     default:
-      throw new Error('Role não encontrada');
+      return 'SelecaoFluxo';
   }
 };
 

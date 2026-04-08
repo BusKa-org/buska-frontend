@@ -70,7 +70,7 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
     setLoading(true);
 
     try {
-      const result = await login(email.trim(), senha);
+      const result = await login({ email: email.trim(), password: senha });
 
       if (!result?.success) {
         setErro(result?.error || 'Credenciais inválidas. Verifique seus dados.');

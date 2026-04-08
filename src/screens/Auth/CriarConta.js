@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect, useRef, useMemo} from 'react';
 import {
   View,
   Text,
@@ -9,37 +9,54 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
   ActivityIndicator,
   Animated,
   StatusBar,
   ImageBackground,
   Dimensions,
+  FlatList,
+  Modal,
 } from 'react-native';
-import { useAuth } from '../../contexts/AuthContext';
-import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
-import Icon, { IconNames } from '../../components/Icon';
-import { api } from '../../api/client';
+import {useAuth} from '../../contexts/AuthContext';
+import {colors, spacing, borderRadius, shadows} from '../../theme';
+import Icon, {IconNames} from '../../components/Icon';
+import {api} from '../../api/client';
 import {
   ErrorCode,
   getFieldValidationMessage,
   errorLogger,
 } from '../../utils/errors';
+import {unwrapItems} from '@/types';
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('screen');
-const CARD_TOP = Math.max(SCREEN_H * 0.40, 220);
+const {width: SCREEN_W, height: SCREEN_H} = Dimensions.get('screen');
+const CARD_TOP = Math.max(SCREEN_H * 0.36, 220);
 
-const STEPS = { BASIC: 1, PERSONAL: 2, ADDRESS: 3 };
+const STEPS = {BASIC: 1, PERSONAL: 2, ADDRESS: 3};
 const TOTAL_STEPS = 3;
 
 const STEP_META = {
-  [STEPS.BASIC]:    { icon: 'email',        title: 'Acesso',     subtitle: 'Defina e-mail e senha' },
-  [STEPS.PERSONAL]: { icon: 'person',       title: 'Dados',      subtitle: 'Informações pessoais' },
-  [STEPS.ADDRESS]:  { icon: 'location-on',  title: 'Endereço',   subtitle: 'Onde você mora?' },
+  [STEPS.BASIC]: {
+    icon: 'email',
+    title: 'Acesso',
+    subtitle: 'Defina e-mail e senha',
+  },
+  [STEPS.PERSONAL]: {
+    icon: 'person',
+    title: 'Dados',
+    subtitle: 'Informações pessoais',
+  },
+  [STEPS.ADDRESS]: {
+    icon: 'location-on',
+    title: 'Endereço',
+    subtitle: 'Onde você mora?',
+  },
 };
 
 const CriarConta = ({navigation}) => {
+  const {register} = useAuth();
+
   const [step, setStep] = useState(STEPS.BASIC);
+
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [cpf, setCpf] = useState('');
@@ -49,10 +66,13 @@ const CriarConta = ({navigation}) => {
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [showSenha, setShowSenha] = useState(false);
   const [showConfirmarSenha, setShowConfirmarSenha] = useState(false);
+
   const [instituicaoId, setInstituicaoId] = useState('');
   const [instituicoes, setInstituicoes] = useState([]);
+  const [selectedInstitutionName, setSelectedInstitutionName] = useState('');
+  const [institutionModalVisible, setInstitutionModalVisible] = useState(false);
+  const [institutionSearch, setInstitutionSearch] = useState('');
 
-  // Address fields
   const [cep, setCep] = useState('');
   const [logradouro, setLogradouro] = useState('');
   const [numero, setNumero] = useState('');
@@ -60,162 +80,308 @@ const CriarConta = ({navigation}) => {
   const [cidade, setCidade] = useState('');
 
   const [loading, setLoading] = useState(false);
-  const [loadingInstituicoes, setLoadingInstituicoes] = useState(true);
+  const [loadingInstituicoes, setLoadingInstituicoes] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
 
   const [errors, setErrors] = useState({});
   const [generalError, setGeneralError] = useState('');
-
-  const { register } = useAuth();
+  const [cepInfo, setCepInfo] = useState('');
 
   const cardOpacity = useRef(new Animated.Value(0)).current;
-  const cardTranslateY = useRef(new Animated.Value(50)).current;
+  const cardTranslateY = useRef(new Animated.Value(40)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(cardOpacity, { toValue: 1, duration: 600, delay: 150, useNativeDriver: true }),
-      Animated.timing(cardTranslateY, { toValue: 0, duration: 480, delay: 150, useNativeDriver: true }),
+      Animated.timing(cardOpacity, {
+        toValue: 1,
+        duration: 550,
+        delay: 120,
+        useNativeDriver: true,
+      }),
+      Animated.timing(cardTranslateY, {
+        toValue: 0,
+        duration: 450,
+        delay: 120,
+        useNativeDriver: true,
+      }),
     ]).start();
-    loadInstituicoes();
-  }, []);
+  }, [cardOpacity, cardTranslateY]);
 
-  const loadInstituicoes = async () => {
+  const latestInstitutionRequestRef = useRef(0);
+
+  useEffect(() => {
+    if (!institutionModalVisible) return;
+
+    const trimmedSearch = institutionSearch.trim();
+
+    // optional: don't search for very short strings
+    if (trimmedSearch.length <= 1) {
+      setInstituicoes([]);
+      setLoadingInstituicoes(false);
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      loadInstituicoes(trimmedSearch);
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [institutionSearch, institutionModalVisible]);
+
+  const meta = STEP_META[step];
+
+  const canOpenInstitutionModal = useMemo(
+    () => step === STEPS.PERSONAL,
+    [step],
+  );
+
+  const loadInstituicoes = async (search = '') => {
+    const trimmedSearch = search.trim();
+    const requestId = ++latestInstitutionRequestRef.current;
+  
+    if (!trimmedSearch) {
+      setInstituicoes([]);
+      setLoadingInstituicoes(false);
+      return;
+    }
+  
     try {
       setLoadingInstituicoes(true);
-      const response = await api.get('/instituicoes/public');
-      setInstituicoes(response.data || []);
+  
+      const response = await api.get('/instituicoes/public', {
+        params: {
+          search: trimmedSearch,
+          limit: 30,
+        },
+      });
+  
+      // ignore stale response
+      if (requestId !== latestInstitutionRequestRef.current) {
+        return;
+      }
+  
+      const payload = response?.data;
+      const items = Array.isArray(payload?.items) ? payload.items : [];
+  
+      setInstituicoes(items);
     } catch (error) {
-      errorLogger.debug('Could not load institutions', { error: error.message });
+      if (requestId !== latestInstitutionRequestRef.current) {
+        return;
+      }
+  
+      errorLogger.debug('Could not load institutions', {
+        error: error?.message,
+      });
       setInstituicoes([]);
     } finally {
-      setLoadingInstituicoes(false);
+      if (requestId === latestInstitutionRequestRef.current) {
+        setLoadingInstituicoes(false);
+      }
     }
   };
 
-  const formatCPF = (text) => {
-    const digits = text.replace(/\D/g, '');
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
-    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
-    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
+  const openInstitutionModal = () => {
+    if (!canOpenInstitutionModal) return;
+    setInstitutionModalVisible(true);
+    setInstitutionSearch('');
   };
 
-  const clearFieldError = (field) => {
+  const closeInstitutionModal = () => {
+    setInstitutionModalVisible(false);
+  };
+
+  const selectInstitution = item => {
+    setInstituicaoId(item.id);
+    setSelectedInstitutionName(item.nome);
+    clearFieldError('instituicaoId');
+    closeInstitutionModal();
+  };
+
+  const clearFieldError = field => {
     if (errors[field]) {
-      setErrors(prev => { const n = {...prev}; delete n[field]; return n; });
+      setErrors(prev => {
+        const next = {...prev};
+        delete next[field];
+        return next;
+      });
     }
     if (generalError) setGeneralError('');
   };
 
+  const formatCPF = text => {
+    const digits = text.replace(/\D/g, '');
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    if (digits.length <= 9) {
+      return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    }
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(
+      6,
+      9,
+    )}-${digits.slice(9, 11)}`;
+  };
+
+  const formatPhone = text => {
+    const digits = text.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    if (digits.length <= 11) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(
+        7,
+        11,
+      )}`;
+    }
+    return digits;
+  };
+
   const validateStep1 = () => {
     const newErrors = {};
+
     if (!email.trim()) {
       newErrors.email = getFieldValidationMessage('email', 'required');
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       newErrors.email = getFieldValidationMessage('email', 'invalid');
     }
+
     if (!senha) {
       newErrors.senha = getFieldValidationMessage('password', 'required');
     } else if (senha.length < 8) {
       newErrors.senha = getFieldValidationMessage('password', 'minLength');
     }
-    if (senha !== confirmarSenha) {
-      newErrors.confirmarSenha = getFieldValidationMessage('password', 'mismatch');
+
+    if (!confirmarSenha) {
+      newErrors.confirmarSenha = 'Confirme sua senha.';
+    } else if (senha !== confirmarSenha) {
+      newErrors.confirmarSenha = getFieldValidationMessage(
+        'password',
+        'mismatch',
+      );
     }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const buscarCep = async (valorCep) => {
-    const cepSomenteNumeros = valorCep.replace(/\D/g, '');
-    if (cepSomenteNumeros.length === 8) {
-      try {
-        setLoadingCep(true);
-        const response = await fetch(`https://viacep.com.br/ws/${cepSomenteNumeros}/json/`);
-        const data = await response.json();
-        if (!data.erro) {
-          setLogradouro(data.logradouro || '');
-          setBairro(data.bairro || '');
-          setCidade(data.localidade || '');
-          clearFieldError('logradouro');
-          clearFieldError('bairro');
-          clearFieldError('cidade');
-          if (!data.logradouro) {
-            Alert.alert('Aviso', 'Este CEP é geral. Por favor, preencha o logradouro e o bairro manualmente.');
-          }
-        } else {
-          Alert.alert('Erro', 'CEP não encontrado na base de dados.');
-          setErrors(prev => ({...prev, cep: 'CEP não encontrado'}));
-        }
-      } catch (error) {
-        Alert.alert('Erro', 'Não foi possível buscar o CEP. Verifique sua conexão.');
-      } finally {
-        setLoadingCep(false);
-      }
-    }
-  };
-
-  const handleCepChange = (texto) => {
-    let cepFormatado = texto.replace(/\D/g, '');
-    if (cepFormatado.length > 5) {
-      cepFormatado = cepFormatado.replace(/^(\d{5})(\d)/, '$1-$2');
-    }
-    setCep(cepFormatado);
-    clearFieldError('cep');
-    buscarCep(cepFormatado);
-  };
-
   const validateStep2 = () => {
     const newErrors = {};
+
     if (!nome.trim()) {
       newErrors.nome = getFieldValidationMessage('nome', 'required');
     } else if (nome.trim().length < 3) {
       newErrors.nome = getFieldValidationMessage('nome', 'minLength');
     }
+
     const cpfDigits = cpf.replace(/\D/g, '');
     if (!cpfDigits) {
       newErrors.cpf = getFieldValidationMessage('cpf', 'required');
     } else if (cpfDigits.length !== 11) {
       newErrors.cpf = getFieldValidationMessage('cpf', 'invalid');
     }
+
     if (!matricula.trim()) {
       newErrors.matricula = getFieldValidationMessage('matricula', 'required');
     }
+
     if (!instituicaoId) {
       newErrors.instituicaoId = 'Selecione uma instituição de ensino.';
     }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const validateStep3 = () => {
     const newErrors = {};
+
     if (!cep.trim()) newErrors.cep = 'CEP é obrigatório.';
     if (!logradouro.trim()) newErrors.logradouro = 'Logradouro é obrigatório.';
     if (!numero.trim()) newErrors.numero = 'Número é obrigatório.';
     if (!bairro.trim()) newErrors.bairro = 'Bairro é obrigatório.';
     if (!cidade.trim()) newErrors.cidade = 'Cidade é obrigatória.';
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const goNextStep = () => {
     setGeneralError('');
-    if (step === STEPS.BASIC && validateStep1()) setStep(STEPS.PERSONAL);
-    else if (step === STEPS.PERSONAL && validateStep2()) setStep(STEPS.ADDRESS);
+
+    if (step === STEPS.BASIC && validateStep1()) {
+      setStep(STEPS.PERSONAL);
+      return;
+    }
+
+    if (step === STEPS.PERSONAL && validateStep2()) {
+      setStep(STEPS.ADDRESS);
+    }
   };
 
   const goPrevStep = () => {
     setGeneralError('');
     setErrors({});
+
     if (step === STEPS.PERSONAL) setStep(STEPS.BASIC);
-    else if (step === STEPS.ADDRESS) setStep(STEPS.PERSONAL);
+    if (step === STEPS.ADDRESS) setStep(STEPS.PERSONAL);
+  };
+
+  const buscarCep = async valorCep => {
+    const cepSomenteNumeros = valorCep.replace(/\D/g, '');
+
+    if (cepSomenteNumeros.length !== 8) return;
+
+    try {
+      setLoadingCep(true);
+      setCepInfo('');
+
+      const response = await fetch(
+        `https://viacep.com.br/ws/${cepSomenteNumeros}/json/`,
+      );
+      const data = await response.json();
+
+      if (!data.erro) {
+        setLogradouro(data.logradouro || '');
+        setBairro(data.bairro || '');
+        setCidade(data.localidade || '');
+
+        clearFieldError('logradouro');
+        clearFieldError('bairro');
+        clearFieldError('cidade');
+        clearFieldError('cep');
+
+        if (!data.logradouro) {
+          setCepInfo(
+            'Este CEP é geral. Preencha logradouro e bairro manualmente.',
+          );
+        }
+      } else {
+        setErrors(prev => ({...prev, cep: 'CEP não encontrado'}));
+      }
+    } catch (error) {
+      setGeneralError('Não foi possível buscar o CEP. Verifique sua conexão.');
+    } finally {
+      setLoadingCep(false);
+    }
+  };
+
+  const handleCepChange = text => {
+    let formatted = text.replace(/\D/g, '').slice(0, 8);
+
+    if (formatted.length > 5) {
+      formatted = formatted.replace(/^(\d{5})(\d)/, '$1-$2');
+    }
+
+    setCep(formatted);
+    clearFieldError('cep');
+    if (cepInfo) setCepInfo('');
+    buscarCep(formatted);
   };
 
   const handleCriarConta = async () => {
     setGeneralError('');
     if (!validateStep3()) return;
+
     setLoading(true);
+
     try {
       const result = await register({
         nome,
@@ -223,7 +389,7 @@ const CriarConta = ({navigation}) => {
         password: senha,
         cpf: cpf.replace(/\D/g, ''),
         matricula,
-        telefone: telefone || undefined,
+        telefone: telefone ? telefone.replace(/\D/g, '') : undefined,
         instituicao_id: instituicaoId || undefined,
         endereco_casa: {
           logradouro: logradouro.trim(),
@@ -238,68 +404,113 @@ const CriarConta = ({navigation}) => {
 
       if (result.success) {
         navigation.navigate('Login');
-        setTimeout(() => {
-          Alert.alert('Conta criada!', 'Seu cadastro foi realizado com sucesso. Faça login para continuar.', [{text: 'OK'}]);
-        }, 300);
-      } else {
-        handleRegistrationError(result);
+        return;
       }
+
+      handleRegistrationError(result);
     } catch (error) {
       errorLogger.error(error, {context: 'CriarConta.handleCriarConta'});
-      setGeneralError(error.message || 'Ocorreu um erro inesperado. Tente novamente.');
+      setGeneralError(
+        error?.message || 'Ocorreu um erro inesperado. Tente novamente.',
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const fieldStepMap = {
-    email: STEPS.BASIC, senha: STEPS.BASIC, confirmarSenha: STEPS.BASIC,
-    nome: STEPS.PERSONAL, cpf: STEPS.PERSONAL, matricula: STEPS.PERSONAL,
-    instituicaoId: STEPS.PERSONAL, telefone: STEPS.PERSONAL,
-    cep: STEPS.ADDRESS, logradouro: STEPS.ADDRESS, numero: STEPS.ADDRESS,
-    bairro: STEPS.ADDRESS, cidade: STEPS.ADDRESS,
+    email: STEPS.BASIC,
+    senha: STEPS.BASIC,
+    confirmarSenha: STEPS.BASIC,
+    nome: STEPS.PERSONAL,
+    cpf: STEPS.PERSONAL,
+    matricula: STEPS.PERSONAL,
+    instituicaoId: STEPS.PERSONAL,
+    telefone: STEPS.PERSONAL,
+    cep: STEPS.ADDRESS,
+    logradouro: STEPS.ADDRESS,
+    numero: STEPS.ADDRESS,
+    bairro: STEPS.ADDRESS,
+    cidade: STEPS.ADDRESS,
   };
 
-  const navigateToEarliestErrorStep = (errorFields) => {
+  const navigateToEarliestErrorStep = errorFields => {
     const steps = errorFields.map(f => fieldStepMap[f]).filter(Boolean);
     if (steps.length > 0) setStep(Math.min(...steps));
   };
 
-  const handleRegistrationError = (result) => {
+  const handleRegistrationError = result => {
     const {error, errorCode, field, fieldErrors} = result;
-    const backendFieldMapping = {'password': 'senha', 'instituicao_id': 'instituicaoId'};
-    const validFormFields = ['nome', 'email', 'cpf', 'matricula', 'telefone', 'senha', 'confirmarSenha', 'instituicaoId', 'cep', 'logradouro', 'numero', 'bairro', 'cidade'];
-    const extractMessage = (msg) => {
+
+    const backendFieldMapping = {
+      password: 'senha',
+      instituicao_id: 'instituicaoId',
+    };
+
+    const validFormFields = [
+      'nome',
+      'email',
+      'cpf',
+      'matricula',
+      'telefone',
+      'senha',
+      'confirmarSenha',
+      'instituicaoId',
+      'cep',
+      'logradouro',
+      'numero',
+      'bairro',
+      'cidade',
+    ];
+
+    const extractMessage = msg => {
       if (typeof msg === 'string') return msg;
-      if (Array.isArray(msg) && msg.length > 0) return typeof msg[0] === 'string' ? msg[0] : 'Campo inválido';
+      if (Array.isArray(msg) && msg.length > 0) {
+        return typeof msg[0] === 'string' ? msg[0] : 'Campo inválido';
+      }
       return 'Campo inválido';
     };
 
     if (fieldErrors && Object.keys(fieldErrors).length > 0) {
       const mappedErrors = {};
       const unmappedFields = [];
+
       for (const [fieldName, errorMsg] of Object.entries(fieldErrors)) {
-        if (fieldName === 'endereco_casa' && typeof errorMsg === 'object' && !Array.isArray(errorMsg)) {
+        if (
+          fieldName === 'endereco_casa' &&
+          typeof errorMsg === 'object' &&
+          !Array.isArray(errorMsg)
+        ) {
           for (const [nestedField, nestedError] of Object.entries(errorMsg)) {
-            if (validFormFields.includes(nestedField)) mappedErrors[nestedField] = extractMessage(nestedError);
+            if (validFormFields.includes(nestedField)) {
+              mappedErrors[nestedField] = extractMessage(nestedError);
+            }
           }
           continue;
         }
+
         const mappedField = backendFieldMapping[fieldName] || fieldName;
-        if (validFormFields.includes(mappedField)) mappedErrors[mappedField] = extractMessage(errorMsg);
-        else unmappedFields.push(fieldName);
+
+        if (validFormFields.includes(mappedField)) {
+          mappedErrors[mappedField] = extractMessage(errorMsg);
+        } else {
+          unmappedFields.push(fieldName);
+        }
       }
+
       if (Object.keys(mappedErrors).length > 0) {
         setErrors(prev => ({...prev, ...mappedErrors}));
         navigateToEarliestErrorStep(Object.keys(mappedErrors));
       }
+
       if (unmappedFields.length > 0) {
-        const fieldLabels = {'endereco_casa': 'Endereço'};
-        const unmappedLabels = unmappedFields.map(f => fieldLabels[f] || f).join(', ');
-        setGeneralError(`Erro em: ${unmappedLabels}. Verifique os dados e tente novamente.`);
+        setGeneralError(
+          `Erro em: ${unmappedFields.join(', ')}. Verifique os dados e tente novamente.`,
+        );
       } else if (Object.keys(mappedErrors).length > 1) {
         setGeneralError('Verifique os campos destacados em vermelho.');
       }
+
       return;
     }
 
@@ -311,12 +522,30 @@ const CriarConta = ({navigation}) => {
     }
 
     const fieldErrorMap = {
-      [ErrorCode.EMAIL_ALREADY_EXISTS]: {field: 'email', message: 'Este e-mail já está cadastrado.'},
-      [ErrorCode.CPF_ALREADY_EXISTS]:   {field: 'cpf',   message: 'Este CPF já está cadastrado.'},
-      [ErrorCode.INVALID_EMAIL]:        {field: 'email', message: 'E-mail inválido.'},
-      [ErrorCode.INVALID_CPF]:          {field: 'cpf',   message: 'CPF inválido.'},
-      [ErrorCode.INVALID_PASSWORD]:     {field: 'senha', message: error || 'Senha inválida.'},
-      [ErrorCode.PASSWORD_TOO_WEAK]:    {field: 'senha', message: error || 'Senha muito fraca.'},
+      [ErrorCode.EMAIL_ALREADY_EXISTS]: {
+        field: 'email',
+        message: 'Este e-mail já está cadastrado.',
+      },
+      [ErrorCode.CPF_ALREADY_EXISTS]: {
+        field: 'cpf',
+        message: 'Este CPF já está cadastrado.',
+      },
+      [ErrorCode.INVALID_EMAIL]: {
+        field: 'email',
+        message: 'E-mail inválido.',
+      },
+      [ErrorCode.INVALID_CPF]: {
+        field: 'cpf',
+        message: 'CPF inválido.',
+      },
+      [ErrorCode.INVALID_PASSWORD]: {
+        field: 'senha',
+        message: error || 'Senha inválida.',
+      },
+      [ErrorCode.PASSWORD_TOO_WEAK]: {
+        field: 'senha',
+        message: error || 'Senha muito fraca.',
+      },
     };
 
     if (fieldErrorMap[errorCode]) {
@@ -328,27 +557,24 @@ const CriarConta = ({navigation}) => {
 
     switch (errorCode) {
       case ErrorCode.REQUIRED_FIELD:
-        if (field) {
-          const mappedField = backendFieldMapping[field] || field;
-          setErrors(prev => ({...prev, [mappedField]: error}));
-          navigateToEarliestErrorStep([mappedField]);
-        } else {
-          setGeneralError(error || 'Preencha todos os campos obrigatórios.');
-        }
+        setGeneralError(error || 'Preencha todos os campos obrigatórios.');
         break;
       case ErrorCode.NETWORK_ERROR:
         setGeneralError('Sem conexão. Verifique sua internet e tente novamente.');
         break;
       case ErrorCode.SERVICE_UNAVAILABLE:
-        setGeneralError('Servidor indisponível. Tente novamente em alguns minutos.');
+        setGeneralError(
+          'Servidor indisponível. Tente novamente em alguns minutos.',
+        );
         break;
       default:
-        setGeneralError(error || 'Não foi possível criar a conta. Tente novamente.');
+        setGeneralError(error || 'Não foi possível criar a conta.');
     }
   };
 
-  const renderFieldError = (field) => {
+  const renderFieldError = field => {
     if (!errors[field]) return null;
+
     return (
       <View style={styles.fieldErrorContainer}>
         <Icon name={IconNames.error} size="xs" color={colors.error.main} />
@@ -357,7 +583,81 @@ const CriarConta = ({navigation}) => {
     );
   };
 
-  const meta = STEP_META[step];
+  const renderInstitutionItem = ({item}) => {
+    const isSelected = instituicaoId === item.id;
+  
+    const location = [item.cidade, item.uf].filter(Boolean).join(' • ');
+    const subtitleParts = [item.sigla, location].filter(Boolean);
+  
+    const tipoLabel =
+      item.tipo ||
+      item.organizacao_academica ||
+      item.categoria_administrativa;
+  
+    return (
+      <TouchableOpacity
+        style={[
+          styles.institutionCard,
+          isSelected && styles.institutionCardSelected,
+        ]}
+        onPress={() => selectInstitution(item)}
+        activeOpacity={0.82}>
+        
+        <View style={styles.institutionCardLeft}>
+          <View
+            style={[
+              styles.institutionIconBadge,
+              isSelected && styles.institutionIconBadgeSelected,
+            ]}>
+            <Icon
+              name="school"
+              size="sm"
+              color={isSelected ? '#0347D0' : colors.neutral[500]}
+            />
+          </View>
+  
+          <View style={styles.institutionTextBlock}>
+            {/* NAME */}
+            <Text
+              style={[
+                styles.institutionName,
+                isSelected && styles.institutionNameSelected,
+              ]}
+              numberOfLines={2}>
+              {item.nome}
+            </Text>
+  
+            {/* SUBTITLE */}
+            {subtitleParts.length > 0 && (
+              <Text style={styles.institutionMeta} numberOfLines={1}>
+                {subtitleParts.join(' • ')}
+              </Text>
+            )}
+  
+            {/* BADGE */}
+            {!!tipoLabel && (
+              <View style={styles.institutionBadge}>
+                <Text style={styles.institutionBadgeText}>
+                  {tipoLabel}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+  
+        {/* CHECK */}
+        <View
+          style={[
+            styles.checkCircle,
+            isSelected && styles.checkCircleSelected,
+          ]}>
+          {isSelected && (
+            <Icon name={IconNames.check} size="xs" color="#FFFFFF" />
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.root}>
@@ -369,61 +669,78 @@ const CriarConta = ({navigation}) => {
         resizeMode="cover"
       />
 
-      {/* Back button — floats above everything */}
       <TouchableOpacity
         style={styles.floatingBack}
         onPress={step > STEPS.BASIC ? goPrevStep : () => navigation.goBack()}
-        activeOpacity={0.7}
-      >
-        <Icon name={IconNames.back} size="md" color="rgba(255,255,255,0.9)" />
+        activeOpacity={0.75}>
+        <Icon
+          name={IconNames.back}
+          size="md"
+          color="rgba(255,255,255,0.95)"
+        />
       </TouchableOpacity>
 
       <KeyboardAvoidingView
         style={styles.kav}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+          showsVerticalScrollIndicator={false}>
           <Animated.View
-            style={[styles.card, {marginTop: CARD_TOP, opacity: cardOpacity, transform: [{translateY: cardTranslateY}]}]}
-          >
-            {/* Step progress bar */}
+            style={[
+              styles.card,
+              {
+                marginTop: CARD_TOP,
+                opacity: cardOpacity,
+                transform: [{translateY: cardTranslateY}],
+              },
+            ]}>
             <View style={styles.progressBar}>
-              {[1, 2, 3].map((s) => (
+              {[1, 2, 3].map(s => (
                 <View
                   key={s}
-                  style={[styles.progressSegment, s <= step && styles.progressSegmentActive]}
+                  style={[
+                    styles.progressSegment,
+                    s <= step && styles.progressSegmentActive,
+                  ]}
                 />
               ))}
             </View>
 
-            {/* Step header */}
             <View style={styles.stepHeader}>
               <View style={styles.stepIconBadge}>
                 <Icon name={meta.icon} size="md" color="#0347D0" />
               </View>
-              <View>
+
+              <View style={styles.stepHeaderText}>
                 <Text style={styles.stepTitle}>{meta.title}</Text>
                 <Text style={styles.stepSubtitle}>{meta.subtitle}</Text>
               </View>
-              <Text style={styles.stepCounter}>{step}/{TOTAL_STEPS}</Text>
+
+              <Text style={styles.stepCounter}>
+                {step}/{TOTAL_STEPS}
+              </Text>
             </View>
 
-            {/* ── Step 1: Acesso ── */}
             {step === STEPS.BASIC && (
               <View style={styles.fieldGroup}>
                 <Text style={styles.label}>E-mail *</Text>
-                <View style={[styles.inputWrapper, errors.email ? styles.inputWrapperError : null]}>
+                <View
+                  style={[
+                    styles.inputWrapper,
+                    errors.email && styles.inputWrapperError,
+                  ]}>
                   <Icon name="email" size="md" color={colors.neutral[400]} />
                   <TextInput
                     style={styles.input}
                     placeholder="seu@email.com"
                     placeholderTextColor={colors.neutral[400]}
                     value={email}
-                    onChangeText={(text) => { setEmail(text); clearFieldError('email'); }}
+                    onChangeText={text => {
+                      setEmail(text);
+                      clearFieldError('email');
+                    }}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
@@ -432,69 +749,116 @@ const CriarConta = ({navigation}) => {
                 {renderFieldError('email')}
 
                 <Text style={styles.label}>Senha *</Text>
-                <View style={[styles.inputWrapper, errors.senha ? styles.inputWrapperError : null]}>
+                <View
+                  style={[
+                    styles.inputWrapper,
+                    errors.senha && styles.inputWrapperError,
+                  ]}>
                   <Icon name="lock" size="md" color={colors.neutral[400]} />
                   <TextInput
                     style={[styles.input, styles.inputFlex]}
                     placeholder="Mínimo 8 caracteres"
                     placeholderTextColor={colors.neutral[400]}
                     value={senha}
-                    onChangeText={(text) => { setSenha(text); clearFieldError('senha'); }}
+                    onChangeText={text => {
+                      setSenha(text);
+                      clearFieldError('senha');
+                    }}
                     secureTextEntry={!showSenha}
                     autoCapitalize="none"
                   />
-                  <TouchableOpacity onPress={() => setShowSenha(v => !v)} hitSlop={{top:8,bottom:8,left:8,right:8}}>
-                    <Icon name={showSenha ? IconNames.visibilityOff : IconNames.visibility} size="md" color={colors.neutral[400]} />
+                  <TouchableOpacity
+                    onPress={() => setShowSenha(prev => !prev)}
+                    hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+                    <Icon
+                      name={
+                        showSenha
+                          ? IconNames.visibilityOff
+                          : IconNames.visibility
+                      }
+                      size="md"
+                      color={colors.neutral[400]}
+                    />
                   </TouchableOpacity>
                 </View>
                 {renderFieldError('senha')}
 
-                <Text style={styles.label}>Confirmar Senha *</Text>
-                <View style={[styles.inputWrapper, errors.confirmarSenha ? styles.inputWrapperError : null]}>
+                <Text style={styles.label}>Confirmar senha *</Text>
+                <View
+                  style={[
+                    styles.inputWrapper,
+                    errors.confirmarSenha && styles.inputWrapperError,
+                  ]}>
                   <Icon name="lock" size="md" color={colors.neutral[400]} />
                   <TextInput
                     style={[styles.input, styles.inputFlex]}
                     placeholder="Digite a senha novamente"
                     placeholderTextColor={colors.neutral[400]}
                     value={confirmarSenha}
-                    onChangeText={(text) => { setConfirmarSenha(text); clearFieldError('confirmarSenha'); }}
+                    onChangeText={text => {
+                      setConfirmarSenha(text);
+                      clearFieldError('confirmarSenha');
+                    }}
                     secureTextEntry={!showConfirmarSenha}
                     autoCapitalize="none"
                   />
-                  <TouchableOpacity onPress={() => setShowConfirmarSenha(v => !v)} hitSlop={{top:8,bottom:8,left:8,right:8}}>
-                    <Icon name={showConfirmarSenha ? IconNames.visibilityOff : IconNames.visibility} size="md" color={colors.neutral[400]} />
+                  <TouchableOpacity
+                    onPress={() => setShowConfirmarSenha(prev => !prev)}
+                    hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+                    <Icon
+                      name={
+                        showConfirmarSenha
+                          ? IconNames.visibilityOff
+                          : IconNames.visibility
+                      }
+                      size="md"
+                      color={colors.neutral[400]}
+                    />
                   </TouchableOpacity>
                 </View>
                 {renderFieldError('confirmarSenha')}
               </View>
             )}
 
-            {/* ── Step 2: Dados pessoais ── */}
             {step === STEPS.PERSONAL && (
               <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Nome Completo *</Text>
-                <View style={[styles.inputWrapper, errors.nome ? styles.inputWrapperError : null]}>
+                <Text style={styles.label}>Nome completo *</Text>
+                <View
+                  style={[
+                    styles.inputWrapper,
+                    errors.nome && styles.inputWrapperError,
+                  ]}>
                   <Icon name="person" size="md" color={colors.neutral[400]} />
                   <TextInput
                     style={styles.input}
                     placeholder="Seu nome completo"
                     placeholderTextColor={colors.neutral[400]}
                     value={nome}
-                    onChangeText={(text) => { setNome(text); clearFieldError('nome'); }}
+                    onChangeText={text => {
+                      setNome(text);
+                      clearFieldError('nome');
+                    }}
                     autoCapitalize="words"
                   />
                 </View>
                 {renderFieldError('nome')}
 
                 <Text style={styles.label}>CPF *</Text>
-                <View style={[styles.inputWrapper, errors.cpf ? styles.inputWrapperError : null]}>
+                <View
+                  style={[
+                    styles.inputWrapper,
+                    errors.cpf && styles.inputWrapperError,
+                  ]}>
                   <Icon name="badge" size="md" color={colors.neutral[400]} />
                   <TextInput
                     style={styles.input}
                     placeholder="000.000.000-00"
                     placeholderTextColor={colors.neutral[400]}
                     value={cpf}
-                    onChangeText={(text) => { setCpf(formatCPF(text)); clearFieldError('cpf'); }}
+                    onChangeText={text => {
+                      setCpf(formatCPF(text));
+                      clearFieldError('cpf');
+                    }}
                     keyboardType="numeric"
                     maxLength={14}
                   />
@@ -502,67 +866,72 @@ const CriarConta = ({navigation}) => {
                 {renderFieldError('cpf')}
 
                 <Text style={styles.label}>Matrícula *</Text>
-                <View style={[styles.inputWrapper, errors.matricula ? styles.inputWrapperError : null]}>
+                <View
+                  style={[
+                    styles.inputWrapper,
+                    errors.matricula && styles.inputWrapperError,
+                  ]}>
                   <Icon name="school" size="md" color={colors.neutral[400]} />
                   <TextInput
                     style={styles.input}
                     placeholder="Número da matrícula escolar"
                     placeholderTextColor={colors.neutral[400]}
                     value={matricula}
-                    onChangeText={(text) => { setMatricula(text); clearFieldError('matricula'); }}
+                    onChangeText={text => {
+                      setMatricula(text);
+                      clearFieldError('matricula');
+                    }}
                   />
                 </View>
                 {renderFieldError('matricula')}
 
-                <Text style={styles.label}>Instituição de Ensino *</Text>
-                {loadingInstituicoes ? (
-                  <View style={styles.loadingRow}>
-                    <ActivityIndicator size="small" color="#0347D0" />
-                    <Text style={styles.loadingText}>Carregando instituições...</Text>
+                <Text style={styles.label}>Instituição de ensino *</Text>
+                <TouchableOpacity
+                  style={[
+                    styles.inputWrapper,
+                    styles.selectWrapperModern,
+                    errors.instituicaoId && styles.inputWrapperError,
+                  ]}
+                  onPress={openInstitutionModal}
+                  activeOpacity={0.82}>
+                  <View style={styles.selectContent}>
+                    <View style={styles.selectIconBadge}>
+                      <Icon name="school" size="sm" color="#0347D0" />
+                    </View>
+
+                    <View style={styles.selectTextContainer}>
+                      <Text style={styles.selectLabelMini}>Instituição</Text>
+                      <Text
+                        style={[
+                          styles.selectTextModern,
+                          !selectedInstitutionName && styles.selectPlaceholder,
+                        ]}
+                        numberOfLines={1}>
+                        {selectedInstitutionName || 'Selecione sua instituição'}
+                      </Text>
+                    </View>
                   </View>
-                ) : instituicoes.length > 0 ? (
-                  <>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      style={[styles.chipsScroll, errors.instituicaoId ? styles.chipsScrollError : null]}
-                    >
-                      <View style={styles.chipsRow}>
-                        {instituicoes.map((inst) => (
-                          <TouchableOpacity
-                            key={inst.id}
-                            style={[
-                              styles.chip,
-                              instituicaoId === inst.id && styles.chipActive,
-                              errors.instituicaoId && !instituicaoId && styles.chipError,
-                            ]}
-                            onPress={() => { setInstituicaoId(inst.id); clearFieldError('instituicaoId'); }}
-                          >
-                            <Text style={[styles.chipText, instituicaoId === inst.id && styles.chipTextActive]}>
-                              {inst.nome}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </ScrollView>
-                    {renderFieldError('instituicaoId')}
-                  </>
-                ) : (
-                  <View style={styles.warningRow}>
-                    <Icon name={IconNames.warning} size="sm" color={colors.warning.main} />
-                    <Text style={styles.warningText}>Nenhuma instituição disponível. Contate o suporte.</Text>
-                  </View>
-                )}
+
+                  <Icon name="expand-more" size="md" color={colors.neutral[400]} />
+                </TouchableOpacity>
+                {renderFieldError('instituicaoId')}
 
                 <Text style={styles.label}>Telefone</Text>
-                <View style={[styles.inputWrapper, errors.telefone ? styles.inputWrapperError : null]}>
+                <View
+                  style={[
+                    styles.inputWrapper,
+                    errors.telefone && styles.inputWrapperError,
+                  ]}>
                   <Icon name="phone" size="md" color={colors.neutral[400]} />
                   <TextInput
                     style={styles.input}
                     placeholder="(00) 00000-0000"
                     placeholderTextColor={colors.neutral[400]}
                     value={telefone}
-                    onChangeText={(text) => { setTelefone(text); clearFieldError('telefone'); }}
+                    onChangeText={text => {
+                      setTelefone(formatPhone(text));
+                      clearFieldError('telefone');
+                    }}
                     keyboardType="phone-pad"
                   />
                 </View>
@@ -570,12 +939,19 @@ const CriarConta = ({navigation}) => {
               </View>
             )}
 
-            {/* ── Step 3: Endereço ── */}
             {step === STEPS.ADDRESS && (
               <View style={styles.fieldGroup}>
                 <Text style={styles.label}>CEP *</Text>
-                <View style={[styles.inputWrapper, errors.cep ? styles.inputWrapperError : null]}>
-                  <Icon name="location-on" size="md" color={colors.neutral[400]} />
+                <View
+                  style={[
+                    styles.inputWrapper,
+                    errors.cep && styles.inputWrapperError,
+                  ]}>
+                  <Icon
+                    name="location-on"
+                    size="md"
+                    color={colors.neutral[400]}
+                  />
                   <TextInput
                     style={styles.input}
                     placeholder="00000-000"
@@ -586,19 +962,29 @@ const CriarConta = ({navigation}) => {
                     maxLength={9}
                     editable={!loadingCep}
                   />
-                  {loadingCep && <ActivityIndicator size="small" color="#0347D0" />}
+                  {loadingCep && (
+                    <ActivityIndicator size="small" color="#0347D0" />
+                  )}
                 </View>
                 {renderFieldError('cep')}
+                {!!cepInfo && <Text style={styles.infoText}>{cepInfo}</Text>}
 
                 <Text style={styles.label}>Logradouro *</Text>
-                <View style={[styles.inputWrapper, errors.logradouro ? styles.inputWrapperError : null]}>
+                <View
+                  style={[
+                    styles.inputWrapper,
+                    errors.logradouro && styles.inputWrapperError,
+                  ]}>
                   <Icon name="home" size="md" color={colors.neutral[400]} />
                   <TextInput
                     style={styles.input}
                     placeholder="Rua, Avenida, etc."
                     placeholderTextColor={colors.neutral[400]}
                     value={logradouro}
-                    onChangeText={(text) => { setLogradouro(text); clearFieldError('logradouro'); }}
+                    onChangeText={text => {
+                      setLogradouro(text);
+                      clearFieldError('logradouro');
+                    }}
                   />
                 </View>
                 {renderFieldError('logradouro')}
@@ -606,26 +992,41 @@ const CriarConta = ({navigation}) => {
                 <View style={styles.row}>
                   <View style={styles.halfField}>
                     <Text style={styles.label}>Número *</Text>
-                    <View style={[styles.inputWrapper, errors.numero ? styles.inputWrapperError : null]}>
+                    <View
+                      style={[
+                        styles.inputWrapper,
+                        errors.numero && styles.inputWrapperError,
+                      ]}>
                       <TextInput
                         style={[styles.input, styles.inputNoPad]}
                         placeholder="123"
                         placeholderTextColor={colors.neutral[400]}
                         value={numero}
-                        onChangeText={(text) => { setNumero(text); clearFieldError('numero'); }}
+                        onChangeText={text => {
+                          setNumero(text);
+                          clearFieldError('numero');
+                        }}
                       />
                     </View>
                     {renderFieldError('numero')}
                   </View>
+
                   <View style={styles.halfField}>
                     <Text style={styles.label}>Bairro *</Text>
-                    <View style={[styles.inputWrapper, errors.bairro ? styles.inputWrapperError : null]}>
+                    <View
+                      style={[
+                        styles.inputWrapper,
+                        errors.bairro && styles.inputWrapperError,
+                      ]}>
                       <TextInput
                         style={[styles.input, styles.inputNoPad]}
                         placeholder="Centro"
                         placeholderTextColor={colors.neutral[400]}
                         value={bairro}
-                        onChangeText={(text) => { setBairro(text); clearFieldError('bairro'); }}
+                        onChangeText={text => {
+                          setBairro(text);
+                          clearFieldError('bairro');
+                        }}
                       />
                     </View>
                     {renderFieldError('bairro')}
@@ -633,31 +1034,43 @@ const CriarConta = ({navigation}) => {
                 </View>
 
                 <Text style={styles.label}>Cidade *</Text>
-                <View style={[styles.inputWrapper, errors.cidade ? styles.inputWrapperError : null]}>
-                  <Icon name="location-city" size="md" color={colors.neutral[400]} />
+                <View
+                  style={[
+                    styles.inputWrapper,
+                    errors.cidade && styles.inputWrapperError,
+                  ]}>
+                  <Icon
+                    name="location-city"
+                    size="md"
+                    color={colors.neutral[400]}
+                  />
                   <TextInput
                     style={styles.input}
-                    placeholder="São Paulo"
+                    placeholder="Sua cidade"
                     placeholderTextColor={colors.neutral[400]}
                     value={cidade}
-                    onChangeText={(text) => { setCidade(text); clearFieldError('cidade'); }}
+                    onChangeText={text => {
+                      setCidade(text);
+                      clearFieldError('cidade');
+                    }}
                   />
                 </View>
                 {renderFieldError('cidade')}
               </View>
             )}
 
-            {/* General error */}
-            {generalError ? (
+            {!!generalError && (
               <View style={styles.errorContainer}>
                 <Icon name={IconNames.error} size="sm" color={colors.error.main} />
                 <Text style={styles.errorText}>{generalError}</Text>
               </View>
-            ) : null}
+            )}
 
-            {/* Primary action */}
             {step < STEPS.ADDRESS ? (
-              <TouchableOpacity style={styles.primaryButton} onPress={goNextStep} activeOpacity={0.88}>
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={goNextStep}
+                activeOpacity={0.88}>
                 <Text style={styles.primaryButtonText}>Continuar</Text>
                 <Icon name={IconNames.forward} size="md" color="#FFFFFF" />
               </TouchableOpacity>
@@ -666,20 +1079,20 @@ const CriarConta = ({navigation}) => {
                 style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
                 onPress={handleCriarConta}
                 disabled={loading}
-                activeOpacity={0.88}
-              >
+                activeOpacity={0.88}>
                 {loading ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.primaryButtonText}>Criar Conta</Text>
+                  <Text style={styles.primaryButtonText}>Criar conta</Text>
                 )}
               </TouchableOpacity>
             )}
 
-            {/* Login link */}
             <View style={styles.loginRow}>
               <Text style={styles.loginText}>Já tem uma conta?</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Login')} activeOpacity={0.8}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Login')}
+                activeOpacity={0.8}>
                 <Text style={styles.loginLink}>Entrar</Text>
               </TouchableOpacity>
             </View>
@@ -688,6 +1101,82 @@ const CriarConta = ({navigation}) => {
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={institutionModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={closeInstitutionModal}>
+        <View style={styles.modalOverlay}>
+          <SafeAreaView style={styles.modalCard}>
+            <View style={styles.modalHandle} />
+
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Selecionar instituição</Text>
+              <TouchableOpacity onPress={closeInstitutionModal} activeOpacity={0.8}>
+                <Icon name={IconNames.close} size="md" color={colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalSearchWrapper}>
+              <View style={styles.searchBar}>
+                <Icon name="search" size="md" color={colors.neutral[400]} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Buscar por nome, sigla ou cidade"
+                  placeholderTextColor={colors.neutral[400]}
+                  value={institutionSearch}
+                  onChangeText={setInstitutionSearch}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                />
+                {!!institutionSearch && (
+                  <TouchableOpacity
+                    onPress={() => setInstitutionSearch('')}
+                    hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+                    <Icon name={IconNames.close} size="sm" color={colors.neutral[400]} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {loadingInstituicoes ? (
+              <View style={styles.modalCenterState}>
+                <ActivityIndicator color="#0347D0" />
+                <Text style={styles.modalStateText}>Buscando instituições...</Text>
+              </View>
+            ) : institutionSearch.trim().length < 2 ? (
+              <View style={styles.modalCenterState}>
+                <Icon name="search" size="lg" color={colors.neutral[300]} />
+                <Text style={styles.modalStateTitle}>Encontre sua instituição</Text>
+                <Text style={styles.modalStateText}>
+                  Digite pelo menos 2 letras do nome, sigla ou cidade.
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={instituicoes}
+                keyExtractor={item => String(item.id)}
+                renderItem={renderInstitutionItem}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.modalListContent}
+                ListEmptyComponent={
+                  <View style={styles.modalCenterState}>
+                    <Icon name="search" size="lg" color={colors.neutral[300]} />
+                    <Text style={styles.modalStateTitle}>
+                      Nenhuma instituição encontrada
+                    </Text>
+                    <Text style={styles.modalStateText}>
+                      Tente outro nome, sigla ou cidade.
+                    </Text>
+                  </View>
+                }
+              />
+            )}
+          </SafeAreaView>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -698,25 +1187,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF3FB',
   },
 
-  floatingBack: {
-    position: 'absolute',
-    top: 48,
-    left: spacing.lg,
-    zIndex: 10,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.18)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
   background: {
     position: 'absolute',
     top: 0,
     left: 0,
     width: SCREEN_W,
     height: SCREEN_H,
+  },
+
+  floatingBack: {
+    position: 'absolute',
+    top: 48,
+    left: spacing.lg,
+    zIndex: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   kav: {
@@ -728,7 +1217,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
 
-  // ── Card ──────────────────────────────────────────
   card: {
     backgroundColor: colors.background.paper,
     borderTopLeftRadius: 28,
@@ -736,11 +1224,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xl,
     paddingBottom: spacing.xl,
-    ...shadows.xl,
     minHeight: '100%',
+    ...shadows.xl,
   },
 
-  // ── Progress bar ──────────────────────────────────
   progressBar: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -750,7 +1237,7 @@ const styles = StyleSheet.create({
   progressSegment: {
     flex: 1,
     height: 4,
-    borderRadius: 2,
+    borderRadius: 999,
     backgroundColor: colors.border.light,
   },
 
@@ -758,18 +1245,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#0347D0',
   },
 
-  // ── Step header ───────────────────────────────────
   stepHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
     marginBottom: spacing.xl,
   },
 
+  stepHeaderText: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+
   stepIconBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     backgroundColor: 'rgba(3,71,208,0.08)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -778,7 +1268,6 @@ const styles = StyleSheet.create({
   stepTitle: {
     fontFamily: 'Inter-Bold',
     fontSize: 18,
-    fontWeight: '700',
     color: colors.text.primary,
     lineHeight: 22,
   },
@@ -787,17 +1276,16 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     fontSize: 13,
     color: colors.text.secondary,
-    lineHeight: 18,
+    marginTop: 2,
   },
 
   stepCounter: {
-    marginLeft: 'auto',
     fontFamily: 'Inter-Medium',
     fontSize: 13,
     color: colors.text.disabled,
+    marginLeft: spacing.md,
   },
 
-  // ── Fields ────────────────────────────────────────
   fieldGroup: {
     gap: spacing.xs,
   },
@@ -805,7 +1293,6 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: 'Inter-Medium',
     fontSize: 13,
-    fontWeight: '500',
     color: colors.text.primary,
     marginBottom: spacing.xs,
     marginTop: spacing.sm,
@@ -814,7 +1301,7 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 52,
+    minHeight: 54,
     borderRadius: borderRadius.lg,
     backgroundColor: colors.neutral[50],
     borderWidth: 1.5,
@@ -844,6 +1331,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
 
+  selectWrapper: {
+    justifyContent: 'space-between',
+  },
+
+  selectText: {
+    flex: 1,
+    fontFamily: 'Inter-Regular',
+    fontSize: 15,
+    color: colors.text.primary,
+  },
+
+  selectPlaceholder: {
+    color: colors.neutral[400],
+  },
+
   row: {
     flexDirection: 'row',
     gap: spacing.md,
@@ -854,7 +1356,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // ── Field error ───────────────────────────────────
   fieldErrorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -866,90 +1367,16 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     fontSize: 12,
     color: colors.error.main,
-  },
-
-  // ── Institution chips ─────────────────────────────
-  chipsScroll: {
-    marginBottom: spacing.xs,
-    marginTop: spacing.xs,
-  },
-
-  chipsScrollError: {
-    marginBottom: 0,
-  },
-
-  chipsRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-
-  chip: {
-    backgroundColor: colors.background.paper,
-    borderRadius: borderRadius.full,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
-    borderWidth: 1.5,
-    borderColor: colors.border.light,
-  },
-
-  chipActive: {
-    backgroundColor: 'rgba(3,71,208,0.08)',
-    borderColor: '#0347D0',
-  },
-
-  chipError: {
-    borderColor: colors.error.main,
-  },
-
-  chipText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 13,
-    color: colors.text.secondary,
-  },
-
-  chipTextActive: {
-    fontFamily: 'Inter-SemiBold',
-    color: '#0347D0',
-    fontWeight: '600',
-  },
-
-  // ── Loading / warning ─────────────────────────────
-  loadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.base,
-    backgroundColor: colors.neutral[50],
-    borderRadius: borderRadius.lg,
-    marginTop: spacing.xs,
-  },
-
-  loadingText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 13,
-    color: colors.text.secondary,
-  },
-
-  warningRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.base,
-    backgroundColor: colors.warning.lighter,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.warning.main,
-    marginTop: spacing.xs,
-  },
-
-  warningText: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 13,
-    color: colors.warning.dark,
     flex: 1,
   },
 
-  // ── General error ─────────────────────────────────
+  infoText: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 12,
+    color: colors.warning.dark,
+    marginTop: spacing.xs,
+  },
+
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -963,13 +1390,12 @@ const styles = StyleSheet.create({
   },
 
   errorText: {
+    flex: 1,
     fontFamily: 'Inter-Regular',
     fontSize: 13,
     color: colors.error.dark,
-    flex: 1,
   },
 
-  // ── Primary button ────────────────────────────────
   primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -982,19 +1408,17 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
 
-  primaryButtonText: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
-  },
-
   primaryButtonDisabled: {
     opacity: 0.65,
   },
 
-  // ── Login row ─────────────────────────────────────
+  primaryButtonText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 16,
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
+  },
+
   loginRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -1012,7 +1436,6 @@ const styles = StyleSheet.create({
   loginLink: {
     fontFamily: 'Inter-Bold',
     fontSize: 14,
-    fontWeight: '700',
     color: '#0347D0',
   },
 
@@ -1022,6 +1445,237 @@ const styles = StyleSheet.create({
     color: colors.text.disabled,
     textAlign: 'center',
     marginTop: spacing.base,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.34)',
+    justifyContent: 'flex-end',
+  },
+
+  modalCard: {
+    backgroundColor: colors.background.paper,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    minHeight: SCREEN_H * 0.72,
+    maxHeight: SCREEN_H * 0.88,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    ...shadows.xl,
+  },
+
+  modalHandle: {
+    width: 42,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: colors.neutral[300],
+    alignSelf: 'center',
+    marginTop: spacing.sm,
+    marginBottom: spacing.base,
+  },
+
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: spacing.base,
+    paddingTop: spacing.xs,
+  },
+
+  modalTitle: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 18,
+    color: colors.text.primary,
+  },
+
+  modalSearchWrapper: {
+    marginBottom: spacing.md,
+  },
+
+  modalListContent: {
+    paddingBottom: spacing.xl,
+    paddingTop: spacing.xs,
+  },
+
+  institutionItem: {
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+
+  institutionName: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 15,
+    color: colors.text.primary,
+    lineHeight: 22,
+  },
+
+  institutionMeta: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
+    color: colors.text.secondary,
+    marginTop: 2,
+  },
+
+  modalCenterState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xxl,
+    gap: spacing.sm,
+  },
+
+  modalStateTitle: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 15,
+    color: colors.text.primary,
+  },
+
+  modalStateText: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
+    color: colors.text.secondary,
+    textAlign: 'center',
+  },
+  selectWrapperModern: {
+    justifyContent: 'space-between',
+    minHeight: 64,
+  },
+  
+  selectContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  
+  selectIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: 'rgba(3,71,208,0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+  },
+  
+  selectTextContainer: {
+    flex: 1,
+  },
+  
+  selectLabelMini: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 11,
+    color: colors.text.secondary,
+    marginBottom: 2,
+  },
+  
+  selectTextModern: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 15,
+    color: colors.text.primary,
+  },
+  
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 52,
+    borderRadius: 16,
+    backgroundColor: colors.neutral[100],
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    paddingHorizontal: spacing.base,
+    gap: spacing.sm,
+  },
+  
+  searchInput: {
+    flex: 1,
+    color: colors.text.primary,
+    fontSize: 15,
+    fontFamily: 'Inter-Regular',
+    paddingVertical: 0,
+  },
+  
+  institutionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.base,
+    borderRadius: 18,
+    backgroundColor: colors.background.paper,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    marginBottom: spacing.sm,
+  },
+  
+  institutionCardSelected: {
+    borderColor: '#0347D0',
+    backgroundColor: 'rgba(3,71,208,0.05)',
+  },
+  
+  institutionCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: spacing.md,
+  },
+  
+  institutionIconBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: colors.neutral[100],
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+  },
+  
+  institutionIconBadgeSelected: {
+    backgroundColor: 'rgba(3,71,208,0.10)',
+  },
+  
+  institutionTextBlock: {
+    flex: 1,
+  },
+  
+  institutionNameSelected: {
+    color: '#0347D0',
+  },
+  
+  checkCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.border.light,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background.paper,
+  },
+  
+  checkCircleSelected: {
+    backgroundColor: '#0347D0',
+    borderColor: '#0347D0',
+  },
+  
+  institutionMeta: {
+    fontSize: 13,
+    color: colors.text.secondary,
+    marginTop: 2,
+  },
+  
+  institutionBadge: {
+    marginTop: 6,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: 'rgba(3,71,208,0.08)',
+  },
+  
+  institutionBadgeText: {
+    fontSize: 11,
+    fontFamily: 'Inter-Medium',
+    color: '#0347D0',
   },
 });
 
