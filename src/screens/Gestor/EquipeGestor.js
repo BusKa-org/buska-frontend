@@ -20,6 +20,7 @@ import { borderRadius, colors, fontWeight, shadows, spacing, textStyles } from '
 import Icon, { IconNames } from '../../components/Icon';
 import { useToast } from '../../components/Toast';
 import { LoadingView, ErrorView } from '../../components/LoadingState';
+import { api } from '../../api/client';
 
 const GESTOR_COLOR = colors.roles.gestor;
 const SEGMENT = { MOTORISTAS: 0, ALUNOS: 1 };
@@ -63,6 +64,7 @@ const EquipeGestor = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [mostrarForm, setMostrarForm] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [aprovandoId, setAprovandoId] = useState(null);
 
   // Form state
   const [form, setForm] = useState({
@@ -112,6 +114,26 @@ const EquipeGestor = () => {
       a => a.nome?.toLowerCase().includes(q) || a.email?.toLowerCase().includes(q),
     );
   }, [alunos, busca]);
+
+  const pendingApprovalCount = useMemo(
+    () => (alunos ?? []).filter(a => a.status === 'PENDING_APPROVAL').length,
+    [alunos],
+  );
+
+  // ─── Approve aluno ───────────────────────────────────────────────────────
+
+  const handleAprovar = async (alunoId) => {
+    setAprovandoId(alunoId);
+    try {
+      await api.post(`/alunos/${alunoId}/aprovar`);
+      toast.success('Aluno aprovado!');
+      await refetchA();
+    } catch (e) {
+      toast.error(e?.message ?? 'Não foi possível aprovar o aluno.');
+    } finally {
+      setAprovandoId(null);
+    }
+  };
 
   // ─── Create motorista ────────────────────────────────────────────────────
 
@@ -178,10 +200,20 @@ const EquipeGestor = () => {
               <TouchableOpacity
                 key={s.id}
                 style={[styles.segBtn, segmento === s.id && styles.segBtnActive]}
-                onPress={() => { setSegmento(s.id); setBusca(''); setMostrarForm(false); }}>
-                <Text style={[styles.segBtnText, segmento === s.id && styles.segBtnTextActive]}>
-                  {s.label}
-                </Text>
+                onPress={() => { setSegmento(s.id); setBusca(''); setMostrarForm(false); }}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: segmento === s.id }}
+                accessibilityLabel={s.label + (s.id === SEGMENT.ALUNOS && pendingApprovalCount > 0 ? `, ${pendingApprovalCount} aguardando aprovação` : '')}>
+                <View style={styles.segBtnInner}>
+                  <Text style={[styles.segBtnText, segmento === s.id && styles.segBtnTextActive]}>
+                    {s.label}
+                  </Text>
+                  {s.id === SEGMENT.ALUNOS && pendingApprovalCount > 0 && (
+                    <View style={styles.pendingBadge}>
+                      <Text style={styles.pendingBadgeText}>{pendingApprovalCount}</Text>
+                    </View>
+                  )}
+                </View>
               </TouchableOpacity>
             ))}
           </View>
@@ -274,12 +306,31 @@ const EquipeGestor = () => {
                 : alunosFiltered.length === 0
                   ? <EmptyState label="alunos" busca={busca} />
                   : alunosFiltered.map(a => (
-                    <PessoaCard
-                      key={a.id}
-                      nome={a.nome}
-                      detalhe={a.email}
-                      color={colors.success.main}
-                    />
+                    <View key={a.id}>
+                      <PessoaCard
+                        nome={a.nome}
+                        detalhe={a.email}
+                        color={a.status === 'PENDING_APPROVAL' ? colors.warning.main : colors.success.main}
+                        statusLabel={a.status === 'PENDING_APPROVAL' ? 'Aguardando aprovação' : undefined}
+                      />
+                      {a.status === 'PENDING_APPROVAL' && (
+                        <TouchableOpacity
+                          style={[styles.aprovarBtn, aprovandoId === a.id && styles.formBtnDisabled]}
+                          onPress={() => handleAprovar(a.id)}
+                          disabled={aprovandoId === a.id}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Aprovar cadastro de ${a.nome}`}>
+                          {aprovandoId === a.id ? (
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                          ) : (
+                            <>
+                              <Icon name={IconNames.checkCircle} size="sm" color="#FFFFFF" />
+                              <Text style={styles.aprovarBtnText}>Aprovar cadastro</Text>
+                            </>
+                          )}
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   ))
               }
             </View>
@@ -290,13 +341,19 @@ const EquipeGestor = () => {
   );
 };
 
-const PessoaCard = ({ nome, detalhe, extra, color }) => (
-  <View style={cardStyles.card}>
+const PessoaCard = ({ nome, detalhe, extra, color, statusLabel }) => (
+  <View style={[cardStyles.card, statusLabel && cardStyles.cardPending]}>
     <Avatar name={nome} color={color} />
     <View style={cardStyles.info}>
       <Text style={cardStyles.nome} numberOfLines={1}>{nome ?? '—'}</Text>
       {detalhe && <Text style={cardStyles.detalhe} numberOfLines={1}>{detalhe}</Text>}
       {extra && <Text style={cardStyles.extra} numberOfLines={1}>{extra}</Text>}
+      {statusLabel && (
+        <View style={cardStyles.statusBadge}>
+          <Icon name={IconNames.schedule} size="xs" color={colors.warning.dark} />
+          <Text style={cardStyles.statusBadgeText}>{statusLabel}</Text>
+        </View>
+      )}
     </View>
   </View>
 );
@@ -308,9 +365,13 @@ const cardStyles = StyleSheet.create({
     backgroundColor: colors.background.paper,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xxs,
     gap: spacing.md,
     ...shadows.xs,
+  },
+  cardPending: {
+    borderLeftWidth: 3,
+    borderLeftColor: colors.warning.main,
   },
   info: { flex: 1 },
   nome: {
@@ -327,6 +388,17 @@ const cardStyles = StyleSheet.create({
     ...textStyles.caption,
     color: colors.text.hint,
     marginTop: spacing.xxs,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    marginTop: spacing.xs,
+  },
+  statusBadgeText: {
+    ...textStyles.caption,
+    color: colors.warning.dark,
+    fontWeight: '600',
   },
 });
 
@@ -480,6 +552,43 @@ const styles = StyleSheet.create({
   list: { flex: 1 },
   listContent: {
     padding: spacing.base,
+  },
+  segBtnInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  pendingBadge: {
+    backgroundColor: colors.warning.main,
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  pendingBadgeText: {
+    color: colors.text.inverse,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  aprovarBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.success.main,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.base,
+    marginBottom: spacing.sm,
+    marginLeft: spacing.md + 44,
+    minHeight: 36,
+  },
+  aprovarBtnText: {
+    ...textStyles.caption,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
 });
 

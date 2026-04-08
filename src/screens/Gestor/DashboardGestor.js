@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { listarOcorrencias, resolverOcorrencia } from '../../services/ocorrenciaService';
 import { useAuth } from '../../contexts/AuthContext';
 import { gestorService } from '../../services/gestorService';
 import { unwrapItems } from '../../types';
@@ -198,6 +199,9 @@ const DashboardGestor = ({ navigation }) => {
 
   const [relatorio, setRelatorio] = useState(null);
   const [recentes, setRecentes] = useState([]);
+  const [ocorrencias, setOcorrencias] = useState([]);
+  const [loadingOcorrencias, setLoadingOcorrencias] = useState(true);
+  const [resolvendo, setResolvendo] = useState(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -245,14 +249,40 @@ const DashboardGestor = ({ navigation }) => {
     } catch {}
   }, []);
 
+  const loadOcorrencias = useCallback(async () => {
+    try {
+      setLoadingOcorrencias(true);
+      const data = await listarOcorrencias('ABERTA');
+      setOcorrencias(Array.isArray(data) ? data : []);
+    } catch {
+      setOcorrencias([]);
+    } finally {
+      setLoadingOcorrencias(false);
+    }
+  }, []);
+
+  const handleResolver = async (id) => {
+    setResolvendo(id);
+    try {
+      await resolverOcorrencia(id);
+      setOcorrencias((prev) => prev.filter((o) => o.id !== id));
+      toast.success('Ocorrência resolvida!');
+    } catch {
+      toast.error('Não foi possível resolver a ocorrência.');
+    } finally {
+      setResolvendo(null);
+    }
+  };
+
   useEffect(() => {
     loadData();
     loadRecentes();
+    loadOcorrencias();
   }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadData(), loadRecentes()]);
+    await Promise.all([loadData(), loadRecentes(), loadOcorrencias()]);
     setRefreshing(false);
   };
 
@@ -440,7 +470,8 @@ const DashboardGestor = ({ navigation }) => {
             <>
               <View style={styles.recentesHeader}>
                 <Text style={styles.sectionTitle}>Viagens recentes</Text>
-                <TouchableOpacity onPress={() => navigateToTab('ViagensTab')}>
+                <TouchableOpacity onPress={() => navigateToTab('ViagensTab')}
+                  accessibilityRole="button" accessibilityLabel="Ver todas as viagens">
                   <Text style={styles.verTodas}>Ver todas</Text>
                 </TouchableOpacity>
               </View>
@@ -451,7 +482,9 @@ const DashboardGestor = ({ navigation }) => {
                     key={v.id}
                     style={styles.recenteCard}
                     onPress={() => navigateToTab('ViagensTab')}
-                    activeOpacity={0.7}>
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Viagem ${v.rota_nome ?? 'Rota'}, ${STATUS_LABEL[v.status] ?? v.status}`}>
                     <View style={styles.recenteLeft}>
                       <Text style={styles.recenteRota} numberOfLines={1}>
                         {v.rota_nome ?? 'Rota'}
@@ -470,6 +503,69 @@ const DashboardGestor = ({ navigation }) => {
               })}
             </>
           )}
+
+          {/* ── Ocorrências abertas ───────────────────────────────────────── */}
+          <View style={styles.recentesHeader}>
+            <View style={styles.ocorrenciasHeaderLeft}>
+              <Text style={styles.sectionTitle}>Ocorrências</Text>
+              {!loadingOcorrencias && ocorrencias.length > 0 && (
+                <View style={styles.ocorrenciaBadge}>
+                  <Text style={styles.ocorrenciaBadgeText}>{ocorrencias.length}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {loadingOcorrencias ? (
+            <ActivityIndicator size="small" color={GESTOR_COLOR} style={{ marginVertical: spacing.base }} />
+          ) : ocorrencias.length === 0 ? (
+            <View style={styles.ocorrenciasEmpty}>
+              <Icon name={IconNames.checkCircle} size="lg" color={colors.success.main} />
+              <Text style={styles.ocorrenciasEmptyText}>Nenhuma ocorrência aberta</Text>
+            </View>
+          ) : (
+            ocorrencias.map((o) => {
+              const TIPO_LABEL = {
+                ATRASO: 'Atraso',
+                SUPERLOTACAO: 'Superlotação',
+                COMPORTAMENTO: 'Comportamento',
+                CANCELAMENTO: 'Cancelamento',
+                OUTRO: 'Outro',
+              };
+              return (
+                <View key={o.id} style={styles.ocorrenciaCard}
+                  accessible
+                  accessibilityLabel={`Ocorrência ${TIPO_LABEL[o.tipo] ?? o.tipo} de ${o.autor_nome}`}>
+                  <View style={styles.ocorrenciaHeader}>
+                    <View style={[styles.ocorrenciaTipoBadge]}>
+                      <Text style={styles.ocorrenciaTipoText}>{TIPO_LABEL[o.tipo] ?? o.tipo}</Text>
+                    </View>
+                    <Text style={styles.ocorrenciaAutor}>{o.autor_nome}</Text>
+                  </View>
+                  {o.descricao ? (
+                    <Text style={styles.ocorrenciaDescricao} numberOfLines={2}>{o.descricao}</Text>
+                  ) : null}
+                  <TouchableOpacity
+                    style={[styles.resolverBtn, resolvendo === o.id && styles.resolverBtnDisabled]}
+                    onPress={() => handleResolver(o.id)}
+                    disabled={resolvendo === o.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Marcar ocorrência de ${o.autor_nome} como resolvida`}>
+                    {resolvendo === o.id ? (
+                      <ActivityIndicator size="small" color={colors.text.inverse} />
+                    ) : (
+                      <>
+                        <Icon name={IconNames.checkCircle} size="sm" color={colors.text.inverse} />
+                        <Text style={styles.resolverBtnText}>Resolver</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              );
+            })
+          )}
+
+          <View style={{ height: spacing.xxl }} />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -624,6 +720,95 @@ const styles = StyleSheet.create({
   statusText: {
     ...textStyles.caption,
     fontWeight: fontWeight.semiBold,
+  },
+
+  // Ocorrências
+  ocorrenciasHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  ocorrenciaBadge: {
+    backgroundColor: colors.error.main,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+    marginTop: spacing.base,
+  },
+  ocorrenciaBadgeText: {
+    color: colors.text.inverse,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  ocorrenciasEmpty: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.success.light,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  ocorrenciasEmptyText: {
+    ...textStyles.body,
+    color: colors.success.dark,
+  },
+  ocorrenciaCard: {
+    backgroundColor: colors.background.paper,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.sm,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.warning.main,
+    ...shadows.xs,
+  },
+  ocorrenciaHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  ocorrenciaTipoBadge: {
+    backgroundColor: colors.warning.light,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  ocorrenciaTipoText: {
+    ...textStyles.caption,
+    color: colors.warning.dark,
+    fontWeight: '700',
+  },
+  ocorrenciaAutor: {
+    ...textStyles.bodySmall,
+    color: colors.text.secondary,
+    flex: 1,
+  },
+  ocorrenciaDescricao: {
+    ...textStyles.body,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
+  },
+  resolverBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.success.main,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    alignSelf: 'flex-end',
+    minHeight: 36,
+  },
+  resolverBtnDisabled: { opacity: 0.6 },
+  resolverBtnText: {
+    ...textStyles.caption,
+    color: colors.text.inverse,
+    fontWeight: '700',
   },
 });
 

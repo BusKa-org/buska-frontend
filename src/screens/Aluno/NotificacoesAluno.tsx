@@ -1,21 +1,27 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
   FlatList,
   RefreshControl,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { getNotificacoes, markNotificacaoAsSent } from '../../services/notificacaoService';
-import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import {
+  getNotificacoes,
+  markNotificacaoAsSent,
+} from '../../services/notificacaoService';
+import { borderRadius, colors, shadows, spacing, textStyles } from '../../theme';
 import { Icon, IconNames, LoadingSpinner, EmptyState } from '../../components';
+import type { Notificacao } from '../../types';
 
-const formatDate = (dateStr) => {
+type Props = { navigation: NativeStackNavigationProp<Record<string, object | undefined>> };
+
+const formatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr || dateStr === 'None') return '';
   try {
-    // Python str(datetime) uses a space instead of T: "2026-03-11 06:51:52+00:00"
     const normalized = dateStr.replace(' ', 'T');
     const date = new Date(normalized);
     if (isNaN(date.getTime())) return '';
@@ -31,8 +37,8 @@ const formatDate = (dateStr) => {
   }
 };
 
-const NotificacoesAluno = ({ navigation }) => {
-  const [notificacoes, setNotificacoes] = useState([]);
+const NotificacoesAluno: React.FC<Props> = ({ navigation }) => {
+  const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
@@ -56,7 +62,7 @@ const NotificacoesAluno = ({ navigation }) => {
     loadNotificacoes();
   }, [loadNotificacoes]);
 
-  const handleMarkAsRead = async (notificacao) => {
+  const handleMarkAsRead = async (notificacao: Notificacao) => {
     if (notificacao.enviada) return;
     try {
       await markNotificacaoAsSent(notificacao.id);
@@ -64,7 +70,7 @@ const NotificacoesAluno = ({ navigation }) => {
         prev.map((n) => (n.id === notificacao.id ? { ...n, enviada: true } : n)),
       );
     } catch {
-      // Non-fatal
+      // non-fatal
     }
   };
 
@@ -74,12 +80,15 @@ const NotificacoesAluno = ({ navigation }) => {
     setNotificacoes((prev) => prev.map((n) => ({ ...n, enviada: true })));
   };
 
-  const renderItem = ({ item }) => (
+  const renderItem = ({ item }: { item: Notificacao }) => (
     <TouchableOpacity
       style={[styles.card, !item.enviada && styles.cardUnread]}
       onPress={() => handleMarkAsRead(item)}
-      activeOpacity={0.7}>
-      <View style={[styles.cardDot, !item.enviada && styles.cardDotUnread]} />
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`${item.titulo}${!item.enviada ? ', não lida' : ''}`}
+      accessibilityState={{ selected: !item.enviada }}>
+      <View style={[styles.cardDot, !item.enviada && styles.cardDotUnread]} accessibilityElementsHidden />
       <View style={styles.cardBody}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle} numberOfLines={1}>
@@ -98,7 +107,8 @@ const NotificacoesAluno = ({ navigation }) => {
         <LoadingSpinner
           fullScreen
           message="Carregando notificações..."
-          color={colors.secondary.main}
+          color={colors.primary.main}
+          accessibilityLabel="Carregando notificações"
         />
       </SafeAreaView>
     );
@@ -109,8 +119,12 @@ const NotificacoesAluno = ({ navigation }) => {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-              <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              accessibilityRole="button"
+              accessibilityLabel="Voltar">
+              <Icon name={IconNames.back} size="md" color={colors.primary.contrast} />
             </TouchableOpacity>
             <View style={styles.headerTitleContainer}>
               <Text style={styles.title}>Notificações</Text>
@@ -123,7 +137,14 @@ const NotificacoesAluno = ({ navigation }) => {
           <Text style={styles.errorMessage}>
             Verifique a sua ligação e tente novamente.
           </Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => { setLoading(true); loadNotificacoes(); }}>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => {
+              setLoading(true);
+              loadNotificacoes();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Tentar novamente">
             <Icon name={IconNames.refresh} size="md" color={colors.primary.contrast} />
             <Text style={styles.retryButtonText}>Tentar novamente</Text>
           </TouchableOpacity>
@@ -134,14 +155,19 @@ const NotificacoesAluno = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            accessibilityRole="button"
+            accessibilityLabel="Voltar">
+            <Icon name={IconNames.back} size="md" color={colors.primary.contrast} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
-            <Text style={styles.title}>Notificações</Text>
+            <Text style={styles.title} accessibilityRole="header">
+              Notificações
+            </Text>
             {unreadCount > 0 && (
               <Text style={styles.headerSubtitle}>
                 {unreadCount} não {unreadCount === 1 ? 'lida' : 'lidas'}
@@ -149,14 +175,17 @@ const NotificacoesAluno = ({ navigation }) => {
             )}
           </View>
           {unreadCount > 0 && (
-            <TouchableOpacity style={styles.markAllButton} onPress={handleMarkAllAsRead}>
-              <Icon name={IconNames.checkCircle} size="md" color={colors.secondary.contrast} />
+            <TouchableOpacity
+              style={styles.markAllButton}
+              onPress={handleMarkAllAsRead}
+              accessibilityRole="button"
+              accessibilityLabel={`Marcar todas as ${unreadCount} notificações como lidas`}>
+              <Icon name={IconNames.checkCircle} size="md" color={colors.primary.contrast} />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* List */}
       <FlatList
         data={notificacoes}
         keyExtractor={(item) => String(item.id)}
@@ -172,8 +201,8 @@ const NotificacoesAluno = ({ navigation }) => {
               setRefreshing(true);
               loadNotificacoes();
             }}
-            colors={[colors.secondary.main]}
-            tintColor={colors.secondary.main}
+            colors={[colors.primary.main]}
+            tintColor={colors.primary.main}
           />
         }
         ListEmptyComponent={
@@ -183,6 +212,7 @@ const NotificacoesAluno = ({ navigation }) => {
             message="Quando houver avisos sobre as suas viagens eles aparecerão aqui."
           />
         }
+        accessibilityLabel="Lista de notificações"
       />
     </SafeAreaView>
   );
@@ -192,40 +222,34 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background.default },
 
   header: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     paddingHorizontal: spacing.base,
     paddingTop: spacing.base,
     paddingBottom: spacing.xl,
     borderBottomLeftRadius: borderRadius.xxl,
     borderBottomRightRadius: borderRadius.xxl,
   },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+  headerTop: { flexDirection: 'row', alignItems: 'center' },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitleContainer: {
-    flex: 1,
-    marginLeft: spacing.md,
-  },
-  title: { ...textStyles.h3, color: colors.secondary.contrast },
+  headerTitleContainer: { flex: 1, marginLeft: spacing.md },
+  title: { ...textStyles.h3, color: colors.primary.contrast },
   headerSubtitle: {
     ...textStyles.bodySmall,
-    color: colors.secondary.light,
+    color: 'rgba(255,255,255,0.75)',
     marginTop: spacing.xs,
   },
   markAllButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -234,10 +258,7 @@ const styles = StyleSheet.create({
     padding: spacing.base,
     gap: spacing.sm,
   },
-  emptyContent: {
-    flex: 1,
-    justifyContent: 'center',
-  },
+  emptyContent: { flex: 1, justifyContent: 'center' },
 
   card: {
     flexDirection: 'row',
@@ -249,7 +270,7 @@ const styles = StyleSheet.create({
   },
   cardUnread: {
     borderLeftWidth: 3,
-    borderLeftColor: colors.secondary.main,
+    borderLeftColor: colors.primary.main,
   },
   cardDot: {
     width: 8,
@@ -259,9 +280,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     marginRight: spacing.sm,
   },
-  cardDotUnread: {
-    backgroundColor: colors.secondary.main,
-  },
+  cardDotUnread: { backgroundColor: colors.primary.main },
   cardBody: { flex: 1 },
   cardHeader: {
     flexDirection: 'row',
@@ -270,21 +289,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     gap: spacing.sm,
   },
-  cardTitle: {
-    ...textStyles.h5,
-    color: colors.text.primary,
-    flex: 1,
-  },
-  cardDate: {
-    ...textStyles.caption,
-    color: colors.text.secondary,
-    flexShrink: 0,
-  },
-  cardMessage: {
-    ...textStyles.body,
-    color: colors.text.secondary,
-    lineHeight: 20,
-  },
+  cardTitle: { ...textStyles.h5, color: colors.text.primary, flex: 1 },
+  cardDate: { ...textStyles.caption, color: colors.text.secondary, flexShrink: 0 },
+  cardMessage: { ...textStyles.body, color: colors.text.secondary, lineHeight: 20 },
 
   errorContainer: {
     flex: 1,
@@ -294,7 +301,12 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   errorTitle: { ...textStyles.h4, color: colors.text.primary, textAlign: 'center' },
-  errorMessage: { ...textStyles.body, color: colors.text.secondary, textAlign: 'center', lineHeight: 22 },
+  errorMessage: {
+    ...textStyles.body,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
   retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -304,6 +316,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
     marginTop: spacing.sm,
+    minHeight: 48,
     ...shadows.sm,
   },
   retryButtonText: { ...textStyles.button, color: colors.primary.contrast },

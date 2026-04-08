@@ -1,4 +1,4 @@
-import { LocalizacaoRequest, PontoCreateRequest, PontoFlatListResponse, PontoListResponse, PontoResponse, RotaCreateRequest, RotaDetailResponse, RotaHorarioCreateRequest, RotaHorarioListResponse, RotaHorarioResponse, RotaListResponse, RotaPontosAddRequest, RotaResponse, RotaUpdateRequest, UserListResponse, ViagemCreateRequest, ViagemListQueryParams, ViagemListResponse, ViagemResponse } from '@/types';
+import { LocalizacaoRequest, PontoCreateRequest, PontoFlatListResponse, PontoListResponse, PontoResponse, RotaCreateRequest, RotaDetailResponse, RotaHorarioCreateRequest, RotaHorarioListResponse, RotaHorarioResponse, RotaListResponse, RotaPontosAddRequest, RotaResponse, RotaUpdateRequest, UserListResponse, ViagemCreateRequest, ViagemListQueryParams, ViagemListResponse, ViagemResponse, ViagemAcaoRequest } from '@/types';
 import { api } from '../api/client';
 
 interface LocalizacaoResponse {
@@ -89,12 +89,12 @@ export const motoristaService = {
   },
 
   /**
-   * List points for a route
-   * Backend: GET /v1/rotas/{id} - includes pontos in response
-   * Normalizes nested structure to flat format
+   * List points for a route (ordered by ordem)
+   * Backend: GET /v1/rotas/{id}/pontos
    */
   async listarPontosRota(rotaId: string): Promise<PontoFlatListResponse> {
-    const response = await api.get<PontoFlatListResponse>(`/rotas/${rotaId}`); 
+    if (!rotaId) return { items: [], total: 0 };
+    const response = await api.get<PontoFlatListResponse>(`/rotas/${rotaId}/pontos`);
     return response.data;
   },
 
@@ -134,9 +134,9 @@ export const motoristaService = {
    * Backend: PUT /v1/viagens/{id}/acao
    */
   async iniciarViagem(viagemId: string): Promise<ViagemResponse> {
-    const payload = ViagemAcaoRequest({
+    const payload : ViagemAcaoRequest = {
       acao: 'INICIAR',
-    });
+    };
     const response = await api.put<ViagemResponse>(`/viagens/${viagemId}/acao`, payload);
     return response.data;
   },
@@ -146,9 +146,9 @@ export const motoristaService = {
    * Backend: PUT /v1/viagens/{id}/acao
    */
   async finalizarViagem(viagemId: string): Promise<ViagemResponse> {
-    const payload = ViagemAcaoRequest({
+    const payload : ViagemAcaoRequest = {
       acao: 'FINALIZAR',
-    });
+    };
     const response = await api.put<ViagemResponse>(`/viagens/${viagemId}/acao`, payload);
     
     return response.data;
@@ -225,7 +225,3 @@ export const motoristaService = {
     return response.data;
   },
 };
-function ViagemAcaoRequest(arg0: { acao: string; }): any {
-  throw new Error('Function not implemented.');
-}
-

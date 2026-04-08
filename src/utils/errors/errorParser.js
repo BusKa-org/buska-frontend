@@ -135,10 +135,11 @@ function extractErrorDetails(responseData) {
     return { message, field, details, fieldErrors };
   }
   
-  // Handle BusKá backend envelope: { "error": { "code", "message", "details", "request_id" } }
+  // Handle BusKá backend envelope: { "error": { "code", "message", "field?", "details", "request_id" } }
   if (responseData.error && typeof responseData.error === 'object') {
     const envelope = responseData.error;
     message = envelope.message || null;
+    field = envelope.field || null;
     const envelopeDetails = envelope.details;
     if (envelopeDetails && typeof envelopeDetails === 'object') {
       details = envelopeDetails;
@@ -146,7 +147,7 @@ function extractErrorDetails(responseData) {
         fieldErrors[k] = typeof v === 'string' ? v : JSON.stringify(v);
       }
     }
-    return { message, field: null, details, fieldErrors };
+    return { message, field, details, fieldErrors };
   }
 
   // Extract main message

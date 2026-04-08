@@ -14,7 +14,7 @@ import type {
 import { unwrapItems } from '../types';
 
 // Normalized UI representation of a ViagemAgendaAlunoResponse
-type ViagemAgendaUI = {
+export type ViagemAgendaUI = {
   id: string | undefined;
   data: string | undefined;
   dia_semana: string | undefined;
@@ -24,9 +24,14 @@ type ViagemAgendaUI = {
   rota_nome: string | undefined;
   status_confirmacao: boolean | undefined;
   ponto_embarque_id: string | undefined;
+  /** Trip operational status (AGENDADA | EM_ANDAMENTO | FINALIZADA | CANCELADA) */
+  status_viagem: string | undefined;
+  alunos_confirmados_count: number;
+  total_alunos: number;
 };
 
 function normalizeViagemAgenda(viagem: ViagemAgendaAlunoResponse): ViagemAgendaUI {
+  const raw = viagem as Record<string, unknown>;
   return {
     id: viagem.viagem_id,
     data: viagem.data,
@@ -37,6 +42,9 @@ function normalizeViagemAgenda(viagem: ViagemAgendaAlunoResponse): ViagemAgendaU
     rota_nome: viagem.rota_nome,
     status_confirmacao: viagem.status_confirmacao,
     ponto_embarque_id: viagem.ponto_embarque_id,
+    status_viagem: (raw.status_viagem as string) ?? 'AGENDADA',
+    alunos_confirmados_count: (raw.alunos_confirmados_count as number) ?? 0,
+    total_alunos: (raw.total_alunos as number) ?? 0,
   };
 }
 

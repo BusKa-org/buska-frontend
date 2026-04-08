@@ -95,3 +95,50 @@ export type LocalizacaoRequest = Schemas['LocalizacaoRequest'];
 export type NotificacaoInput = Schemas['NotificacaoInput'];
 export type FcmTokenRequest = Schemas['FcmTokenRequest'];
 export type RelatorioEstatisticas = Schemas['RelatorioEstatisticas'];
+
+// Notificacao (runtime inbox shape — not in openapi)
+export interface Notificacao {
+  id: string;
+  titulo: string;
+  mensagem: string;
+  enviada: boolean;
+  data_envio: string | null;
+}
+
+// Ocorrencia — issue reporting (new endpoint /v1/ocorrencias)
+export type TipoOcorrencia =
+  | 'ATRASO'
+  | 'SUPERLOTACAO'
+  | 'COMPORTAMENTO'
+  | 'CANCELAMENTO'
+  | 'OUTRO';
+
+export type StatusOcorrencia = 'ABERTA' | 'RESOLVIDA';
+
+export interface OcorrenciaCreateRequest {
+  tipo: TipoOcorrencia;
+  descricao?: string;
+  viagem_id?: string;
+}
+
+export interface OcorrenciaResponse {
+  id: string;
+  autor_id: string;
+  autor_nome: string;
+  viagem_id: string | null;
+  tipo: TipoOcorrencia;
+  descricao: string | null;
+  status: StatusOcorrencia;
+  created_at: string;
+}
+
+// Minor approval — PENDING_APPROVAL extension on aluno status
+export type AlunoApprovalStatus = 'PENDING_APPROVAL' | 'ACTIVE' | 'PENDING_SIGNUP' | 'DISABLED';
+
+// Capacity info derived from ViagemResponse fields
+export interface CapacidadeInfo {
+  alunosConfirmados: number;
+  capacidadeTotal: number;
+  percentual: number;
+  quaseLotado: boolean;
+}
