@@ -13,6 +13,7 @@ import { motoristaService } from '../../services/motoristaService';
 import { useToast } from '../../components/Toast';
 import { colors, spacing, borderRadius, shadows, textStyles, fontWeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
+import { unwrapItems } from '../../types';
 
 const DIAS_SEMANA = [
   { id: 'SEG', label: 'Seg' },
@@ -56,7 +57,7 @@ const DefinirHorariosRota = ({ navigation, route }) => {
       }
 
       try {
-        const data = await motoristaService.listarHorariosRota(rotaId);
+        const data = await motoristaService.listarHorariosRota(rotaId).then(unwrapItems);
         setHorarios(data || []);
       } catch (error) {
         console.error('Error loading schedules:', error);
@@ -149,14 +150,14 @@ const DefinirHorariosRota = ({ navigation, route }) => {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+            <Icon name={IconNames.back} size="md" color={colors.primary.contrast} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.title}>Horários</Text>
             <Text style={styles.headerSubtitle}>{rotaNome}</Text>
           </View>
           <View style={styles.headerIcon}>
-            <Icon name={IconNames.schedule} size="lg" color={colors.secondary.contrast} />
+            <Icon name={IconNames.schedule} size="lg" color={colors.primary.contrast} />
           </View>
         </View>
       </View>
@@ -168,7 +169,7 @@ const DefinirHorariosRota = ({ navigation, route }) => {
             <Text style={styles.cardTitle}>Horários Cadastrados</Text>
             
             {loading ? (
-              <ActivityIndicator size="small" color={colors.secondary.main} />
+              <ActivityIndicator size="small" color={colors.primary.dark} />
             ) : horarios.length === 0 ? (
               <View style={styles.emptyState}>
                 <Icon name={IconNames.schedule} size="xl" color={colors.neutral[300]} />
@@ -303,7 +304,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     paddingHorizontal: spacing.base,
     paddingTop: spacing.base,
     paddingBottom: spacing.xl,
@@ -318,7 +319,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -328,18 +329,18 @@ const styles = StyleSheet.create({
   },
   title: {
     ...textStyles.h3,
-    color: colors.secondary.contrast,
+    color: colors.primary.contrast,
   },
   headerSubtitle: {
     ...textStyles.bodySmall,
-    color: colors.secondary.light,
+    color: 'rgba(255,255,255,0.75)',
     marginTop: spacing.xs,
   },
   headerIcon: {
     width: 44,
     height: 44,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -457,8 +458,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sentidoOptionSelected: {
-    borderColor: colors.secondary.main,
-    backgroundColor: colors.secondary.light,
+    borderColor: colors.primary.dark,
+    backgroundColor: colors.primary.lighter,
   },
   sentidoOptionText: {
     ...textStyles.body,
@@ -466,7 +467,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   sentidoOptionTextSelected: {
-    color: colors.secondary.main,
+    color: colors.primary.dark,
   },
   diasGrid: {
     flexDirection: 'row',
@@ -482,8 +483,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.default,
   },
   diaChipSelected: {
-    borderColor: colors.secondary.main,
-    backgroundColor: colors.secondary.main,
+    borderColor: colors.primary.dark,
+    backgroundColor: colors.primary.dark,
   },
   diaChipText: {
     ...textStyles.bodySmall,
@@ -494,7 +495,7 @@ const styles = StyleSheet.create({
     color: colors.text.inverse,
   },
   addButton: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     flexDirection: 'row',

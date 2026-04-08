@@ -14,6 +14,7 @@ import { useFetch } from '../../hooks';
 import { LoadingView, ErrorView, EmptyView } from '../../components/LoadingState';
 import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
+import { unwrapItems } from '../../types';
 
 const ListaViagens = ({navigation, route}) => {
   const { user } = useAuth();
@@ -29,10 +30,10 @@ const ListaViagens = ({navigation, route}) => {
     if (isGestor) {
       // Gestor uses the full trips endpoint with optional filters
       const filters = rotaFiltro?.id ? { rota_id: rotaFiltro.id } : {};
-      viagensData = await motoristaService.listarTodasViagens(filters);
+      viagensData = await motoristaService.listarTodasViagens(filters).then(unwrapItems);
     } else {
       // Motorista uses /viagens/minhas
-      viagensData = await motoristaService.listarViagens();
+      viagensData = await motoristaService.listarViagens().then(unwrapItems);
       // Filter by route if specified (client-side for motorista)
       if (rotaFiltro?.id) {
         viagensData = (viagensData || []).filter(v => v.rota_id === rotaFiltro.id);
@@ -75,7 +76,7 @@ const ListaViagens = ({navigation, route}) => {
       case 'AGENDADA':
         return colors.warning.main;
       case 'EM_ANDAMENTO':
-        return colors.secondary.main;
+        return colors.primary.dark;
       case 'FINALIZADA':
         return colors.success.main;
       case 'CANCELADA':
@@ -106,7 +107,7 @@ const ListaViagens = ({navigation, route}) => {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}>
-            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+            <Icon name={IconNames.back} size="md" color={colors.primary.contrast} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.title}>
@@ -117,7 +118,7 @@ const ListaViagens = ({navigation, route}) => {
             )}
           </View>
           <View style={styles.headerIcon}>
-            <Icon name={IconNames.route} size="lg" color={colors.secondary.contrast} />
+            <Icon name={IconNames.route} size="lg" color={colors.primary.contrast} />
           </View>
         </View>
       </View>
@@ -144,8 +145,8 @@ const ListaViagens = ({navigation, route}) => {
             <RefreshControl 
               refreshing={refreshing} 
               onRefresh={onRefresh}
-              colors={[colors.secondary.main]}
-              tintColor={colors.secondary.main}
+              colors={[colors.primary.dark]}
+              tintColor={colors.primary.dark}
             />
           }>
           <View style={styles.content}>
@@ -208,7 +209,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     paddingHorizontal: spacing.base,
     paddingTop: spacing.base,
     paddingBottom: spacing.xl,
@@ -223,7 +224,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -233,18 +234,18 @@ const styles = StyleSheet.create({
   },
   title: {
     ...textStyles.h3,
-    color: colors.secondary.contrast,
+    color: colors.primary.contrast,
   },
   subtitle: {
     ...textStyles.bodySmall,
-    color: colors.secondary.light,
+    color: 'rgba(255,255,255,0.75)',
     marginTop: spacing.xs,
   },
   headerIcon: {
     width: 44,
     height: 44,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },

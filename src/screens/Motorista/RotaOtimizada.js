@@ -25,7 +25,7 @@ const RotaOtimizada = ({navigation, route}) => {
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}>
-          <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
+          <Icon name={IconNames.back} size="md" color={colors.primary.dark} />
           <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Rota Otimizada</Text>
@@ -97,7 +97,7 @@ const RotaOtimizada = ({navigation, route}) => {
                 </View>
                 {index < pontosOtimizados.length - 1 && (
                   <View style={styles.linhaConector}>
-                    <Icon name={IconNames.expandMore} size="md" color={colors.secondary.main} />
+                    <Icon name={IconNames.expandMore} size="md" color={colors.primary.dark} />
                   </View>
                 )}
               </View>
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     ...textStyles.body,
-    color: colors.secondary.main,
+    color: colors.primary.dark,
   },
   title: {
     ...textStyles.h2,
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   },
   ordemNumero: {
     ...textStyles.h2,
-    color: colors.secondary.main,
+    color: colors.primary.dark,
   },
   destinoLabel: {
     ...textStyles.caption,

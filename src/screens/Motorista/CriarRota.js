@@ -60,14 +60,14 @@ const CriarRota = ({navigation}) => {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}>
-            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+            <Icon name={IconNames.back} size="md" color={colors.primary.contrast} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.title}>Nova Rota</Text>
             <Text style={styles.headerSubtitle}>Configure sua nova rota</Text>
           </View>
           <View style={styles.headerIcon}>
-            <Icon name={IconNames.bus} size="lg" color={colors.secondary.contrast} />
+            <Icon name={IconNames.bus} size="lg" color={colors.primary.contrast} />
           </View>
         </View>
       </View>
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     paddingHorizontal: spacing.base,
     paddingTop: spacing.base,
     paddingBottom: spacing.xl,
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -158,18 +158,18 @@ const styles = StyleSheet.create({
   },
   title: {
     ...textStyles.h3,
-    color: colors.secondary.contrast,
+    color: colors.primary.contrast,
   },
   headerSubtitle: {
     ...textStyles.bodySmall,
-    color: colors.secondary.light,
+    color: 'rgba(255,255,255,0.75)',
     marginTop: spacing.xs,
   },
   headerIcon: {
     width: 44,
     height: 44,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
   },
   criarButton: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     borderRadius: borderRadius.md,
     padding: spacing.base,
     alignItems: 'center',

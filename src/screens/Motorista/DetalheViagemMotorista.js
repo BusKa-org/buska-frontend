@@ -50,7 +50,7 @@ const DetalheViagemMotorista = ({navigation, route}) => {
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.goBack()}>
-              <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+              <Icon name={IconNames.back} size="md" color={colors.primary.contrast} />
             </TouchableOpacity>
             <View style={styles.headerTitleContainer}>
               <Text style={styles.title}>Detalhes da Viagem</Text>
@@ -81,7 +81,7 @@ const DetalheViagemMotorista = ({navigation, route}) => {
       case 'A iniciar':
         return colors.warning.main;
       case 'Em andamento':
-        return colors.secondary.main;
+        return colors.primary.dark;
       case 'Finalizada':
         return colors.success.main;
       default:
@@ -109,14 +109,14 @@ const DetalheViagemMotorista = ({navigation, route}) => {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}>
-            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+            <Icon name={IconNames.back} size="md" color={colors.primary.contrast} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.title}>Detalhes da Viagem</Text>
             <Text style={styles.headerSubtitle}>{viagem.tipo} • {viagem.horario}</Text>
           </View>
           <View style={styles.headerIcon}>
-            <Icon name={IconNames.route} size="lg" color={colors.secondary.contrast} />
+            <Icon name={IconNames.route} size="lg" color={colors.primary.contrast} />
           </View>
         </View>
       </View>
@@ -148,7 +148,7 @@ const DetalheViagemMotorista = ({navigation, route}) => {
             <View style={styles.rotaInfo}>
               <View style={styles.pontoRota}>
                 <View style={styles.pontoIcon}>
-                  <Icon name={IconNames.location} size="md" color={colors.secondary.main} />
+                  <Icon name={IconNames.location} size="md" color={colors.primary.dark} />
                 </View>
                 <View style={styles.pontoInfo}>
                   <Text style={styles.pontoLabel}>Origem</Text>
@@ -232,7 +232,7 @@ const DetalheViagemMotorista = ({navigation, route}) => {
                         : IconNames.location} 
                       size="sm" 
                       color={ponto.tipo === 'origem' 
-                        ? colors.secondary.main 
+                        ? colors.primary.dark 
                         : ponto.tipo === 'destino'
                         ? colors.accent.main
                         : colors.text.secondary} 
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     paddingHorizontal: spacing.base,
     paddingTop: spacing.base,
     paddingBottom: spacing.xl,
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -358,18 +358,18 @@ const styles = StyleSheet.create({
   },
   title: {
     ...textStyles.h3,
-    color: colors.secondary.contrast,
+    color: colors.primary.contrast,
   },
   headerSubtitle: {
     ...textStyles.bodySmall,
-    color: colors.secondary.light,
+    color: 'rgba(255,255,255,0.75)',
     marginTop: spacing.xs,
   },
   headerIcon: {
     width: 44,
     height: 44,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
   },
   viagemTipo: {
     ...textStyles.body,
-    color: colors.secondary.main,
+    color: colors.primary.dark,
     fontWeight: fontWeight.semiBold,
     marginBottom: spacing.xs,
   },
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xs,
   },
   verAlunosButton: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     alignItems: 'center',
@@ -575,7 +575,7 @@ const styles = StyleSheet.create({
     color: colors.text.inverse,
   },
   verRotaOtimizadaButton: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     borderRadius: borderRadius.md,
     padding: spacing.base,
     alignItems: 'center',
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
     color: colors.text.inverse,
   },
   definirPontosButton: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     alignItems: 'center',

@@ -78,7 +78,7 @@ const ConfigNotificacoes = ({ navigation }) => {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+            <Icon name={IconNames.back} size="md" color={colors.primary.contrast} />
           </TouchableOpacity>
 
           <View style={styles.headerTitleContainer}>
@@ -87,7 +87,7 @@ const ConfigNotificacoes = ({ navigation }) => {
           </View>
 
           <View style={styles.headerIcon}>
-            <Icon name={IconNames.settings} size="lg" color={colors.secondary.contrast} />
+            <Icon name={IconNames.settings} size="lg" color={colors.primary.contrast} />
           </View>
         </View>
       </View>
@@ -146,7 +146,7 @@ const AccountSection = ({ user, showProfileCard }: { user: any; showProfileCard:
   return (
     <View style={styles.profileCard}>
       <View style={styles.avatarCircle}>
-        <Icon name={IconNames.person} size="xl" color={colors.secondary.main} />
+        <Icon name={IconNames.person} size="xl" color={colors.primary.dark} />
       </View>
 
       <View style={styles.profileInfo}>
@@ -174,10 +174,10 @@ const AlunoNotificationSection = ({ user }: { user: any }) => {
         <View
           style={[
             styles.settingIconContainer,
-            { backgroundColor: colors.secondary.lighter ?? colors.neutral[100] },
+            { backgroundColor: colors.primary.lighter },
           ]}
         >
-          <Icon name={IconNames.notifications} size="md" color={colors.secondary.main} />
+          <Icon name={IconNames.notifications} size="md" color={colors.primary.dark} />
         </View>
 
         <View style={styles.settingInfo}>
@@ -262,7 +262,7 @@ const MotoristaNotificationSection = ({
           <Switch
             value={values.notificacaoAlunos}
             onValueChange={onChange.setNotificacaoAlunos}
-            trackColor={{ false: colors.border.light, true: colors.secondary.main }}
+            trackColor={{ false: colors.border.light, true: colors.primary.dark }}
             thumbColor={colors.background.paper}
           />
         </View>
@@ -279,7 +279,7 @@ const MotoristaNotificationSection = ({
           <Switch
             value={values.notificacaoAtrasos}
             onValueChange={onChange.setNotificacaoAtrasos}
-            trackColor={{ false: colors.border.light, true: colors.secondary.main }}
+            trackColor={{ false: colors.border.light, true: colors.primary.dark }}
             thumbColor={colors.background.paper}
           />
         </View>
@@ -296,7 +296,7 @@ const MotoristaNotificationSection = ({
           <Switch
             value={values.notificacaoEmergencia}
             onValueChange={onChange.setNotificacaoEmergencia}
-            trackColor={{ false: colors.border.light, true: colors.secondary.main }}
+            trackColor={{ false: colors.border.light, true: colors.primary.dark }}
             thumbColor={colors.background.paper}
           />
         </View>
@@ -313,7 +313,7 @@ const MotoristaNotificationSection = ({
           <Switch
             value={values.notificacaoRotas}
             onValueChange={onChange.setNotificacaoRotas}
-            trackColor={{ false: colors.border.light, true: colors.secondary.main }}
+            trackColor={{ false: colors.border.light, true: colors.primary.dark }}
             thumbColor={colors.background.paper}
           />
         </View>
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     paddingHorizontal: spacing.base,
     paddingTop: spacing.base,
     paddingBottom: spacing.xl,
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -429,18 +429,18 @@ const styles = StyleSheet.create({
   },
   title: {
     ...textStyles.h3,
-    color: colors.secondary.contrast,
+    color: colors.primary.contrast,
   },
   headerSubtitle: {
     ...textStyles.bodySmall,
-    color: colors.secondary.light,
+    color: 'rgba(255,255,255,0.75)',
     marginTop: spacing.xs,
   },
   headerIcon: {
     width: 44,
     height: 44,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -485,14 +485,14 @@ const styles = StyleSheet.create({
   roleBadge: {
     alignSelf: 'flex-start',
     marginTop: spacing.xs,
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: borderRadius.full,
   },
   roleBadgeText: {
     ...textStyles.caption,
-    color: colors.secondary.contrast,
+    color: colors.primary.contrast,
     fontWeight: '600',
   },
 
@@ -606,7 +606,7 @@ const styles = StyleSheet.create({
   },
 
   saveButton: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     borderRadius: borderRadius.md,
     padding: spacing.base,
     alignItems: 'center',

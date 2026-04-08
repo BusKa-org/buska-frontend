@@ -947,6 +947,10 @@ export interface components {
             /** @description inscrever ou desinscrever */
             acao: string;
         };
+        RotaPontosAddRequest: {
+            /** @description Pontos da rota */
+            pontos?: components["schemas"]["RotaPontoAddRequest"][];
+        };
         PontoFlatListResponse: {
             items?: components["schemas"]["PontoFlatResponse"][];
             /** @description Total de pontos */
@@ -1167,6 +1171,10 @@ export interface components {
             id?: string;
             /** @description Nome */
             nome?: string;
+            /** @description Sigla */
+            sigla?: string;
+            /** @description UF */
+            uf?: string;
             /** @description Tipo */
             tipo?: string;
             /** @description Endereço formatado */
@@ -1618,7 +1626,12 @@ export interface operations {
     };
     list_instituicoes_public: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Pesquisa por nome, sigla e/ou UF */
+                search?: string;
+                /** @description Limite de resultados */
+                limit?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2172,7 +2185,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RotaPontoAddRequest"];
+                "application/json": components["schemas"]["RotaPontosAddRequest"];
             };
         };
         responses: {

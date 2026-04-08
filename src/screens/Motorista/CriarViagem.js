@@ -43,7 +43,7 @@ const CriarViagem = ({navigation, route}) => {
 
         const [rotasData, motoristasData] = await Promise.all([
           motoristaService.listarRotas().then(unwrapItems),
-          motoristaService.listarMotoristas()
+          motoristaService.listarMotoristas().then(unwrapItems)
         ]);
         
         setRotas(rotasData);
@@ -108,7 +108,7 @@ const CriarViagem = ({navigation, route}) => {
       
       try {
         setLoadingHorarios(true);
-        const horariosData = await motoristaService.listarHorariosRota(rotaSelecionada);
+        const horariosData = await motoristaService.listarHorariosRota(rotaSelecionada).then(unwrapItems);
         setHorarios(horariosData || []);
         setHorarioSelecionado(null);
       } catch (error) {
@@ -199,21 +199,21 @@ const CriarViagem = ({navigation, route}) => {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}>
-            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+            <Icon name={IconNames.back} size="md" color={colors.primary.contrast} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.title}>Nova Viagem</Text>
             <Text style={styles.subtitle}>Configure os detalhes da viagem</Text>
           </View>
           <View style={styles.headerIcon}>
-            <Icon name={IconNames.add} size="lg" color={colors.secondary.contrast} />
+            <Icon name={IconNames.add} size="lg" color={colors.primary.contrast} />
           </View>
         </View>
       </View>
 
       {loadingRotas ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.secondary.main} />
+          <ActivityIndicator size="large" color={colors.primary.dark} />
         </View>
       ) : (
         <ScrollView style={styles.scrollView}>
@@ -264,7 +264,7 @@ const CriarViagem = ({navigation, route}) => {
               <View style={styles.section}>
                 <Text style={styles.label}>Horário</Text>
                 {loadingHorarios ? (
-                  <ActivityIndicator size="small" color={colors.secondary.main} />
+                  <ActivityIndicator size="small" color={colors.primary.dark} />
                 ) : horarios.length === 0 ? (
                   <View style={styles.infoBox}>
                     <Icon name={IconNames.info} size="md" color={colors.info.main} />
@@ -286,7 +286,7 @@ const CriarViagem = ({navigation, route}) => {
                           <Icon 
                             name={IconNames.schedule} 
                             size="md" 
-                            color={horarioSelecionado === horario.id ? colors.secondary.main : colors.text.secondary} 
+                            color={horarioSelecionado === horario.id ? colors.primary.dark : colors.text.secondary} 
                           />
                           <Text
                             style={[
@@ -378,7 +378,7 @@ const CriarViagem = ({navigation, route}) => {
             <View style={styles.section}>
               <Text style={styles.label}>Motorista *</Text>
               {loadingMotoristas ? (
-                <ActivityIndicator size="small" color={colors.secondary.main} />
+                <ActivityIndicator size="small" color={colors.primary.dark} />
               ) : (
                 <ScrollView
                   horizontal
@@ -393,7 +393,7 @@ const CriarViagem = ({navigation, route}) => {
                       ]}
                       onPress={() => setMotoristaSelecionado(mot.id)}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Icon name={IconNames.person} size="sm" color={motoristaSelecionado === mot.id ? colors.secondary.main : colors.text.secondary} />
+                        <Icon name={IconNames.person} size="sm" color={motoristaSelecionado === mot.id ? colors.primary.dark : colors.text.secondary} />
                         <Text
                           style={[
                             styles.rotaOptionText,
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     paddingHorizontal: spacing.base,
     paddingTop: spacing.base,
     paddingBottom: spacing.xl,
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -456,18 +456,18 @@ const styles = StyleSheet.create({
   },
   title: {
     ...textStyles.h3,
-    color: colors.secondary.contrast,
+    color: colors.primary.contrast,
   },
   subtitle: {
     ...textStyles.bodySmall,
-    color: colors.secondary.light,
+    color: 'rgba(255,255,255,0.75)',
     marginTop: spacing.xs,
   },
   headerIcon: {
     width: 44,
     height: 44,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -514,8 +514,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.paper,
   },
   quickDateButtonSelected: {
-    borderColor: colors.secondary.main,
-    backgroundColor: colors.secondary.main,
+    borderColor: colors.primary.dark,
+    backgroundColor: colors.primary.dark,
   },
   quickDateText: {
     ...textStyles.bodySmall,
@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
     ...shadows.xs,
   },
   rotaOptionSelected: {
-    borderColor: colors.secondary.main,
+    borderColor: colors.primary.dark,
     backgroundColor: colors.info.light,
   },
   rotaOptionText: {
@@ -554,7 +554,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.medium,
   },
   rotaOptionTextSelected: {
-    color: colors.secondary.main,
+    color: colors.primary.dark,
     fontWeight: fontWeight.semiBold,
   },
   horariosContainer: {
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
     ...shadows.xs,
   },
   horarioOptionSelected: {
-    borderColor: colors.secondary.main,
+    borderColor: colors.primary.dark,
     backgroundColor: colors.info.light,
   },
   horarioContent: {
@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
   },
   horarioTextSelected: {
-    color: colors.secondary.main,
+    color: colors.primary.dark,
     fontWeight: fontWeight.semiBold,
   },
   infoBox: {
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   emptyButton: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,

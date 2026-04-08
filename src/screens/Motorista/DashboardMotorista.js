@@ -13,6 +13,7 @@ import {motoristaService} from '../../services/motoristaService';
 import pontoService from '../../services/pontoService';
 import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeight } from '../../theme';
 import { Icon, IconNames, LoadingSpinner } from '../../components';
+import { unwrapItems } from '../../types';
 
 const DashboardMotorista = ({navigation}) => {
   const { user } = useAuth();
@@ -45,7 +46,7 @@ const DashboardMotorista = ({navigation}) => {
   useEffect(() => {
     const loadProximaViagem = async () => {
       try {
-        const viagens = await motoristaService.listarViagens();
+        const viagens = await motoristaService.listarViagens().then(unwrapItems);
         
         if (viagens && viagens.length > 0) {
           const now = new Date();
@@ -86,14 +87,14 @@ const DashboardMotorista = ({navigation}) => {
 
           if (viagensFuturas.length > 0) {
             const proxima = viagensFuturas[0];
-            const pontos = await pontoService.getPontosByRota(proxima.rota_id);
+            const pontos = await pontoService.getPontosByRota(proxima.rota_id).then(unwrapItems);
             proxima.pontos = pontos;
             
             let origem = 'N/A';
             let destino = 'N/A';
             
             try {
-              const pontos = await motoristaService.listarPontosRota(proxima.rota_id);
+              const pontos = await motoristaService.listarPontosRota(proxima.rota_id).then(unwrapItems);
               if (pontos && pontos.length > 0) {
                 origem = pontos[0].nome || 'N/A';
                 if (pontos.length > 1) {
@@ -201,7 +202,7 @@ const DashboardMotorista = ({navigation}) => {
               </Text>
             </View>
             <View style={styles.avatarContainer}>
-              <Icon name={IconNames.person} size="xl" color={colors.secondary.contrast} />
+              <Icon name={IconNames.person} size="xl" color={colors.primary.contrast} />
             </View>
           </View>
         </View>
@@ -209,12 +210,12 @@ const DashboardMotorista = ({navigation}) => {
         {/* Próxima Viagem */}
         <View style={styles.proximaViagemCard}>
           <View style={styles.cardHeader}>
-            <Icon name={IconNames.schedule} size="md" color={colors.secondary.light} />
+            <Icon name={IconNames.schedule} size="md" color={colors.primary.dark} />
             <Text style={styles.cardTitle}>Próxima Viagem</Text>
           </View>
           {loadingViagem ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={colors.secondary.contrast} />
+              <ActivityIndicator size="small" color={colors.primary.dark} />
             </View>
           ) : proximaViagem ? (
             <>
@@ -258,7 +259,7 @@ const DashboardMotorista = ({navigation}) => {
               {/* Informações de Alunos */}
               <View style={styles.alunosInfo}>
                 <View style={styles.alunosHeader}>
-                  <Icon name={IconNames.group} size="sm" color={colors.secondary.light} />
+                  <Icon name={IconNames.group} size="sm" color={colors.primary.dark} />
                   <Text style={styles.alunosText}>
                     {alunosInfo.alunosConfirmados} de {alunosInfo.totalAlunos} alunos confirmados
                   </Text>
@@ -305,7 +306,7 @@ const DashboardMotorista = ({navigation}) => {
             </>
           ) : (
             <View style={styles.emptyState}>
-              <Icon name={IconNames.route} size="xxl" color={colors.secondary.light} />
+              <Icon name={IconNames.route} size="xxl" color={colors.neutral[300]} />
               <Text style={styles.emptyText}>Nenhuma viagem agendada</Text>
               <Text style={styles.emptySubtext}>Aguarde o gestor atribuir viagens para você</Text>
             </View>
@@ -319,7 +320,7 @@ const DashboardMotorista = ({navigation}) => {
               style={styles.botaoRapido}
               onPress={() => navigation.navigate('RotaMotorista')}>
               <View style={styles.botaoIconContainer}>
-                <Icon name={IconNames.bus} size="lg" color={colors.secondary.main} />
+                <Icon name={IconNames.bus} size="lg" color={colors.primary.dark} />
               </View>
               <Text style={styles.botaoRapidoText}>Minhas Rotas</Text>
             </TouchableOpacity>
@@ -328,7 +329,7 @@ const DashboardMotorista = ({navigation}) => {
               style={styles.botaoRapido}
               onPress={() => navigation.navigate('ListaViagens')}>
               <View style={styles.botaoIconContainer}>
-                <Icon name={IconNames.route} size="lg" color={colors.secondary.main} />
+                <Icon name={IconNames.route} size="lg" color={colors.primary.dark} />
               </View>
               <Text style={styles.botaoRapidoText}>Minhas Viagens</Text>
             </TouchableOpacity>
@@ -364,7 +365,7 @@ const DashboardMotorista = ({navigation}) => {
               style={styles.botaoRapido}
               onPress={() => navigation.navigate('ConfigNotificacoesMotorista')}>
               <View style={styles.botaoIconContainer}>
-                <Icon name={IconNames.settings} size="lg" color={colors.secondary.main} />
+                <Icon name={IconNames.settings} size="lg" color={colors.primary.dark} />
               </View>
               <Text style={styles.botaoRapidoText}>Configurações</Text>
             </TouchableOpacity>
@@ -386,7 +387,7 @@ const styles = StyleSheet.create({
   
   // Header - Styled like DashboardAluno
   header: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xl,
     paddingBottom: spacing.xxl,
@@ -403,18 +404,18 @@ const styles = StyleSheet.create({
   },
   greeting: {
     ...textStyles.h2,
-    color: colors.secondary.contrast,
+    color: colors.primary.contrast,
     marginBottom: spacing.xs,
   },
   subtitle: {
     ...textStyles.bodySmall,
-    color: colors.secondary.light,
+    color: 'rgba(255,255,255,0.75)',
   },
   avatarContainer: {
     width: 56,
     height: 56,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -424,7 +425,7 @@ const styles = StyleSheet.create({
     margin: spacing.base,
     marginTop: -spacing.xl,
     padding: spacing.lg,
-    backgroundColor: colors.secondary.lighter,
+    backgroundColor: colors.primary.lighter,
     borderRadius: borderRadius.xl,
     ...shadows.lg,
   },
@@ -436,7 +437,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     ...textStyles.caption,
-    color: colors.secondary.light,
+    color: colors.text.secondary,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
@@ -455,11 +456,11 @@ const styles = StyleSheet.create({
   },
   viagemHorario: {
     ...textStyles.display2,
-    color: colors.secondary.contrast,
+    color: colors.text.primary,
   },
   viagemData: {
     ...textStyles.bodySmall,
-    color: colors.secondary.lighter,
+    color: colors.text.secondary,
     marginBottom: spacing.md,
   },
   statusBadge: {
@@ -491,13 +492,13 @@ const styles = StyleSheet.create({
   },
   pontoNome: {
     ...textStyles.body,
-    color: colors.secondary.contrast,
+    color: colors.text.primary,
     fontWeight: fontWeight.medium,
   },
   linhaRota: {
     width: 2,
     height: spacing.base,
-    backgroundColor: colors.secondary.light,
+    backgroundColor: colors.neutral[300],
     marginLeft: spacing.sm,
     opacity: 0.5,
   },
@@ -552,7 +553,7 @@ const styles = StyleSheet.create({
   },
   verDetalhesButtonText: {
     ...textStyles.button,
-    color: colors.secondary.main,
+    color: colors.primary.dark,
   },
   iniciarButton: {
     flexDirection: 'row',
@@ -578,12 +579,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...textStyles.h4,
-    color: colors.secondary.contrast,
+    color: colors.text.secondary,
     marginTop: spacing.md,
   },
   emptySubtext: {
     ...textStyles.bodySmall,
-    color: colors.secondary.light,
+    color: colors.text.hint,
     textAlign: 'center',
     marginTop: spacing.xs,
   },
@@ -610,7 +611,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.secondary.lighter,
+    backgroundColor: colors.primary.lighter,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.sm,

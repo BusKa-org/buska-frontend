@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { Icon, IconNames } from '../../components';
+import { colors } from '../../theme';
 
 // Physical screen size — never changes, immune to keyboard resize on Android
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('screen');
@@ -88,7 +89,7 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#0D5BCF" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.primary.dark} />
 
       {/* Background uses explicit screen dimensions so keyboard resize on Android never affects it */}
       <ImageBackground
@@ -134,7 +135,7 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
                     <Icon
                       name={IconNames.email}
                       size="md"
-                      color={emailFocused ? '#2F6FED' : '#94A3B8'}
+                      color={emailFocused ? colors.primary.main : '#94A3B8'}
                       style={undefined}
                     />
                   </View>
@@ -171,7 +172,7 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
                     <Icon
                       name={IconNames.lock}
                       size="md"
-                      color={senhaFocused ? '#2F6FED' : '#94A3B8'}
+                      color={senhaFocused ? colors.primary.main : '#94A3B8'}
                       style={undefined}
                     />
                   </View>
@@ -287,7 +288,7 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#EEF3FB',
+    backgroundColor: colors.background.default,
   },
   background: {
     position: 'absolute',
@@ -409,7 +410,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#143D86',
+    color: colors.primary.dark,
     textAlign: 'center',
   },
   subtitle: {
@@ -441,7 +442,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   inputWrapperFocused: {
-    borderColor: '#2F6FED',
+    borderColor: colors.primary.main,
     backgroundColor: '#FFFFFF',
   },
   inputWrapperError: {
@@ -498,8 +499,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   checkBoxActive: {
-    backgroundColor: '#F4B400',
-    borderColor: '#F4B400',
+    backgroundColor: colors.accent.main,
+    borderColor: colors.accent.main,
   },
   rememberText: {
     fontSize: 15,
@@ -508,15 +509,15 @@ const styles = StyleSheet.create({
   forgotText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#2563EB',
+    color: colors.primary.main,
   },
   loginButton: {
     height: 58,
     borderRadius: 14,
-    backgroundColor: '#156EF2',
+    backgroundColor: colors.primary.main,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#156EF2',
+    shadowColor: colors.primary.main,
     shadowOpacity: 0.26,
     shadowOffset: { width: 0, height: 8 },
     shadowRadius: 18,
@@ -556,7 +557,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   footerLink: {
-    color: '#2563EB',
+    color: colors.primary.main,
     fontWeight: '800',
   },
   featuresCard: {

@@ -11,6 +11,7 @@ import { colors, spacing, borderRadius, shadows, textStyles, fontSize, fontWeigh
 import Icon, { IconNames } from '../../components/Icon';
 import { motoristaService } from '../../services/motoristaService';
 import { useToast } from '../../components/Toast';
+import { unwrapItems } from '../../types';
 
 // Geolocation: use community package on native; fallback to global on web
 let Geolocation = null;
@@ -46,7 +47,7 @@ const InicioFimViagem = ({navigation, route}) => {
       
       try {
         setLoadingStatus(true);
-        const viagens = await motoristaService.listarViagens();
+        const viagens = await motoristaService.listarViagens().then(unwrapItems);
         const viagemAtual = viagens.find(v => v.id === viagemParam.id);
         
         if (viagemAtual) {
@@ -189,7 +190,7 @@ const InicioFimViagem = ({navigation, route}) => {
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.goBack()}>
-              <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+              <Icon name={IconNames.back} size="md" color={colors.primary.contrast} />
             </TouchableOpacity>
             <View style={styles.headerTitleContainer}>
               <Text style={styles.title}>Iniciar Viagem</Text>
@@ -212,7 +213,7 @@ const InicioFimViagem = ({navigation, route}) => {
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.goBack()}>
-              <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+              <Icon name={IconNames.back} size="md" color={colors.primary.contrast} />
             </TouchableOpacity>
             <View style={styles.headerTitleContainer}>
               <Text style={styles.title}>Carregando...</Text>
@@ -220,7 +221,7 @@ const InicioFimViagem = ({navigation, route}) => {
           </View>
         </View>
         <View style={styles.emptyContainer}>
-          <ActivityIndicator size="large" color={colors.secondary.main} />
+          <ActivityIndicator size="large" color={colors.primary.dark} />
         </View>
       </SafeAreaView>
     );
@@ -234,7 +235,7 @@ const InicioFimViagem = ({navigation, route}) => {
             style={[styles.backButton, viagemIniciada && styles.backButtonDisabledStyle]}
             onPress={() => navigation.goBack()}
             disabled={viagemIniciada}>
-            <Icon name={IconNames.back} size="md" color={viagemIniciada ? colors.success.light : colors.secondary.contrast} />
+            <Icon name={IconNames.back} size="md" color={viagemIniciada ? colors.success.light : colors.primary.contrast} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.title}>
@@ -245,7 +246,7 @@ const InicioFimViagem = ({navigation, route}) => {
             </Text>
           </View>
           <View style={[styles.headerIcon, viagemIniciada && styles.headerIconEmAndamento]}>
-            <Icon name={viagemIniciada ? IconNames.route : IconNames.schedule} size="lg" color={viagemIniciada ? colors.success.contrast : colors.secondary.contrast} />
+            <Icon name={viagemIniciada ? IconNames.route : IconNames.schedule} size="lg" color={viagemIniciada ? colors.success.contrast : colors.primary.contrast} />
           </View>
         </View>
       </View>
@@ -257,7 +258,7 @@ const InicioFimViagem = ({navigation, route}) => {
           <Text style={styles.viagemHorario}>{viagem.horario}</Text>
           <View style={styles.rotaInfo}>
             <View style={styles.pontoRota}>
-              <Icon name={IconNames.location} size="md" color={colors.secondary.main} />
+              <Icon name={IconNames.location} size="md" color={colors.primary.dark} />
               <Text style={styles.pontoNome}>{viagem.origem}</Text>
             </View>
             <View style={styles.linhaRota} />
@@ -358,7 +359,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     paddingHorizontal: spacing.base,
     paddingTop: spacing.base,
     paddingBottom: spacing.xl,
@@ -376,7 +377,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -390,18 +391,18 @@ const styles = StyleSheet.create({
   },
   title: {
     ...textStyles.h3,
-    color: colors.secondary.contrast,
+    color: colors.primary.contrast,
   },
   headerSubtitle: {
     ...textStyles.bodySmall,
-    color: colors.secondary.light,
+    color: 'rgba(255,255,255,0.75)',
     marginTop: spacing.xs,
   },
   headerIcon: {
     width: 44,
     height: 44,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -430,7 +431,7 @@ const styles = StyleSheet.create({
   },
   viagemTipo: {
     ...textStyles.h4,
-    color: colors.secondary.main,
+    color: colors.primary.dark,
     fontWeight: fontWeight.semiBold,
     marginBottom: spacing.sm,
   },
@@ -473,7 +474,7 @@ const styles = StyleSheet.create({
   cronometro: {
     fontSize: fontSize.display1,
     fontWeight: fontWeight.bold,
-    color: colors.secondary.main,
+    color: colors.primary.dark,
     fontFamily: 'monospace',
   },
   iniciarButton: {
@@ -513,7 +514,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   acaoButton: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     borderRadius: borderRadius.md,
     padding: spacing.base,
     alignItems: 'center',

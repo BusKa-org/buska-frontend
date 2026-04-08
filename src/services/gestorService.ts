@@ -1,5 +1,5 @@
 import { api } from '../api/client';
-import type { AlunoListResponse, InstituicaoCreateRequest, InstituicaoListResponse, InstituicaoResponse, MotoristaCreateRequest, OnibusCreateRequest, OnibusListResponse, OnibusResponse, RotaCreateRequest, RotaListResponse, RotaResponse, UserListResponse, UserResponse, ViagemCreateRequest, ViagemListQueryParams, ViagemListResponse, ViagemLoteRequest, ViagemLoteResponse, ViagemResponse } from '../types';
+import type { AlunoListResponse, InstituicaoCreateRequest, InstituicaoListResponse, InstituicaoResponse, MotoristaCreateRequest, OnibusCreateRequest, OnibusListResponse, OnibusResponse, RelatorioEstatisticas, RotaCreateRequest, RotaListResponse, RotaResponse, UserListResponse, UserResponse, ViagemCreateRequest, ViagemListQueryParams, ViagemListResponse, ViagemLoteRequest, ViagemLoteResponse, ViagemResponse } from '../types';
 
 export const gestorService = {
   /**
@@ -147,6 +147,18 @@ export const gestorService = {
    */
   async excluirInstituicao(instituicaoId: string): Promise<{ message: string }> {
     const response = await api.delete<{ message: string }>(`/instituicoes/${instituicaoId}`);
+    return response.data;
+  },
+
+  /**
+   * Get operational report for a date range
+   * Backend: GET /v1/dashboard/relatorios/periodo
+   * Returns: viagens_realizadas, alunos_transportados, vagas_desperdicadas, km_total_rodado, media_alunos_por_km
+   */
+  async obterRelatorio(dataInicio: string, dataFim: string): Promise<RelatorioEstatisticas> {
+    const response = await api.get<RelatorioEstatisticas>('/dashboard/relatorios/periodo', {
+      params: { data_inicio: dataInicio, data_fim: dataFim },
+    });
     return response.data;
   },
 };

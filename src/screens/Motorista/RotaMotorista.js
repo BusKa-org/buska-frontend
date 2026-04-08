@@ -30,7 +30,7 @@ const RotaMotorista = ({navigation, route}) => {
       case 'A iniciar':
         return colors.warning.main;
       case 'Em andamento':
-        return colors.secondary.main;
+        return colors.primary.dark;
       case 'Finalizada':
         return colors.success.main;
       default:
@@ -70,14 +70,14 @@ const RotaMotorista = ({navigation, route}) => {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}>
-            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+            <Icon name={IconNames.back} size="md" color={colors.primary.contrast} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.title}>Minhas Rotas</Text>
             <Text style={styles.subtitle}>{rotas.length} rota{rotas.length !== 1 ? 's' : ''} cadastrada{rotas.length !== 1 ? 's' : ''}</Text>
           </View>
           <View style={styles.headerIcon}>
-            <Icon name={IconNames.bus} size="lg" color={colors.secondary.contrast} />
+            <Icon name={IconNames.bus} size="lg" color={colors.primary.contrast} />
           </View>
         </View>
         {isGestor && (
@@ -92,7 +92,7 @@ const RotaMotorista = ({navigation, route}) => {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.secondary.main} />
+          <ActivityIndicator size="large" color={colors.primary.dark} />
         </View>
       ) : (
         <ScrollView
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     paddingHorizontal: spacing.base,
     paddingTop: spacing.base,
     paddingBottom: spacing.lg,
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -212,20 +212,20 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     ...textStyles.bodySmall,
-    color: colors.secondary.light,
+    color: 'rgba(255,255,255,0.75)',
     marginTop: spacing.xs,
   },
   headerIcon: {
     width: 44,
     height: 44,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
   title: {
     ...textStyles.h3,
-    color: colors.secondary.contrast,
+    color: colors.primary.contrast,
   },
   criarRotaButton: {
     flexDirection: 'row',
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   acaoButton: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     alignItems: 'center',
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   emptyButton: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,

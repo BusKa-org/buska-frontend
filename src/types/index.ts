@@ -54,6 +54,7 @@ export type RotaDetailResponse = Schemas['RotaDetailResponse'];
 export type RotaCreateRequest = Schemas['RotaCreateRequest'];
 export type RotaUpdateRequest = Schemas['RotaUpdateRequest'];
 export type RotaPontoAddRequest = Schemas['RotaPontoAddRequest'];
+export type RotaPontosAddRequest = Schemas['RotaPontosAddRequest'];
 export type RotaInscricaoRequest = Schemas['RotaInscricaoRequest'];
 export type RotaHorarioResponse = Schemas['RotaHorarioResponse'];
 export type RotaHorarioListResponse = Schemas['RotaHorarioListResponse'];

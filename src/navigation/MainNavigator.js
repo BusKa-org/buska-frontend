@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import {Platform, View, ActivityIndicator, StyleSheet} from 'react-native';
 import AlunoNavigator from './AlunoNavigator';
 import MotoristaNavigator from './MotoristaNavigator';
+import GestorNavigator from './GestorNavigator';
 import AuthNavigator from './AuthNavigator';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -35,8 +36,7 @@ const getInitialRoute = (role) => {
     case 'MOTORISTA':
       return 'MotoristaNavigator';
     case 'GESTOR':
-      // Gestores usam MotoristaNavigator por enquanto (têm acesso às mesmas telas + admin)
-      return 'MotoristaNavigator';
+      return 'GestorNavigator';
     default:
       return 'SelecaoFluxo';
   }
@@ -68,6 +68,7 @@ const MainNavigator = () => {
         <Navigator>
           <Screen name="AlunoNavigator" component={AlunoNavigator} />
           <Screen name="MotoristaNavigator" component={MotoristaNavigator} />
+          <Screen name="GestorNavigator" component={GestorNavigator} />
         </Navigator>
       </NavigationProvider>
     );
@@ -89,6 +90,7 @@ const MainNavigator = () => {
       }}>
       <Stack.Screen name="AlunoNavigator" component={AlunoNavigator} />
       <Stack.Screen name="MotoristaNavigator" component={MotoristaNavigator} />
+      <Stack.Screen name="GestorNavigator" component={GestorNavigator} />
     </Stack.Navigator>
   );
 };
