@@ -3,6 +3,26 @@
 Todas as novidades, melhorias e correções do BusKá são registradas aqui.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.0.0-beta] — 2026-04-11
+
+### Novidades
+
+- **Tela de splash animada** — Nova splash screen com animações de fade, escala e deslizamento ao iniciar o aplicativo
+- **Consentimento do responsável** — Fluxo dedicado para autorização de cadastro de alunos menores: responsável recebe link, visualiza os dados do estudante e concede ou recusa a autorização antes da análise do gestor
+- **Reporte de ocorrências** — Bottom sheet `ReportSheet` com chips de categoria (atraso, lotação, comportamento, cancelamento) para registro rápido de problemas durante viagens, disponível para alunos e motoristas
+- **Banner de alertas de viagem** — Componente `TripAlertBanner` com animação de entrada/saída e auto-dismiss para exibir avisos contextuais de viagem sem bloquear a tela
+- **Aprovação de cadastros pelo gestor** — Tela de detalhe do aluno agora exibe o status `AGUARDANDO APROVAÇÃO` e permite que gestores aprovem cadastros com um toque, notificando o aluno automaticamente
+- **Motorista: avisos e reporte durante viagem** — Durante viagens ativas o motorista pode enviar mensagens pré-definidas aos alunos e reportar problemas com categoria selecionável, sem necessidade de digitar
+- **Mapa de rota estático** — Novo componente `StaticRouteMap` para visualização da rota sem interatividade, usado em telas de detalhe de viagem
+
+### Melhorias
+
+- `InicioFimViagem` remodelado com princípios de segurança para motoristas: controles flutuantes, botões de ação muito maiores (mín. 72 dp) e bloqueio do botão voltar durante viagens ativas
+- Componentes de mapa reorganizados em `features/map` com variantes nativas e web separadas (`LocationMap`, `RouteMap`, `StaticRouteMap`, `MapPointPicker`)
+- `AuthContext` atualizado para tratar o novo status `PENDING_APPROVAL` e o fluxo de cadastro de alunos menores
+
+---
+
 ## [0.1.1-beta] — 2026-03-15
 
 ### Melhorias
