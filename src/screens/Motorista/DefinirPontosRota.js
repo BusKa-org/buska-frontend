@@ -380,7 +380,7 @@ const DefinirPontosRota = ({navigation, route}) => {
         `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=5&countrycodes=br&addressdetails=1`,
         {
           headers: {
-            'User-Agent': 'BusKa/0.1.1-beta (React Native; contact: contato.buska@gmail.com)',
+            'User-Agent': 'BusKa/1.0.0-beta (React Native; contact: contato.buska@gmail.com)',
             'Accept': 'application/json',
           },
         },

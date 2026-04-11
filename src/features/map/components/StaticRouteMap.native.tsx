@@ -143,7 +143,7 @@ export default function StaticRouteMap({ pontosRota }: StaticRouteMapProps) {
         style={styles.webview}
         originWhitelist={['*']}
         source={{ html, baseUrl: 'https://buska.projeto1.lsd.ufcg.edu.br' }}
-        userAgent="BusKa/0.1.1-beta (React Native; OpenStreetMap tile client, contact: contato.buska@gmail.com)"
+        userAgent="BusKa/1.0.0-beta (React Native; OpenStreetMap tile client, contact: contato.buska@gmail.com)"
         javaScriptEnabled
         domStorageEnabled
         scrollEnabled={false}
