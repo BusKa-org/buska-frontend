@@ -5,12 +5,16 @@ import MainNavigator from './src/navigation/MainNavigator';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { ToastProvider } from './src/components';
 import SplashScreen from './src/screens/SplashScreen';
+import { Platform } from 'react-native';
 
 const Root: React.FC = () => {
   const { loading } = useAuth();
 
-  if (loading) {
-    return <SplashScreen />;
+  const DEBUG_HOLD_SPLASH = __DEV__ && Platform.OS !== 'web';
+  const [released, setReleased] = React.useState(!DEBUG_HOLD_SPLASH);
+
+  if (loading || !released) {
+    return <SplashScreen onContinue={() => setReleased(true)} />;
   }
 
   return <MainNavigator />;
@@ -32,14 +36,3 @@ export const App: React.FC = () => {
     </ToastProvider>
   );
 };
-
-/**
- * import React from "react";
-import { Text, View } from "react-native";
-
-export const App: React.FC = () => (
-  <View>
-    <Text>BusKá Web Test</Text>
-  </View>
-);
- */

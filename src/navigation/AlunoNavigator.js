@@ -3,10 +3,11 @@ import {Platform} from 'react-native';
 import DashboardAluno from '../screens/Aluno/DashboardAluno';
 import SelecaoRotas from '../screens/Aluno/SelecaoRotas';
 import RotaAluno from '../screens/Aluno/RotaAluno';
-import ConfigNotificacoesAluno from '../screens/Aluno/ConfigNotificacoesAluno';
+import ConfigNotificacoes from '../screens/ConfigNotificacoes';
 import NotificacoesAluno from '../screens/Aluno/NotificacoesAluno';
 import DetalheViagem from '../screens/Aluno/DetalheViagem';
 import LocalizacaoOnibus from '../screens/Aluno/LocalizacaoOnibus';
+import EditarPerfilAluno from '../screens/Aluno/EditarPerfilAluno';
 import {
   NavigationProvider,
   Navigator,
@@ -14,7 +15,7 @@ import {
 } from './SimpleNavigator';
 
 // Detecta se está na web
-const isWeb = Platform.OS === 'web' || typeof window !== 'undefined';
+const isWeb = Platform.OS === 'web';
 
 // Para mobile, tenta usar React Navigation
 let NativeStackNavigator = null;
@@ -38,10 +39,11 @@ const AlunoNavigator = () => {
           <Screen name="DashboardAluno" component={DashboardAluno} />
           <Screen name="SelecaoRotas" component={SelecaoRotas} />
           <Screen name="RotaAluno" component={RotaAluno} />
-          <Screen name="ConfigNotificacoesAluno" component={ConfigNotificacoesAluno} />
+          <Screen name="ConfigNotificacoesAluno" component={ConfigNotificacoes} />
           <Screen name="NotificacoesAluno" component={NotificacoesAluno} />
           <Screen name="DetalheViagem" component={DetalheViagem} />
           <Screen name="LocalizacaoOnibus" component={LocalizacaoOnibus} />
+          <Screen name="EditarPerfilAluno" component={EditarPerfilAluno} />
           {/* Telas auxiliares */}
           <Screen name="MinhasRotas" component={RotaAluno} />
           <Screen name="Notificacoes" component={NotificacoesAluno} />
@@ -67,10 +69,11 @@ const AlunoNavigator = () => {
       <Stack.Screen name="DashboardAluno" component={DashboardAluno} />
       <Stack.Screen name="SelecaoRotas" component={SelecaoRotas} />
       <Stack.Screen name="RotaAluno" component={RotaAluno} />
-      <Stack.Screen name="ConfigNotificacoesAluno" component={ConfigNotificacoesAluno} />
+      <Stack.Screen name="ConfigNotificacoesAluno" component={ConfigNotificacoes} />
       <Stack.Screen name="NotificacoesAluno" component={NotificacoesAluno} />
       <Stack.Screen name="DetalheViagem" component={DetalheViagem} />
       <Stack.Screen name="LocalizacaoOnibus" component={LocalizacaoOnibus} />
+      <Stack.Screen name="EditarPerfilAluno" component={EditarPerfilAluno} />
       {/* Telas auxiliares */}
       <Stack.Screen name="MinhasRotas" component={RotaAluno} />
       <Stack.Screen name="Notificacoes" component={NotificacoesAluno} />

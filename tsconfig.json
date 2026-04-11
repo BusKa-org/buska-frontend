@@ -15,13 +15,14 @@
       "paths": {
         "@/*": ["src/*"]
       },
-      "types": ["react", "react-native", "jest"]
+      "types": ["react", "react-native", "jest"],
+      "lib": ["esnext", "dom"]
     },
     "include": [
       "src",
       "App.tsx",
       "App.js",
-      "index.ts",
+      "index.web.tsx",
       "index.js",
       "*.d.ts"
     ],

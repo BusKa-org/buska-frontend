@@ -32,8 +32,11 @@ const TOAST_CONFIG = {
   },
 };
 
-// Context
-const ToastContext = createContext(null);
+/**
+ * @typedef {{ showToast: Function, success: Function, error: Function, warning: Function, info: Function }} ToastAPI
+ * @type {React.Context<ToastAPI | null>}
+ */
+const ToastContext = /** @type {React.Context<any>} */ (createContext(null));
 
 // Provider Component
 export const ToastProvider = ({ children }) => {

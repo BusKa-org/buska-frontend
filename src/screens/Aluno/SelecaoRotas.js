@@ -14,6 +14,7 @@ import {
 import { alunoService } from '../../services';
 import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
+import { unwrapItems } from '../../types';
 
 const SelecaoRotas = ({navigation}) => {
   const [busca, setBusca] = useState('');
@@ -22,13 +23,14 @@ const SelecaoRotas = ({navigation}) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [subscribing, setSubscribing] = useState(null);
+  const [unsubscribing, setUnsubscribing] = useState(null);
 
   const loadRotas = async () => {
     try {
-      const rotas = await alunoService.listarRotas();
-      const rotasInscritasData = await alunoService.listarMinhasRotas();
-      setRotasDisponiveis(rotas || []);
-      setRotasInscritas(rotasInscritasData || []);
+      const rotas = await alunoService.listarRotas().then(unwrapItems);
+      const rotasInscritasData = await alunoService.listarMinhasRotas().then(unwrapItems);
+      setRotasDisponiveis(rotas);
+      setRotasInscritas(rotasInscritasData);
     } catch (error) {
       console.error('Error loading routes:', error);
       Alert.alert('Erro', 'Não foi possível carregar as rotas. Tente novamente.');
@@ -55,7 +57,7 @@ const SelecaoRotas = ({navigation}) => {
     try {
       setSubscribing(rota.id);
       await alunoService.gerenciarInscricaoRota(rota.id, 'inscrever');
-      const rotasInscritasAtualizadas = await alunoService.listarMinhasRotas();
+      const rotasInscritasAtualizadas = await alunoService.listarMinhasRotas().then(unwrapItems);
       setRotasInscritas(rotasInscritasAtualizadas || []);
       setRotasDisponiveis(rotasDisponiveis.filter((r) => r.id !== rota.id));
       Alert.alert('Sucesso', 'Você foi cadastrado nesta rota!', [
@@ -67,6 +69,33 @@ const SelecaoRotas = ({navigation}) => {
     } finally {
       setSubscribing(null);
     }
+  };
+
+  const handleSairDaRota = (rota) => {
+    Alert.alert(
+      'Sair da rota',
+      `Deseja sair da rota "${rota.nome}"? Você poderá se inscrever novamente depois.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sair',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setUnsubscribing(rota.id);
+              await alunoService.gerenciarInscricaoRota(rota.id, 'desinscrever');
+              setRotasInscritas(prev => prev.filter(r => r.id !== rota.id));
+              setRotasDisponiveis(prev => [...prev, rota]);
+              Alert.alert('Pronto', 'Você saiu da rota com sucesso.');
+            } catch (error) {
+              Alert.alert('Erro', error?.message || 'Não foi possível sair da rota.');
+            } finally {
+              setUnsubscribing(null);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const onRefresh = () => {
@@ -133,11 +162,10 @@ const SelecaoRotas = ({navigation}) => {
                   Minhas Rotas ({rotasInscritas.length})
                 </Text>
                 {rotasInscritas.map((rota) => (
-                  <TouchableOpacity 
-                    key={rota.id} 
-                    style={[styles.rotaCard, styles.rotaCardInscrita]}
-                    onPress={() => navigation.navigate('RotaAluno', { rota })}>
-                    <View style={styles.rotaHeader}>
+                  <View key={rota.id} style={[styles.rotaCard, styles.rotaCardInscrita]}>
+                    <TouchableOpacity
+                      style={styles.rotaHeader}
+                      onPress={() => navigation.navigate('RotaAluno', { rota })}>
                       <View style={[styles.rotaIconContainer, { backgroundColor: colors.success.light }]}>
                         <Icon name={IconNames.checkCircle} size="lg" color={colors.success.main} />
                       </View>
@@ -153,8 +181,23 @@ const SelecaoRotas = ({navigation}) => {
                         </View>
                       </View>
                       <Icon name={IconNames.chevronRight} size="md" color={colors.text.secondary} />
-                    </View>
-                  </TouchableOpacity>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.sairRotaButton}
+                      onPress={() => handleSairDaRota(rota)}
+                      disabled={unsubscribing === rota.id}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Sair da rota ${rota.nome}`}>
+                      {unsubscribing === rota.id ? (
+                        <ActivityIndicator size="small" color={colors.error.main} />
+                      ) : (
+                        <>
+                          <Icon name={IconNames.delete} size="sm" color={colors.error.main} />
+                          <Text style={styles.sairRotaButtonText}>Sair da rota</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 ))}
               </>
             )}
@@ -352,6 +395,23 @@ const styles = StyleSheet.create({
   cadastrarButtonText: {
     ...textStyles.button,
     color: colors.primary.contrast,
+  },
+  sairRotaButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.error.main,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.sm,
+  },
+  sairRotaButtonText: {
+    ...textStyles.caption,
+    color: colors.error.main,
+    fontWeight: '600',
   },
   emptyState: {
     alignItems: 'center',

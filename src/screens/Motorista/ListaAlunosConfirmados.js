@@ -33,7 +33,7 @@ const ListaAlunosConfirmados = ({navigation, route}) => {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}>
-            <Icon name={IconNames.back} size="md" color={colors.secondary.contrast} />
+            <Icon name={IconNames.back} size="md" color={colors.primary.contrast} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.title}>Alunos Confirmados</Text>
@@ -42,7 +42,7 @@ const ListaAlunosConfirmados = ({navigation, route}) => {
             </Text>
           </View>
           <View style={styles.headerIcon}>
-            <Icon name={IconNames.group} size="lg" color={colors.secondary.contrast} />
+            <Icon name={IconNames.group} size="lg" color={colors.primary.contrast} />
           </View>
         </View>
       </View>
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.default,
   },
   header: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     paddingHorizontal: spacing.base,
     paddingTop: spacing.base,
     paddingBottom: spacing.xl,
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -127,18 +127,18 @@ const styles = StyleSheet.create({
   },
   title: {
     ...textStyles.h3,
-    color: colors.secondary.contrast,
+    color: colors.primary.contrast,
   },
   headerSubtitle: {
     ...textStyles.bodySmall,
-    color: colors.secondary.light,
+    color: 'rgba(255,255,255,0.75)',
     marginTop: spacing.xs,
   },
   headerIcon: {
     width: 44,
     height: 44,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.dark,
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   alunoCardNovo: {
-    borderColor: colors.secondary.main,
+    borderColor: colors.primary.dark,
     borderWidth: 2,
     backgroundColor: colors.info.light,
   },
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
   },
   novoBadge: {
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
     borderRadius: borderRadius.full,
