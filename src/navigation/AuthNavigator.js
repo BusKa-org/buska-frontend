@@ -3,6 +3,7 @@ import {Platform} from 'react-native';
 import Login from '../screens/Auth/Login';
 import CriarConta from '../screens/Auth/CriarConta';
 import RecuperarSenha from '../screens/Auth/RecuperarSenha';
+import ConsentimentoResponsavel from '../screens/Auth/ConsentimentoResponsavel';
 import {
   NavigationProvider,
   Navigator,
@@ -10,7 +11,7 @@ import {
 } from './SimpleNavigator';
 
 // Detecta se está na web
-const isWeb = Platform.OS === 'web' || typeof window !== 'undefined';
+const isWeb = Platform.OS === 'web';
 
 // Para mobile, tenta usar React Navigation
 let NativeStackNavigator = null;
@@ -35,6 +36,7 @@ const AuthNavigator = () => {
           <Screen name="Login" component={Login} />
           <Screen name="CriarConta" component={CriarConta} />
           <Screen name="RecuperarSenha" component={RecuperarSenha} />
+          <Screen name="ConsentimentoResponsavel" component={ConsentimentoResponsavel} />
         </Navigator>
       </NavigationProvider>
     );
@@ -57,6 +59,7 @@ const AuthNavigator = () => {
       <Stack.Screen name="Login" component={Login} />
       <Stack.Screen name="CriarConta" component={CriarConta} />
       <Stack.Screen name="RecuperarSenha" component={RecuperarSenha} />
+      <Stack.Screen name="ConsentimentoResponsavel" component={ConsentimentoResponsavel} />
     </Stack.Navigator>
   );
 };

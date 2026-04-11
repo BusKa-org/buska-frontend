@@ -14,10 +14,10 @@ import {motoristaService} from '../../services/motoristaService';
 import { colors, spacing, borderRadius, shadows, textStyles, fontWeight } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
 import { useToast } from '../../components/Toast';
-import Svg, { Polyline } from 'react-native-svg';
-import MapaComponent from './MapaComponent'; 
+import { StaticRouteMap, MapPointPicker } from '../../features/map/index';
+import { unwrapItems } from '../../types';
 
-const RotaMapaSimples = ({ pontos, onPontoChegado }) => {
+const RotaMapaSimples = ({ pontos }) => {
   const { validPontos, hasValidPoints } = useMemo(() => {
     const valid = (pontos || []).filter(
       p =>
@@ -26,11 +26,7 @@ const RotaMapaSimples = ({ pontos, onPontoChegado }) => {
         !isNaN(Number(p.latitude)) &&
         !isNaN(Number(p.longitude)),
     );
-
-    return {
-      validPontos: valid,
-      hasValidPoints: valid.length > 0,
-    };
+    return { validPontos: valid, hasValidPoints: valid.length > 0 };
   }, [pontos]);
 
   if (!hasValidPoints) {
@@ -54,18 +50,15 @@ const RotaMapaSimples = ({ pontos, onPontoChegado }) => {
         <Text style={mapStyles.subtitle}>{validPontos.length} pontos</Text>
       </View>
 
-      <View style={[mapStyles.mapWrapper, { height: 400, overflow: 'hidden' }]}>
-        <MapaComponent 
-          pontosRota={validPontos} 
-          onPontoChegado={onPontoChegado} 
-        />
+      <View style={mapStyles.mapWrapper}>
+        <StaticRouteMap pontosRota={validPontos} />
       </View>
 
       <View style={mapStyles.routeInfo}>
         <View style={mapStyles.routeInfoItem}>
           <View style={[mapStyles.infoDot, { backgroundColor: '#34A853' }]} />
           <Text style={mapStyles.infoLabel}>
-            {validPontos[0]?.nome || validPontos[0]?.apelido || 'Destino Atual'}
+            {validPontos[0]?.nome || validPontos[0]?.apelido || 'Início'}
           </Text>
         </View>
 
@@ -115,9 +108,8 @@ const mapStyles = StyleSheet.create({
     color: colors.text.secondary,
   },
   mapWrapper: {
-    padding: spacing.sm,
-    position: 'relative',
     overflow: 'hidden',
+    borderRadius: borderRadius.md,
   },
   zoomContainer: {
     width: '100%',
@@ -345,27 +337,6 @@ const mapStyles = StyleSheet.create({
 });
 
 
-const buscarCoordenadas = async (endereco) => {
-  try {
-    const query = encodeURIComponent(endereco);
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`
-    );
-    const data = await response.json();
-
-    if (data && data.length > 0) {
-      return {
-        lat: data[0].lat,
-        lon: data[0].lon,
-        display_name: data[0].display_name
-      };
-    }
-    return null;
-  } catch (error) {
-    console.error("Erro na busca de endereço:", error);
-    return null;
-  }
-};
 
 const DefinirPontosRota = ({navigation, route}) => {
   const params = route?.params || {};
@@ -379,44 +350,83 @@ const DefinirPontosRota = ({navigation, route}) => {
   
   const [pontosRota, setPontosRota] = useState([]);
   const [pontosDisponiveis, setPontosDisponiveis] = useState([]);
-  const [novoPontoNome, setNovoPontoNome] = useState('');
-  const [novoPontoLat, setNovoPontoLat] = useState('');
-  const [novoPontoLon, setNovoPontoLon] = useState('');
   const [mostrarFormNovoPonto, setMostrarFormNovoPonto] = useState(false);
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
-  const [adicionando, setAdicionando] = useState(null); // Track which point is being added
+  const [adicionando, setAdicionando] = useState(null);
   const [buscandoEndereco, setBuscandoEndereco] = useState(false);
 
+  // New point creation state
+  const [termoBusca, setTermoBusca] = useState('');
+  const [resultadosBusca, setResultadosBusca] = useState([]);
+  const [resultadoSelecionado, setResultadoSelecionado] = useState(null);
+  const [localizacaoPin, setLocalizacaoPin] = useState(null);
+  const [nomePontoCustom, setNomePontoCustom] = useState('');
+
   const handleBuscarEndereco = async () => {
-    if (!novoPontoNome.trim()) {
-      toast.error('Digite o nome da rua ou local para buscar.');
+    if (!termoBusca.trim()) {
+      toast.error('Digite um endereço para buscar.');
       return;
     }
 
     try {
       setBuscandoEndereco(true);
-      
-      const query = encodeURIComponent(novoPontoNome);
+      setResultadosBusca([]);
+      setResultadoSelecionado(null);
+      setLocalizacaoPin(null);
+
+      const query = encodeURIComponent(termoBusca);
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=5&countrycodes=br&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'BusKa/1.0.0-beta (React Native; contact: contato.buska@gmail.com)',
+            'Accept': 'application/json',
+          },
+        },
       );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
       const data = await response.json();
 
       if (data && data.length > 0) {
-        setNovoPontoLat(data[0].lat);
-        setNovoPontoLon(data[0].lon);
-        console.log(data[0]);
-        toast.success('Coordenadas encontradas!');
+        setResultadosBusca(data);
       } else {
-        toast.error('Local não encontrado. Tente ser mais específico (Ex: Nome da Rua, Cidade).');
+        toast.error('Nenhum resultado. Tente um endereço mais específico (Ex: Rua das Flores, Campina Grande).');
       }
     } catch (error) {
-      console.error("Erro na busca:", error);
-      toast.error('Erro ao conectar com o serviço de mapas.');
+      console.error('Erro na busca:', error);
+      toast.error('Erro ao buscar. Verifique sua conexão.');
     } finally {
       setBuscandoEndereco(false);
     }
+  };
+
+  const handleSelecionarResultado = (resultado) => {
+    const lat = parseFloat(resultado.lat);
+    const lon = parseFloat(resultado.lon);
+    setResultadoSelecionado(resultado);
+    setLocalizacaoPin({ latitude: lat, longitude: lon });
+
+    const address = resultado.address || {};
+    const nomeGuess =
+      address.road ||
+      address.pedestrian ||
+      address.suburb ||
+      address.neighbourhood ||
+      resultado.display_name.split(',')[0];
+    setNomePontoCustom(nomeGuess || '');
+  };
+
+  const handleLimparNovoPonto = () => {
+    setResultadoSelecionado(null);
+    setResultadosBusca([]);
+    setLocalizacaoPin(null);
+    setNomePontoCustom('');
+    setTermoBusca('');
   };
 
   // Load existing points
@@ -426,7 +436,7 @@ const DefinirPontosRota = ({navigation, route}) => {
         setLoading(true);
         
         // Load available points (municipality points) and deduplicate
-        const todosOsPontos = await motoristaService.listarPontos();
+        const todosOsPontos = await motoristaService.listarPontos().then(unwrapItems);
         const pontosUnicos = [];
         const idsVistos = new Set();
         for (const ponto of (todosOsPontos || [])) {
@@ -440,7 +450,7 @@ const DefinirPontosRota = ({navigation, route}) => {
         
         // Load route points if editing existing route
         if (rotaId && !isNovaRota) {
-          const pontosData = await motoristaService.listarPontosRota(rotaId);
+          const pontosData = await motoristaService.listarPontosRota(rotaId).then(unwrapItems);
           setPontosRota(pontosData || []);
         }
       } catch (error) {
@@ -495,18 +505,17 @@ const DefinirPontosRota = ({navigation, route}) => {
   };
 
   const handleCriarNovoPonto = async () => {
-    if (!novoPontoNome.trim()) {
+    if (!nomePontoCustom.trim()) {
       toast.error('Informe o nome do ponto.');
       return;
     }
 
-    const lat = parseFloat(novoPontoLat);
-    const lon = parseFloat(novoPontoLon);
-
-    if (isNaN(lat) || isNaN(lon)) {
-      toast.error('Latitude e longitude devem ser números válidos.');
+    if (!localizacaoPin) {
+      toast.error('Selecione uma localização no mapa.');
       return;
     }
+
+    const { latitude: lat, longitude: lon } = localizacaoPin;
 
     if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
       toast.error('Coordenadas fora do intervalo válido.');
@@ -515,31 +524,29 @@ const DefinirPontosRota = ({navigation, route}) => {
 
     try {
       setSalvando(true);
-      
-      // Create point in backend
+
       const novoPonto = await motoristaService.criarPonto({
-        apelido: novoPontoNome.trim(),
+        apelido: nomePontoCustom.trim(),
         latitude: lat,
         longitude: lon,
       });
-      
-      // Add to local list
-      setPontosRota([...pontosRota, {
-        id: novoPonto.id,
-        nome: novoPontoNome.trim(),
-        latitude: lat,
-        longitude: lon,
-        ordem: pontosRota.length + 1,
-        isNew: true,
-      }]);
-      
-      // Clear form
-      setNovoPontoNome('');
-      setNovoPontoLat('');
-      setNovoPontoLon('');
+
+      setPontosRota(prev => [
+        ...prev,
+        {
+          id: novoPonto.id,
+          nome: nomePontoCustom.trim(),
+          apelido: nomePontoCustom.trim(),
+          latitude: lat,
+          longitude: lon,
+          ordem: prev.length + 1,
+        },
+      ]);
+
+      handleLimparNovoPonto();
       setMostrarFormNovoPonto(false);
-      
-      toast.success('Ponto criado e adicionado!');
+
+      toast.success('Ponto criado e adicionado à rota!');
     } catch (error) {
       toast.error(error?.message || 'Erro ao criar ponto.');
     } finally {
@@ -598,6 +605,8 @@ const DefinirPontosRota = ({navigation, route}) => {
         navigation.navigate('DefinirHorariosRota', {
           rota: { nome: rotaNome, pontos: pontosRota },
           isNovaRota: true,
+          motorista_padrao_id: params.motorista_padrao_id || null,
+          veiculo_padrao_id: params.veiculo_padrao_id || null,
         });
       } else {
         if (!rotaId) {
@@ -606,7 +615,12 @@ const DefinirPontosRota = ({navigation, route}) => {
         }
         
         setSalvando(true);
-        await motoristaService.adicionarPontosRota(rotaId, pontosRota);
+        await motoristaService.adicionarPontosRota(rotaId, {
+          pontos: pontosRota.map((p, index) => ({
+            ponto_id: p.id,
+            ordem: index + 1,
+          })),
+        });
       
         toast.success('Pontos salvos com sucesso!');
         navigation.goBack();
@@ -623,7 +637,7 @@ const DefinirPontosRota = ({navigation, route}) => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.secondary.main} />
+          <ActivityIndicator size="large" color={colors.primary.dark} />
           <Text style={styles.loadingText}>Carregando pontos...</Text>
         </View>
       </SafeAreaView>
@@ -635,7 +649,7 @@ const DefinirPontosRota = ({navigation, route}) => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Icon name={IconNames.back} size="md" color={colors.secondary.main} />
+          <Icon name={IconNames.back} size="md" color={colors.primary.dark} />
           <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Pontos da Rota</Text>
@@ -692,7 +706,7 @@ const DefinirPontosRota = ({navigation, route}) => {
                       <Icon 
                         name={IconNames.expandLess} 
                         size="md" 
-                        color={index === 0 ? colors.neutral[300] : colors.secondary.main} 
+                        color={index === 0 ? colors.neutral[300] : colors.primary.dark} 
                       />
                     </TouchableOpacity>
                     <TouchableOpacity 
@@ -702,7 +716,7 @@ const DefinirPontosRota = ({navigation, route}) => {
                       <Icon 
                         name={IconNames.expandMore} 
                         size="md" 
-                        color={index === pontosRota.length - 1 ? colors.neutral[300] : colors.secondary.main} 
+                        color={index === pontosRota.length - 1 ? colors.neutral[300] : colors.primary.dark} 
                       />
                     </TouchableOpacity>
                   </View>
@@ -744,7 +758,7 @@ const DefinirPontosRota = ({navigation, route}) => {
                       <Icon 
                         name={isAdded ? IconNames.checkCircle : IconNames.add} 
                         size="xs" 
-                        color={isAdded ? colors.success.main : colors.secondary.main} 
+                        color={isAdded ? colors.success.main : colors.primary.dark} 
                       />
                       <Text style={[styles.pontoChipText, isAdded && styles.pontoChipTextAdded]} numberOfLines={1}>
                         {ponto.apelido || ponto.nome}
@@ -758,41 +772,42 @@ const DefinirPontosRota = ({navigation, route}) => {
 
           {/* Create New Point */}
           <View style={styles.card}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.cardHeaderButton}
-              onPress={() => setMostrarFormNovoPonto(!mostrarFormNovoPonto)}>
+              onPress={() => {
+                setMostrarFormNovoPonto(!mostrarFormNovoPonto);
+                if (mostrarFormNovoPonto) handleLimparNovoPonto();
+              }}>
               <View style={styles.cardHeaderLeft}>
                 <Icon name={IconNames.add} size="md" color={colors.success.main} />
                 <Text style={styles.cardTitle}>Criar Novo Ponto</Text>
               </View>
-              <Icon 
-                name={mostrarFormNovoPonto ? IconNames.expandLess : IconNames.expandMore} 
-                size="md" 
-                color={colors.text.secondary} 
+              <Icon
+                name={mostrarFormNovoPonto ? IconNames.expandLess : IconNames.expandMore}
+                size="md"
+                color={colors.text.secondary}
               />
             </TouchableOpacity>
-            
+
             {mostrarFormNovoPonto && (
               <View style={styles.formContainer}>
-                {/* Campo de Busca */}
-                <View style={{ flexDirection: 'row', marginBottom: 10 }}>
+
+                {/* Search row */}
+                <View style={npStyles.searchRow}>
                   <TextInput
-                    style={[styles.input, { flex: 1, marginBottom: 0 }]}
-                    placeholder="Nome do ponto ou endereço"
-                    value={novoPontoNome}
-                    onChangeText={setNovoPontoNome}
+                    style={[styles.input, npStyles.searchInput]}
+                    placeholder="Ex: Praça Central, Campina Grande"
+                    placeholderTextColor={colors.text.hint}
+                    value={termoBusca}
+                    onChangeText={setTermoBusca}
+                    onSubmitEditing={handleBuscarEndereco}
+                    returnKeyType="search"
+                    editable={!resultadoSelecionado}
                   />
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={handleBuscarEndereco}
-                    style={{ 
-                      backgroundColor: colors.secondary.main, 
-                      justifyContent: 'center', 
-                      paddingHorizontal: 15,
-                      borderRadius: 8,
-                      marginLeft: 8 
-                    }}
-                    disabled={buscandoEndereco}
-                  >
+                    style={[npStyles.searchButton, resultadoSelecionado && npStyles.searchButtonDisabled]}
+                    disabled={buscandoEndereco || !!resultadoSelecionado}>
                     {buscandoEndereco ? (
                       <ActivityIndicator size="small" color="#fff" />
                     ) : (
@@ -801,37 +816,101 @@ const DefinirPontosRota = ({navigation, route}) => {
                   </TouchableOpacity>
                 </View>
 
-                {/* O botão só aparece se as coordenadas já tiverem sido capturadas pela busca */}
-                {novoPontoLat && novoPontoLon ? (
-                  <TouchableOpacity 
-                    style={[
-                      styles.saveButton, 
-                      { backgroundColor: colors.success.main, marginTop: 5, height: 45 },
-                      salvando && { opacity: 0.6 }
-                    ]}
-                    onPress={handleCriarNovoPonto}
-                    disabled={salvando}
-                  >
-                    {salvando ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Icon name={IconNames.add} size="sm" color="#fff" />
-                        <Text style={{ color: '#fff', fontWeight: 'bold', marginLeft: 8 }}>
-                          Confirmar e Adicionar à Rota
+                {/* Search results list */}
+                {resultadosBusca.length > 0 && !resultadoSelecionado && (
+                  <View style={npStyles.resultsList}>
+                    <Text style={npStyles.resultsTitle}>
+                      {resultadosBusca.length} resultado(s) — toque para selecionar
+                    </Text>
+                    {resultadosBusca.map((r, i) => {
+                      const parts = r.display_name.split(',');
+                      const mainPart = parts.slice(0, 2).join(',').trim();
+                      const subPart = parts.slice(2, 5).join(',').trim();
+                      const isLast = i === resultadosBusca.length - 1;
+                      return (
+                        <TouchableOpacity
+                          key={r.place_id || i}
+                          style={[npStyles.resultItem, isLast && { borderBottomWidth: 0 }]}
+                          onPress={() => handleSelecionarResultado(r)}>
+                          <View style={npStyles.resultIconWrap}>
+                            <Icon name={IconNames.location} size="sm" color={colors.primary.dark} />
+                          </View>
+                          <View style={npStyles.resultText}>
+                            <Text style={npStyles.resultMain} numberOfLines={1}>{mainPart}</Text>
+                            {!!subPart && (
+                              <Text style={npStyles.resultSub} numberOfLines={1}>{subPart}</Text>
+                            )}
+                          </View>
+                          <Icon name={IconNames.expandMore} size="sm" color={colors.neutral[400]} />
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {/* Selected location + map picker + name */}
+                {resultadoSelecionado && localizacaoPin && (
+                  <>
+                    {/* Selected address header */}
+                    <View style={npStyles.selectedHeader}>
+                      <View style={npStyles.selectedInfo}>
+                        <Text style={npStyles.selectedLabel}>Local selecionado</Text>
+                        <Text style={npStyles.selectedAddress} numberOfLines={2}>
+                          {resultadoSelecionado.display_name.split(',').slice(0, 3).join(',')}
+                        </Text>
+                        <Text style={npStyles.coordText}>
+                          {localizacaoPin.latitude.toFixed(6)}, {localizacaoPin.longitude.toFixed(6)}
                         </Text>
                       </View>
-                    )}
-                  </TouchableOpacity>
-                ) : (
-                  <Text style={{ 
-                    fontSize: 12, 
-                    color: colors.text.secondary, 
-                    textAlign: 'center', 
-                    marginTop: 5,
-                    fontStyle: 'italic' 
-                  }}>
-                    Busque um endereço para liberar a adição
+                      <TouchableOpacity
+                        onPress={() => { setResultadoSelecionado(null); setLocalizacaoPin(null); }}
+                        style={npStyles.changeButton}>
+                        <Text style={npStyles.changeButtonText}>Trocar</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Interactive map picker */}
+                    <View style={npStyles.mapPickerWrap}>
+                      <MapPointPicker
+                        initialLocation={localizacaoPin}
+                        onLocationChange={loc => setLocalizacaoPin(loc)}
+                      />
+                    </View>
+
+                    {/* Name input */}
+                    <TextInput
+                      style={[styles.input, { marginTop: spacing.md }]}
+                      placeholder="Nome do ponto (ex: Terminal Central)"
+                      placeholderTextColor={colors.text.hint}
+                      value={nomePontoCustom}
+                      onChangeText={setNomePontoCustom}
+                    />
+
+                    {/* Confirm button */}
+                    <TouchableOpacity
+                      style={[
+                        styles.saveButton,
+                        { backgroundColor: colors.success.main },
+                        salvando && styles.buttonDisabled,
+                      ]}
+                      onPress={handleCriarNovoPonto}
+                      disabled={salvando}>
+                      {salvando ? (
+                        <ActivityIndicator color="#fff" />
+                      ) : (
+                        <>
+                          <Icon name={IconNames.add} size="sm" color="#fff" />
+                          <Text style={styles.saveButtonText}>Adicionar à Rota</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </>
+                )}
+
+                {/* Empty hint */}
+                {resultadosBusca.length === 0 && !resultadoSelecionado && !buscandoEndereco && (
+                  <Text style={npStyles.hint}>
+                    Busque um endereço ou local para adicionar um novo ponto à rota
                   </Text>
                 )}
               </View>
@@ -895,7 +974,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     ...textStyles.body,
-    color: colors.secondary.main,
+    color: colors.primary.dark,
   },
   title: {
     ...textStyles.h2,
@@ -977,7 +1056,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,
@@ -1034,7 +1113,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: colors.secondary.lighter,
+    backgroundColor: colors.primary.lighter,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.full,
@@ -1049,7 +1128,7 @@ const styles = StyleSheet.create({
   },
   pontoChipText: {
     ...textStyles.caption,
-    color: colors.secondary.dark,
+    color: colors.primary.main,
     fontWeight: fontWeight.medium,
   },
   pontoChipTextAdded: {
@@ -1105,7 +1184,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.secondary.main,
+    backgroundColor: colors.primary.dark,
     padding: spacing.base,
     borderRadius: borderRadius.md,
   },
@@ -1115,6 +1194,134 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.5,
+  },
+});
+
+const npStyles = StyleSheet.create({
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  searchButton: {
+    backgroundColor: colors.primary.dark,
+    height: 48,
+    paddingHorizontal: spacing.base,
+    borderRadius: borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchButtonDisabled: {
+    opacity: 0.4,
+  },
+  resultsList: {
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    overflow: 'hidden',
+    marginBottom: spacing.md,
+  },
+  resultsTitle: {
+    ...textStyles.caption,
+    color: colors.text.secondary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.background.default,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+  resultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+    backgroundColor: colors.background.paper,
+    gap: spacing.sm,
+  },
+  resultIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary.lighter,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  resultText: {
+    flex: 1,
+  },
+  resultMain: {
+    ...textStyles.body,
+    fontWeight: fontWeight.medium,
+    color: colors.text.primary,
+  },
+  resultSub: {
+    ...textStyles.caption,
+    color: colors.text.secondary,
+    marginTop: 2,
+  },
+  selectedHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: spacing.md,
+    backgroundColor: colors.primary.lighter,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  selectedInfo: {
+    flex: 1,
+    gap: spacing.xxs,
+  },
+  selectedLabel: {
+    ...textStyles.caption,
+    color: colors.primary.main,
+    fontWeight: fontWeight.semiBold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  selectedAddress: {
+    ...textStyles.body,
+    color: colors.text.primary,
+    fontWeight: fontWeight.medium,
+  },
+  coordText: {
+    ...textStyles.caption,
+    color: colors.text.secondary,
+    fontFamily: 'monospace',
+    marginTop: spacing.xxs,
+  },
+  changeButton: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.primary.dark,
+    alignSelf: 'flex-start',
+  },
+  changeButtonText: {
+    ...textStyles.caption,
+    color: colors.primary.dark,
+    fontWeight: fontWeight.semiBold,
+  },
+  mapPickerWrap: {
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    marginBottom: spacing.sm,
+    ...shadows.sm,
+  },
+  hint: {
+    ...textStyles.caption,
+    color: colors.text.hint,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    fontStyle: 'italic',
   },
 });
 

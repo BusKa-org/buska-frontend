@@ -1,4 +1,4 @@
-import api from './api';
+import { api } from '../api/client';
 
 export const userService = {
   /**
@@ -47,6 +47,19 @@ export const userService = {
   async updateFcmToken(fcmToken) {
     try {
       const response = await api.patch('/users/fcm-token', { fcm_token: fcmToken });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Update own profile (nome, telefone, receber_notificacoes, cnh for motoristas)
+   * Backend: PATCH /v1/users/me
+   */
+  async updateProfile(data) {
+    try {
+      const response = await api.patch('/users/me', data);
       return response.data;
     } catch (error) {
       throw this.handleError(error);

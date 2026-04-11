@@ -10,13 +10,13 @@
 
 export const colors = {
   // ===========================================
-  // PRIMARY - Deep Navy (Trust & Professionalism)
+  // PRIMARY - Brand Blue (matches Login palette)
   // ===========================================
   primary: {
-    main: '#0F2942',        // Deep navy - main brand color
-    light: '#1A3A5C',       // Lighter navy for hover states
-    lighter: '#2D5A87',     // Cards, secondary elements
-    dark: '#091B2D',        // Darker for emphasis
+    main: '#156EF2',        // Login button blue — primary CTA
+    light: '#4A8EF5',       // Lighter blue for hover states
+    lighter: '#DBEAFE',     // Very light blue for backgrounds
+    dark: '#0D5BCF',        // Header backgrounds, status bar
     contrast: '#FFFFFF',    // Text on primary backgrounds
   },
 
@@ -95,10 +95,10 @@ export const colors = {
   // BACKGROUNDS
   // ===========================================
   background: {
-    default: '#F8FAFC',     // Main app background
+    default: '#EEF3FB',     // Main app background (matches login safeArea)
     paper: '#FFFFFF',       // Cards, modals
     elevated: '#FFFFFF',    // Elevated surfaces
-    dark: '#0F2942',        // Dark sections (headers)
+    dark: '#0D5BCF',        // Dark sections (headers)
   },
 
   // ===========================================
@@ -119,7 +119,7 @@ export const colors = {
     light: '#E2E8F0',       // Default borders
     medium: '#CBD5E1',      // Emphasized borders
     dark: '#94A3B8',        // Strong borders
-    focus: '#00B4D8',       // Focus state (secondary color)
+    focus: '#156EF2',       // Focus state (primary blue)
   },
 
   // ===========================================
@@ -145,10 +145,10 @@ export const colors = {
   // GRADIENTS (for headers, cards)
   // ===========================================
   gradients: {
-    primary: ['#0F2942', '#1A3A5C'],
+    primary: ['#0D5BCF', '#156EF2'],
     secondary: ['#00B4D8', '#48CAE4'],
     accent: ['#F7B32B', '#FFD166'],
-    dark: ['#091B2D', '#0F2942'],
+    dark: ['#0D5BCF', '#143D86'],
   },
 
   // ===========================================

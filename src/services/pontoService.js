@@ -3,7 +3,7 @@
  * Handles pickup point operations using Axios API
  */
 
-import api from './api';
+import { api } from '../api/client';
 
 /**
  * Get all points for a route

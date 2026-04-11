@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useRef, useEffect} from 'react';
 import {
   View,
   Text,
@@ -10,16 +10,34 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Animated,
+  StatusBar,
+  ImageBackground,
+  Dimensions,
 } from 'react-native';
-import { colors, spacing, borderRadius, shadows, textStyles } from '../../theme';
+import { colors, spacing, borderRadius, shadows } from '../../theme';
 import Icon, { IconNames } from '../../components/Icon';
-import api from '../../services/api';
+import { api } from '../../api/client';
+
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('screen');
+const CARD_TOP = Math.max(SCREEN_H * 0.40, 220);
 
 const RecuperarSenha = ({navigation}) => {
   const [email, setEmail] = useState('');
   const [enviado, setEnviado] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [focused, setFocused] = useState(false);
+
+  const cardOpacity = useRef(new Animated.Value(0)).current;
+  const cardTranslateY = useRef(new Animated.Value(50)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(cardOpacity, {toValue: 1, duration: 600, delay: 150, useNativeDriver: true}),
+      Animated.timing(cardTranslateY, {toValue: 0, duration: 480, delay: 150, useNativeDriver: true}),
+    ]).start();
+  }, []);
 
   const handleRecuperarSenha = async () => {
     const emailTrim = email.trim();
@@ -30,7 +48,7 @@ const RecuperarSenha = ({navigation}) => {
     setError('');
     setLoading(true);
     try {
-      await api.post('/auth/forgot-password', { email: emailTrim.toLowerCase() });
+      await api.post('/auth/forgot-password', {email: emailTrim.toLowerCase()});
       setEnviado(true);
     } catch (err) {
       const msg = err?.message || err?.response?.data?.message || 'Não foi possível enviar o e-mail. Tente novamente.';
@@ -40,105 +58,159 @@ const RecuperarSenha = ({navigation}) => {
     }
   };
 
+  // ── Success state ──────────────────────────────────
   if (enviado) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.content}>
-          <View style={styles.successContainer}>
-            <View style={styles.successIconContainer}>
-              <Icon name={IconNames.checkCircle} size="huge" color={colors.success.main} />
-            </View>
-            <Text style={styles.successTitle}>E-mail Enviado!</Text>
-            <Text style={styles.successText}>
+      <SafeAreaView style={styles.root}>
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+
+        <ImageBackground
+          source={require('../../../assets/login-background.png')}
+          style={styles.background}
+          resizeMode="cover"
+        />
+
+        <TouchableOpacity
+          style={styles.floatingBack}
+          onPress={() => navigation.navigate('Login')}
+          activeOpacity={0.7}
+        >
+          <Icon name={IconNames.back} size="md" color="rgba(255,255,255,0.9)" />
+        </TouchableOpacity>
+
+        <View style={[styles.successCard, {marginTop: CARD_TOP}]}>
+          <View style={styles.successContent}>
+            <Text style={styles.successTitle}>Verifique sua caixa de entrada</Text>
+            <Text style={styles.successBody}>
               Enviamos um link de recuperação para
             </Text>
-            <Text style={styles.emailText}>{email}</Text>
-            <Text style={styles.successSubtext}>
-              Verifique sua caixa de entrada e siga as instruções para
-              redefinir sua senha.
+            <View style={styles.emailPill}>
+              <Icon name="email" size="sm" color="#0347D0" />
+              <Text style={styles.emailPillText}>{email}</Text>
+            </View>
+            <Text style={styles.successHint}>
+              Siga as instruções no e-mail para redefinir sua senha. Verifique também a pasta de spam.
             </Text>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.navigate('Login')}>
-              <Icon name={IconNames.back} size="md" color={colors.primary.contrast} />
-              <Text style={styles.backButtonText}>Voltar ao Login</Text>
-            </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => navigation.navigate('Login')}
+            activeOpacity={0.88}
+          >
+            <Icon name={IconNames.back} size="md" color="#FFFFFF" />
+            <Text style={styles.primaryButtonText}>Voltar ao Login</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
+  // ── Default state ──────────────────────────────────
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.root}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+
+      <ImageBackground
+        source={require('../../../assets/login-background.png')}
+        style={styles.background}
+        resizeMode="cover"
+      />
+
+      <TouchableOpacity
+        style={styles.floatingBack}
+        onPress={() => navigation.goBack()}
+        activeOpacity={0.7}
+      >
+        <Icon name={IconNames.back} size="md" color="rgba(255,255,255,0.9)" />
+      </TouchableOpacity>
+
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}>
+        style={styles.kav}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled">
-          <View style={styles.content}>
-            {/* Back Button */}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View
+            style={[styles.card, {marginTop: CARD_TOP, opacity: cardOpacity, transform: [{translateY: cardTranslateY}]}]}
+          >
+            {/* Card header */}
+            <View style={styles.cardHeader}>
+              <View style={styles.lockBadge}>
+                <Icon name="lock-reset" size="md" color="#0347D0" />
+              </View>
+              <View style={styles.cardHeaderText}>
+                <Text style={styles.cardTitle}>Esqueceu sua senha?</Text>
+                <Text style={styles.cardSubtitle}>
+                  Informe seu e-mail e enviaremos um link para você criar uma nova senha.
+                </Text>
+              </View>
+            </View>
+
+            {/* Email field */}
+            <Text style={styles.label}>E-mail</Text>
+            <View style={[
+              styles.inputWrapper,
+              focused && styles.inputWrapperFocused,
+              error ? styles.inputWrapperError : null,
+            ]}>
+              <Icon
+                name="email"
+                size="md"
+                color={focused ? '#0347D0' : colors.neutral[400]}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="seu@email.com"
+                placeholderTextColor={colors.neutral[400]}
+                value={email}
+                onChangeText={(text) => { setEmail(text); if (error) setError(''); }}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!loading}
+              />
+            </View>
+
+            {error ? (
+              <View style={styles.errorContainer}>
+                <Icon name={IconNames.warning} size="sm" color={colors.error.main} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
+
+            {/* CTA */}
             <TouchableOpacity
-              style={styles.navBackButton}
-              onPress={() => navigation.goBack()}>
-              <Icon name={IconNames.back} size="base" color={colors.text.secondary} />
+              style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+              onPress={handleRecuperarSenha}
+              disabled={loading}
+              activeOpacity={0.88}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <>
+                  <Icon name="send" size="md" color="#FFFFFF" />
+                  <Text style={styles.primaryButtonText}>Enviar Link de Recuperação</Text>
+                </>
+              )}
             </TouchableOpacity>
 
-            {/* Header */}
-            <View style={styles.header}>
-              <View style={styles.headerIconContainer}>
-                <Icon name="lock-reset" size="xxl" color={colors.secondary.main} />
-              </View>
-              <Text style={styles.title}>Recuperar Senha</Text>
-              <Text style={styles.subtitle}>
-                Digite seu e-mail para receber{'\n'}um link de recuperação
-              </Text>
-            </View>
-
-            {/* Form */}
-            <View style={styles.form}>
-              <Text style={styles.label}>E-mail</Text>
-              <View style={styles.inputContainer}>
-                <Icon name="email" size="md" color={colors.text.hint} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="seu@email.com"
-                  placeholderTextColor={colors.text.hint}
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!loading}
-                />
-              </View>
-              {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-              <TouchableOpacity
-                style={[styles.recuperarButton, loading && styles.recuperarButtonDisabled]}
-                onPress={handleRecuperarSenha}
-                disabled={loading}>
-                {loading ? (
-                  <ActivityIndicator color={colors.primary.contrast} />
-                ) : (
-                  <>
-                    <Icon name="send" size="md" color={colors.primary.contrast} />
-                    <Text style={styles.recuperarButtonText}>
-                      Enviar Link de Recuperação
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.backLink}
-                onPress={() => navigation.navigate('Login')}>
-                <Icon name={IconNames.back} size="sm" color={colors.secondary.main} />
-                <Text style={styles.backLinkText}>Voltar ao Login</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+            {/* Back link */}
+            <TouchableOpacity
+              style={styles.backLink}
+              onPress={() => navigation.navigate('Login')}
+              activeOpacity={0.8}
+            >
+              <Icon name={IconNames.back} size="sm" color="#0347D0" />
+              <Text style={styles.backLinkText}>Voltar ao Login</Text>
+            </TouchableOpacity>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -146,104 +218,175 @@ const RecuperarSenha = ({navigation}) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: colors.background.default,
+    backgroundColor: '#EEF3FB',
   },
-  keyboardView: {
+
+  floatingBack: {
+    position: 'absolute',
+    top: 48,
+    left: spacing.lg,
+    zIndex: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  background: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: SCREEN_W,
+    height: SCREEN_H,
+  },
+
+  kav: {
     flex: 1,
   },
+
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: spacing.xl,
   },
-  content: {
-    flex: 1,
-    padding: spacing.xl,
-    justifyContent: 'center',
-  },
-  navBackButton: {
-    position: 'absolute',
-    top: spacing.xl,
-    left: spacing.xl,
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.md,
+
+  // ── Card ──────────────────────────────────────────
+  card: {
     backgroundColor: colors.background.paper,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...shadows.xs,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.xl,
+    ...shadows.xl,
+    minHeight: '100%',
   },
-  header: {
-    alignItems: 'center',
+
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
     marginBottom: spacing.xxl,
   },
-  headerIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.secondary.lighter,
+
+  lockBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: 'rgba(3,71,208,0.08)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.lg,
+    flexShrink: 0,
   },
-  title: {
-    ...textStyles.h1,
-    color: colors.primary.main,
-    marginBottom: spacing.base,
+
+  cardHeaderText: {
+    flex: 1,
   },
-  subtitle: {
-    ...textStyles.body,
+
+  cardTitle: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
+    lineHeight: 26,
+  },
+
+  cardSubtitle: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 14,
     color: colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 20,
   },
-  form: {
-    width: '100%',
-  },
+
+  // ── Field ─────────────────────────────────────────
   label: {
-    ...textStyles.inputLabel,
+    fontFamily: 'Inter-Medium',
+    fontSize: 13,
+    fontWeight: '500',
     color: colors.text.primary,
     marginBottom: spacing.sm,
   },
-  inputContainer: {
+
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background.paper,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.base,
-    borderWidth: 1,
+    height: 56,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.neutral[50],
+    borderWidth: 1.5,
     borderColor: colors.border.light,
-    marginBottom: spacing.xl,
-    gap: spacing.md,
-  },
-  input: {
-    flex: 1,
-    paddingVertical: spacing.base,
-    fontSize: textStyles.inputText.fontSize,
-    color: colors.text.primary,
-  },
-  errorText: {
-    ...textStyles.bodySmall,
-    color: colors.error.main,
+    paddingHorizontal: spacing.base,
+    gap: spacing.sm,
     marginBottom: spacing.base,
   },
-  recuperarButton: {
+
+  inputWrapperFocused: {
+    borderColor: '#0347D0',
+    backgroundColor: colors.background.paper,
+  },
+
+  inputWrapperError: {
+    borderColor: colors.error.main,
+  },
+
+  input: {
+    flex: 1,
+    height: '100%',
+    color: colors.text.primary,
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    paddingVertical: 0,
+  },
+
+  // ── Error ─────────────────────────────────────────
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.error.light,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.base,
+  },
+
+  errorText: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
+    color: colors.error.dark,
+    flex: 1,
+  },
+
+  // ── Primary button ────────────────────────────────
+  primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.primary.main,
-    borderRadius: borderRadius.md,
-    padding: spacing.base,
+    height: 56,
+    borderRadius: borderRadius.lg,
+    backgroundColor: '#0347D0',
+    marginTop: spacing.xs,
     ...shadows.sm,
   },
-  recuperarButtonText: {
-    ...textStyles.button,
-    color: colors.primary.contrast,
+
+  primaryButtonText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
-  recuperarButtonDisabled: {
-    opacity: 0.7,
+
+  primaryButtonDisabled: {
+    opacity: 0.65,
   },
+
+  // ── Back link ─────────────────────────────────────
   backLink: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -251,60 +394,73 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     marginTop: spacing.xl,
   },
+
   backLinkText: {
-    ...textStyles.bodySmall,
-    color: colors.secondary.main,
+    fontFamily: 'Inter-Medium',
+    fontSize: 14,
+    color: '#0347D0',
+    fontWeight: '500',
   },
-  successContainer: {
+
+  // ── Success card ──────────────────────────────────
+  successCard: {
+    flex: 1,
+    backgroundColor: colors.background.paper,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.xl,
+    justifyContent: 'space-between',
+    ...shadows.xl,
+  },
+
+  successContent: {
     alignItems: 'center',
-    padding: spacing.xl,
+    paddingTop: spacing.lg,
   },
-  successIconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.success.light,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
+
   successTitle: {
-    ...textStyles.h2,
+    fontFamily: 'Inter-Bold',
+    fontSize: 22,
+    fontWeight: '700',
     color: colors.text.primary,
+    textAlign: 'center',
     marginBottom: spacing.base,
   },
-  successText: {
-    ...textStyles.body,
+
+  successBody: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 15,
     color: colors.text.secondary,
     textAlign: 'center',
+    marginBottom: spacing.sm,
   },
-  emailText: {
-    ...textStyles.h5,
-    color: colors.secondary.main,
-    marginVertical: spacing.sm,
-  },
-  successSubtext: {
-    ...textStyles.bodySmall,
-    color: colors.text.hint,
-    textAlign: 'center',
-    marginTop: spacing.base,
-    marginBottom: spacing.xxl,
-    lineHeight: 20,
-  },
-  backButton: {
+
+  emailPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.primary.main,
-    borderRadius: borderRadius.md,
-    padding: spacing.base,
-    width: '100%',
-    ...shadows.sm,
+    backgroundColor: 'rgba(3,71,208,0.08)',
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.xl,
   },
-  backButtonText: {
-    ...textStyles.button,
-    color: colors.primary.contrast,
+
+  emailPillText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0347D0',
+  },
+
+  successHint: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 13,
+    color: colors.text.disabled,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
 
