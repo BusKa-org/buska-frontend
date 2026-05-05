@@ -1,11 +1,10 @@
-// src/features/map/components/LocationMap.native.tsx
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapLibreGL from '@maplibre/maplibre-react-native';
 
 import type { LocationMapProps } from '../types';
 import { normalizeRoutePoints, pointToLatLng } from '../utils/points';
-import { MAP_STYLE_URL } from '../utils/mapStyle';
+import { MAP_STYLE_JSON } from '../utils/mapStyle';
 
 MapLibreGL.setAccessToken(null);
 
@@ -58,7 +57,7 @@ export default function LocationMap({ pontosRota }: LocationMapProps) {
     <View style={styles.container}>
       <MapLibreGL.MapView
         style={[styles.map, mapError && styles.hidden]}
-        styleURL={MAP_STYLE_URL}
+        mapStyle={MAP_STYLE_JSON}
         attributionEnabled
         logoEnabled={false}
         compassEnabled={false}

@@ -1,9 +1,8 @@
-// src/features/map/components/MapPointPicker.native.tsx
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import MapLibreGL from '@maplibre/maplibre-react-native';
 
-import { MAP_STYLE_URL } from '../utils/mapStyle';
+import { MAP_STYLE_JSON } from '../utils/mapStyle';
 
 MapLibreGL.setAccessToken(null);
 
@@ -88,7 +87,7 @@ export default function MapPointPicker({
     <View style={styles.container}>
       <MapLibreGL.MapView
         style={styles.map}
-        styleURL={MAP_STYLE_URL}
+        mapStyle={MAP_STYLE_JSON}
         attributionEnabled
         logoEnabled={false}
         compassEnabled={false}

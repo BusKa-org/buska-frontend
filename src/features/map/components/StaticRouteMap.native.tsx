@@ -1,9 +1,9 @@
-// src/features/map/components/StaticRouteMap.native.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import MapLibreGL from '@maplibre/maplibre-react-native';
 
-import { MAP_STYLE_URL } from '../utils/mapStyle';
+import { MAP_STYLE_JSON } from '../utils/mapStyle';
+import { useMultiSegmentRoute } from '../hooks/useMultiSegmentRoute';
 
 MapLibreGL.setAccessToken(null);
 
@@ -54,17 +54,37 @@ export default function StaticRouteMap({ pontosRota }: StaticRouteMapProps) {
 
   const points = useMemo(() => normalizePoints(pontosRota || []), [pontosRota]);
 
+  const pointsForRouting = useMemo(
+    () => points.map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
+    [points],
+  );
+
+  const {
+    coordinates: routedCoords,
+    loading: routeLoading,
+    error: routeError,
+  } = useMultiSegmentRoute(pointsForRouting);
+
   const lineGeoJson = useMemo(() => {
-    if (points.length < 2) return null;
+    let coords: number[][];
+    if (routedCoords.length >= 2) {
+      coords = routedCoords.map((c) => [c.longitude, c.latitude]);
+    } else if (points.length >= 2) {
+      coords = points.map((p) => [p.longitude, p.latitude]);
+    } else {
+      return null;
+    }
     return {
       type: 'Feature' as const,
       geometry: {
         type: 'LineString' as const,
-        coordinates: points.map((p) => [p.longitude, p.latitude]),
+        coordinates: coords,
       },
       properties: {},
     };
-  }, [points]);
+  }, [points, routedCoords]);
+
+  const isUsingFallback = routedCoords.length < 2 && points.length >= 2;
 
   const handleMapReady = useCallback(() => {
     setMapReady(true);
@@ -95,7 +115,7 @@ export default function StaticRouteMap({ pontosRota }: StaticRouteMapProps) {
     <View style={styles.container}>
       <MapLibreGL.MapView
         style={styles.map}
-        styleURL={MAP_STYLE_URL}
+        mapStyle={MAP_STYLE_JSON}
         attributionEnabled
         logoEnabled={false}
         compassEnabled={false}
@@ -116,10 +136,10 @@ export default function StaticRouteMap({ pontosRota }: StaticRouteMapProps) {
               style={{
                 lineColor: '#4285F4',
                 lineWidth: 4,
-                lineOpacity: 0.85,
+                lineOpacity: isUsingFallback ? 0.5 : 0.85,
                 lineCap: 'round',
                 lineJoin: 'round',
-                lineDasharray: [2, 1],
+                lineDasharray: isUsingFallback ? [2, 1] : [1, 0],
               }}
             />
           </MapLibreGL.ShapeSource>

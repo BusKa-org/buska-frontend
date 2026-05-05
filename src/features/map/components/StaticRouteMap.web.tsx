@@ -1,10 +1,10 @@
-// src/features/map/components/StaticRouteMap.web.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import maplibregl, { LngLatBoundsLike, Map as MapLibreMap, Marker } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 import { MAP_STYLE_URL } from '../utils/mapStyle';
+import { useMultiSegmentRoute } from '../hooks/useMultiSegmentRoute';
 
 interface RoutePoint {
   id?: string | number;
@@ -92,6 +92,15 @@ export default function StaticRouteMap({ pontosRota }: StaticRouteMapProps) {
 
   const points = useMemo(() => normalizePoints(pontosRota || []), [pontosRota]);
 
+  const pointsForRouting = useMemo(
+    () => points.map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
+    [points],
+  );
+
+  const { coordinates: routedCoords } = useMultiSegmentRoute(pointsForRouting);
+
+  const isUsingFallback = routedCoords.length < 2 && points.length >= 2;
+
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
@@ -121,7 +130,6 @@ export default function StaticRouteMap({ pontosRota }: StaticRouteMapProps) {
           'line-color': '#4285F4',
           'line-width': 4,
           'line-opacity': 0.85,
-          'line-dasharray': [2, 1],
         },
       });
       setMapReady(true);
@@ -155,16 +163,32 @@ export default function StaticRouteMap({ pontosRota }: StaticRouteMapProps) {
       markersRef.current.push(marker);
     });
 
-    // Atualiza linha
     const source = map.getSource(ROUTE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
     if (source) {
-      const coords =
-        points.length >= 2 ? points.map((p) => [p.longitude, p.latitude]) : [];
+      let coords: number[][] = [];
+      if (routedCoords.length >= 2) {
+        coords = routedCoords.map((c) => [c.longitude, c.latitude]);
+      } else if (points.length >= 2) {
+        coords = points.map((p) => [p.longitude, p.latitude]);
+      }
       source.setData({
         type: 'Feature',
         geometry: { type: 'LineString', coordinates: coords },
         properties: {},
       });
+    }
+
+    if (map.getLayer(ROUTE_LAYER_ID)) {
+      map.setPaintProperty(
+        ROUTE_LAYER_ID,
+        'line-dasharray',
+        isUsingFallback ? [2, 1] : [1, 0],
+      );
+      map.setPaintProperty(
+        ROUTE_LAYER_ID,
+        'line-opacity',
+        isUsingFallback ? 0.5 : 0.85,
+      );
     }
 
     // Ajusta viewport
@@ -179,7 +203,7 @@ export default function StaticRouteMap({ pontosRota }: StaticRouteMapProps) {
       ];
       map.fitBounds(bounds, { padding: 50, duration: 500 });
     }
-  }, [mapReady, points]);
+  }, [mapReady, points, routedCoords, isUsingFallback]);
 
   return (
     <View style={styles.container}>

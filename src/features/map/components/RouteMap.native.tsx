@@ -1,4 +1,3 @@
-// src/features/map/components/RouteMap.native.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -16,7 +15,7 @@ import { useCurrentLocation } from '../hooks/useCurrentLocation';
 import { useArrivalDetection } from '../hooks/useArrivalDetection';
 import { useRoutePolyline } from '../hooks/useRoutePolyline';
 import { normalizeRoutePoints, pointToLatLng, buildFitCoordinates } from '../utils/points';
-import { MAP_STYLE_URL } from '../utils/mapStyle';
+import { MAP_STYLE_JSON } from '../utils/mapStyle';
 
 // MapLibre não exige access token, mas alguns binários esperam a chamada.
 // Passar string vazia ou null evita warnings.
@@ -160,7 +159,7 @@ export default function RouteMap({ pontosRota, onPontoChegado }: RouteMapProps) 
     <View style={styles.container}>
       <MapLibreGL.MapView
         style={[styles.map, mapError && styles.hidden]}
-        styleURL={MAP_STYLE_URL}
+        mapStyle={MAP_STYLE_JSON}
         attributionEnabled
         logoEnabled={false}
         compassEnabled={false}
