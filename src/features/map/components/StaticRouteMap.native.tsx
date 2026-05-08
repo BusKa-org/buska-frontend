@@ -43,7 +43,7 @@ function normalizePoints(points: RoutePoint[]): NormalizedPoint[] {
     latitude: Number(p.latitude),
     longitude: Number(p.longitude),
     label: i === 0 ? 'A' : i === valid.length - 1 ? 'B' : String(i + 1),
-    color: i === 0 ? '#34A853' : i === valid.length - 1 ? '#EA4335' : '#4285F4',
+    color: i === 0 ? '#34A853' : i === valid.length - 1 ? '#EA4335' : '#7B1FA2',
     name: p.nome || p.apelido || `Ponto ${i + 1}`,
   }));
 }
@@ -151,6 +151,7 @@ export default function StaticRouteMap({ pontosRota }: StaticRouteMapProps) {
             id={`pin-${idx}`}
             coordinate={[point.longitude, point.latitude]}
             title={point.name}
+            anchor={{ x: 0.5, y: 1 }}
           >
             <View style={styles.pinWrapper}>
               <View style={[styles.pinHead, { backgroundColor: point.color }]}>
@@ -188,38 +189,36 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   pinWrapper: {
+    width: 48,
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: 'transparent',
   },
   pinHead: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 3,
-    borderColor: '#fff',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 4,
+    borderColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
   },
   pinLabel: {
-    color: '#fff',
-    fontSize: 11,
+    color: '#ffffff',
+    fontSize: 18,
     fontWeight: 'bold',
-    lineHeight: 12,
+    lineHeight: 22,
+    textAlign: 'center',
+    includeFontPadding: false,
   },
   pinTail: {
     width: 0,
     height: 0,
-    borderLeftWidth: 5,
-    borderRightWidth: 5,
-    borderTopWidth: 7,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderTopWidth: 14,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    marginTop: -1,
+    marginTop: -2,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,

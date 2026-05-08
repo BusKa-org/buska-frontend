@@ -1,9 +1,11 @@
-export const OSM_ATTRIBUTION = '© OpenStreetMap contributors';
+export const OSM_ATTRIBUTION =
+  '© OpenStreetMap contributors © CARTO';
 
 const OSM_TILE_URLS = [
-  'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+  'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+  'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+  'https://d.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
 ];
 
 export const MAP_STYLE_DEFINITION = {

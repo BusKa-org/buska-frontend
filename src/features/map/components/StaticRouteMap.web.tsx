@@ -48,38 +48,40 @@ function normalizePoints(points: RoutePoint[]): NormalizedPoint[] {
   }));
 }
 
-function buildPinElement(label: string, color: string, title: string): HTMLDivElement {
+function buildPinElement(label: string, color: string, title: string): HTMLElement {
   const wrapper = document.createElement('div');
   wrapper.title = title;
-  wrapper.style.display = 'flex';
-  wrapper.style.flexDirection = 'column';
-  wrapper.style.alignItems = 'center';
-  wrapper.style.filter = 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))';
+  wrapper.style.position = 'relative';
+  wrapper.style.width = '60px';
+  wrapper.style.height = '88px';
+  wrapper.style.filter = 'drop-shadow(0 5px 10px rgba(0,0,0,0.5))';
+  wrapper.style.cursor = 'pointer';
 
-  const head = document.createElement('div');
-  head.style.width = '28px';
-  head.style.height = '28px';
-  head.style.borderRadius = '50%';
-  head.style.background = color;
-  head.style.color = '#fff';
-  head.style.fontSize = '12px';
-  head.style.fontWeight = 'bold';
-  head.style.display = 'flex';
-  head.style.alignItems = 'center';
-  head.style.justifyContent = 'center';
-  head.style.border = '3px solid #fff';
-  head.textContent = label;
+  wrapper.innerHTML = `
+    <svg width="60" height="88" viewBox="-4 -4 44 60" xmlns="http://www.w3.org/2000/svg">
+      <path d="M 13 50 a 5 1.8 0 1 0 10 0 a 5 1.8 0 1 0 -10 0 z"
+            fill="rgba(0,0,0,0.5)" />
+      <path d="M 18 0 C 8.06 0 0 8.06 0 18 c 0 13.5 18 32 18 32 s 18 -18.5 18 -32 C 36 8.06 27.94 0 18 0 z"
+            fill="#ffffff" stroke="#ffffff" stroke-width="6" stroke-linejoin="round" />
+      <path d="M 18 0 C 8.06 0 0 8.06 0 18 c 0 13.5 18 32 18 32 s 18 -18.5 18 -32 C 36 8.06 27.94 0 18 0 z"
+            fill="${color}" />
+      <circle cx="18" cy="18" r="11" fill="#ffffff" />
+    </svg>
+    <span style="
+      position: absolute;
+      top: 8px;
+      left: 0;
+      width: 60px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+      line-height: 32px;
+      color: ${color};
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      pointer-events: none;
+    ">${label}</span>
+  `;
 
-  const tail = document.createElement('div');
-  tail.style.width = '0';
-  tail.style.height = '0';
-  tail.style.borderLeft = '5px solid transparent';
-  tail.style.borderRight = '5px solid transparent';
-  tail.style.borderTop = `7px solid ${color}`;
-  tail.style.marginTop = '-1px';
-
-  wrapper.appendChild(head);
-  wrapper.appendChild(tail);
   return wrapper;
 }
 
@@ -145,16 +147,13 @@ export default function StaticRouteMap({ pontosRota }: StaticRouteMapProps) {
     };
   }, []);
 
-  // Atualiza markers + linha + viewport quando os pontos mudam
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
     const map = mapRef.current;
 
-    // Limpa markers antigos
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
-    // Cria novos markers
     points.forEach((point) => {
       const el = buildPinElement(point.label, point.color, point.name);
       const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
